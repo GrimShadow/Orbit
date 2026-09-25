@@ -1,0 +1,4 @@
+# Populated in Step 4.4 (SaaS / dedicated / on-prem / air-gapped profiles).
+image:
+  registry: ghcr.io/grimshadow/orbit
+  tag: ""

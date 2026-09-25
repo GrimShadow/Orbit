@@ -1,0 +1,10 @@
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/storybook-static
+.git
+.github
+docs
+deploy
+tests

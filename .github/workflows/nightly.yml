@@ -1,0 +1,39 @@
+name: nightly
+on:
+  schedule: [{ cron: "17 2 * * *" }]
+  workflow_dispatch:
+permissions: { contents: read }
+
+jobs:
+  stack:
+    name: compose stack smoke + ZAP API scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { global-json-file: global.json }
+      - run: dotnet tool restore
+      - run: make up
+      - run: make migrate
+      - run: dotnet build Dam.sln -c Release
+      - name: Start API and worker
+        run: |
+          (cd src/Dam.Api && ASPNETCORE_ENVIRONMENT=Development nohup dotnet run --no-build -c Release > /tmp/api.log 2>&1 &)
+          (cd src/Dam.Worker && ASPNETCORE_ENVIRONMENT=Development nohup dotnet run --no-build -c Release > /tmp/worker.log 2>&1 &)
+          timeout 60 bash -c 'until curl -sf localhost:5080/readyz; do sleep 2; done'
+      - name: End-to-end smoke (login, /me, ping -> worker)
+        run: tools/smoke.sh
+      # Unauthenticated surface only for now; an authenticated scan is added in Step 4.2 (security hardening).
+      - name: ZAP API scan
+        uses: zaproxy/action-api-scan@v0.9.0
+        with:
+          target: http://localhost:5080/openapi/v1.json
+          format: openapi
+          fail_action: false
+          allow_issue_writing: false
+      - if: always()
+        run: docker compose -f deploy/docker-compose.yml logs --no-color > /tmp/compose.log; tail -n 50 /tmp/api.log /tmp/worker.log || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: nightly-logs, path: "/tmp/*.log" }

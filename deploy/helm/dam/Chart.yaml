@@ -1,0 +1,7 @@
+apiVersion: v2
+name: dam
+description: PADS4 DAM (chart is filled in by Step 4.4; this stub keeps `helm lint` in CI from day one)
+type: application
+version: 0.0.1
+appVersion: "0.0.0"
+icon: https://pads4.com/favicon.ico

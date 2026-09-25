@@ -1,0 +1,20 @@
+# One Dockerfile for every .NET host: docker build --build-arg PROJECT=Dam.Api -f deploy/docker/Dockerfile.dotnet .
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+ARG PROJECT
+ARG TARGETARCH
+SHELL ["/bin/bash", "-c"]
+WORKDIR /src
+COPY global.json Directory.Build.props .editorconfig Dam.sln ./
+COPY src ./src
+RUN dotnet publish src/${PROJECT}/${PROJECT}.csproj -c Release -a ${TARGETARCH/amd64/x64} --no-self-contained -o /out \
+    -p:UseAppHost=false -p:TreatWarningsAsErrors=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+ARG PROJECT
+ENV PROJECT_DLL=${PROJECT}.dll ASPNETCORE_URLS=http://+:8080 DOTNET_EnableDiagnostics=0
+WORKDIR /app
+COPY --from=build /out .
+# Non-root (spec A7.8). Read-only root FS is enforced at run time (compose / Helm), not baked in.
+USER $APP_UID
+EXPOSE 8080
+ENTRYPOINT ["sh", "-c", "exec dotnet $PROJECT_DLL"]
