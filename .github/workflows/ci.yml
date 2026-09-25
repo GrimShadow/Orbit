@@ -68,7 +68,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: aquasecurity/trivy-action@0.28.0
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scanners: vuln,secret,misconfig
@@ -76,7 +76,7 @@ jobs:
           ignore-unfixed: true
           skip-dirs: node_modules,tests
           exit-code: "1"
-      - uses: aquasecurity/trivy-action@0.28.0
+      - uses: aquasecurity/trivy-action@v0.36.0
         with: { scan-type: fs, format: cyclonedx, output: sbom-source.cdx.json, skip-dirs: "node_modules,tests" }
       - uses: actions/upload-artifact@v4
         with: { name: sbom-source, path: sbom-source.cdx.json }
@@ -119,14 +119,14 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,scope=${{ matrix.name }},mode=max
       - name: Container scan (fails on fixable HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: scan/${{ matrix.name }}:${{ github.sha }}
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
       - name: SBOM (CycloneDX)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: scan/${{ matrix.name }}:${{ github.sha }}
           format: cyclonedx
