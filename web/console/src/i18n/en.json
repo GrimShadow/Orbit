@@ -1,6 +1,13 @@
 {
-  "app": { "name": "PADS4 DAM", "skip": "Skip to main content" },
-  "nav": { "primary": "Primary", "home": "Home", "account": "My account" },
+  "app": {
+    "name": "PADS4 DAM",
+    "skip": "Skip to main content"
+  },
+  "nav": {
+    "primary": "Primary",
+    "home": "Home",
+    "account": "My account"
+  },
   "shell": {
     "tenant": "Tenant",
     "language": "Language",
@@ -14,7 +21,10 @@
     "action": "Sign in",
     "redirecting": "Redirecting to sign-in…"
   },
-  "home": { "title": "Welcome, {{name}}", "body": "Your library, approvals and analytics will appear here as they are built." },
+  "home": {
+    "title": "Welcome, {{name}}",
+    "body": "Your library, approvals and analytics will appear here as they are built."
+  },
   "me": {
     "title": "My account",
     "name": "Name",
@@ -24,13 +34,28 @@
     "noRoles": "No roles assigned",
     "loadFailed": "Could not load your account",
     "reference": "Reference: {{id}}",
-    "retry": "Try again"
+    "retry": "Try again",
+    "groups": "Groups",
+    "permissions": "Permissions",
+    "permissionCount_one": "{{count}} permission",
+    "permissionCount_other": "{{count}} permissions",
+    "attributes": "Attributes",
+    "none": "None",
+    "inactiveRoles": "These roles are switched off until the missing attribute (for example a region) is set on your account: {{roles}}. Ask your administrator."
   },
-  "notFound": { "title": "Page not found", "body": "The page you asked for does not exist.", "home": "Back to home" },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The page you asked for does not exist.",
+    "home": "Back to home"
+  },
   "error": {
     "title": "Something went wrong",
     "body": "An unexpected error occurred. Reload the page to continue.",
     "reload": "Reload"
   },
-  "callback": { "signingIn": "Signing you in…", "failed": "Sign-in failed", "retry": "Try again" }
+  "callback": {
+    "signingIn": "Signing you in…",
+    "failed": "Sign-in failed",
+    "retry": "Try again"
+  }
 }

@@ -23,6 +23,12 @@ const ME = {
   displayName: 'Dev Admin',
   tenantId: '0197a000-0000-7000-8000-000000000001',
   roles: ['Admin', 'Editor'],
+  groups: ['brand-approvers'],
+  permissions: ['assets.read', 'assets.update'],
+  attributes: { region: ['North'] },
+  accessRuleCount: 1,
+  inactiveRoles: [] as string[],
+  status: 'active',
 };
 
 function renderAt(route: string, auth: AuthState) {
@@ -71,9 +77,20 @@ describe('routing and auth', () => {
     expect(await screen.findByRole('heading', { name: 'My account' })).toBeInTheDocument();
     expect(screen.getByText(ME.tenantId)).toBeInTheDocument();
     expect(screen.getByText('Editor')).toBeInTheDocument();
+    expect(screen.getByText('brand-approvers')).toBeInTheDocument();
+    expect(screen.getByText('2 permissions')).toBeInTheDocument();
+    expect(screen.getByText('region: North')).toBeInTheDocument();
+    expect(screen.queryByText(/switched off/)).not.toBeInTheDocument();
     const [url, init] = f.mock.calls[0]!;
     expect(url).toBe('/api/v1/me');
     expect((init!.headers as Record<string, string>).Authorization).toBe('Bearer tok');
+  });
+
+  it('warns when a role is switched off because an attribute is missing', async () => {
+    mockFetch(() => json({ ...ME, roles: ['Dealer'], permissions: [], inactiveRoles: ['Dealer'] }));
+    renderAt('/me', signedIn);
+    expect(await screen.findByRole('alert')).toHaveTextContent('switched off until the missing attribute');
+    expect(screen.getByText('0 permissions')).toBeInTheDocument();
   });
 
   it('shows the problem title and correlation id when the API fails', async () => {

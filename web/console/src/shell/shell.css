@@ -150,3 +150,12 @@
     display: none;
   }
 }
+.dam-alert {
+  margin: 0;
+  padding: var(--dam-space-3) var(--dam-space-4);
+  border: 1px solid var(--dam-warning);
+  border-inline-start-width: 4px;
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-surface);
+  color: var(--dam-text);
+}
