@@ -9,7 +9,7 @@ COPY src ./src
 RUN dotnet publish src/${PROJECT}/${PROJECT}.csproj -c Release -a ${TARGETARCH/amd64/x64} --no-self-contained -o /out \
     -p:UseAppHost=false -p:TreatWarningsAsErrors=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 ARG PROJECT
 ENV PROJECT_DLL=${PROJECT}.dll ASPNETCORE_URLS=http://+:8080 DOTNET_EnableDiagnostics=0
 WORKDIR /app
