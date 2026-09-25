@@ -20,6 +20,7 @@ public sealed class SystemUser : ICurrentUser
 {
     public bool IsAuthenticated => false;
     public Guid? UserId => null;
+    public string? Subject => null;
     public IReadOnlyCollection<string> Roles => [];
 }
 

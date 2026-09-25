@@ -94,6 +94,20 @@ export function MePage() {
         <dd>{data.email}</dd>
         <dt>{t('me.tenant')}</dt>
         <dd>{data.tenantId}</dd>
+        <dt>{t('me.groups')}</dt>
+        <dd>{data.groups.length ? data.groups.join(', ') : t('me.none')}</dd>
+        <dt>{t('me.permissions')}</dt>
+        <dd>{t('me.permissionCount', { count: data.permissions.length })}</dd>
+        {Object.keys(data.attributes).length > 0 && (
+          <>
+            <dt>{t('me.attributes')}</dt>
+            <dd>
+              {Object.entries(data.attributes)
+                .map(([k, v]) => `${k}: ${v.join(', ')}`)
+                .join(' · ')}
+            </dd>
+          </>
+        )}
         <dt>{t('me.roles')}</dt>
         <dd>
           {data.roles.length ? (
@@ -109,6 +123,11 @@ export function MePage() {
           )}
         </dd>
       </dl>
+      {data.inactiveRoles.length > 0 && (
+        <p role="alert" className="dam-alert">
+          {t('me.inactiveRoles', { roles: data.inactiveRoles.join(', ') })}
+        </p>
+      )}
     </div>
   );
 }

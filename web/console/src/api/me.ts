@@ -8,6 +8,12 @@ export interface Me {
   displayName: string | null;
   tenantId: string;
   roles: string[];
+  groups: string[];
+  permissions: string[];
+  attributes: Record<string, string[]>;
+  accessRuleCount: number;
+  inactiveRoles: string[];
+  status: string | null;
 }
 
 export function useMe() {

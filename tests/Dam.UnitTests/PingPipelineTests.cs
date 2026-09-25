@@ -2,6 +2,7 @@ using Dam.Application;
 using Dam.Application.Abstractions;
 using Dam.Application.Messaging;
 using Dam.Application.Ping;
+using Dam.Domain.Authorization;
 using Dam.Domain.Common;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,11 +15,14 @@ public sealed class PingPipelineTests
     {
         public bool IsAuthenticated => auth;
         public Guid? UserId => auth ? Guid.NewGuid() : null;
+        public string? Subject => auth ? "sub" : null;
         public IReadOnlyCollection<string> Roles => roles;
     }
     private sealed class FakeAuthz(bool allow) : IAuthorizationService
     {
-        public bool Can(ICurrentUser user, string permission, object? resource = null) => allow;
+        public Task<bool> CanAsync(string permission, ResourceContext? resource = null, CancellationToken ct = default) => Task.FromResult(allow);
+        public Task<IReadOnlyList<ScopeClause>> GetScopeAsync(string permission, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<AccessProfile> GetProfileAsync(CancellationToken ct = default) => throw new NotSupportedException();
     }
     private sealed class FakeUow : IUnitOfWork
     {

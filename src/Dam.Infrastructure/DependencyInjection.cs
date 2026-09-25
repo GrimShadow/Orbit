@@ -16,6 +16,9 @@ public static class DependencyInjection
             .UseNpgsql(connectionString)
             .UseSnakeCaseNamingConvention()
             .AddInterceptors(sp.GetRequiredService<TenantConnectionInterceptor>()));
+        services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
+        services.AddSingleton<IQueryExecutor, EfQueryExecutor>();
+        services.AddScoped<IAccessProfileProvider, Identity.AccessProfileProvider>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
         services.AddScoped<EfDomainEventSource>();
         services.AddScoped<IDomainEventSource>(sp => sp.GetRequiredService<EfDomainEventSource>());

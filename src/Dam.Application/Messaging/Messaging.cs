@@ -1,3 +1,4 @@
+using Dam.Domain.Authorization;
 using Dam.Domain.Common;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,7 +9,12 @@ public interface IRequest<TResponse>;
 public interface ICommand<TResponse> : IRequest<TResponse>;
 public interface IQuery<TResponse> : IRequest<TResponse>;
 /// <summary>Requests that need a permission check declare it here.</summary>
-public interface IAuthorizedRequest { string Permission { get; } }
+public interface IAuthorizedRequest
+{
+    string Permission { get; }
+    /// <summary>The resource being acted on, when the permission is scoped (folder, region…). Null = a plain permission check.</summary>
+    ResourceContext? Resource => null;
+}
 
 public interface IRequestHandler<in TRequest, TResponse> where TRequest : IRequest<TResponse>
 {

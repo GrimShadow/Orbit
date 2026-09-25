@@ -125,6 +125,87 @@
             "access.token.claim": "true",
             "id.token.claim": "true"
           }
+        },
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "config": {
+            "access.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "region",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "region",
+            "claim.name": "region",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "aggregate.attrs": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "dealer",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "dealer",
+            "claim.name": "dealer",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "aggregate.attrs": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "brand",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "brand",
+            "claim.name": "brand",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "aggregate.attrs": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "channel",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "channel",
+            "claim.name": "channel",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "aggregate.attrs": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
         }
       ]
     }
@@ -185,8 +266,167 @@
       "realmRoles": [
         "Admin"
       ]
+    },
+    {
+      "username": "editor@dam.local",
+      "email": "editor@dam.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Erin",
+      "lastName": "Editor",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dam",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Editor"
+      ],
+      "groups": []
+    },
+    {
+      "username": "approver@dam.local",
+      "email": "approver@dam.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Amit",
+      "lastName": "Approver",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dam",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Approver"
+      ],
+      "groups": [
+        "/brand-approvers"
+      ]
+    },
+    {
+      "username": "viewer@dam.local",
+      "email": "viewer@dam.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Vera",
+      "lastName": "Viewer",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dam",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Viewer"
+      ],
+      "groups": []
+    },
+    {
+      "username": "dealer.north@dam.local",
+      "email": "dealer.north@dam.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Nikhil",
+      "lastName": "North",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dam",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Dealer"
+      ],
+      "groups": [
+        "/dealers"
+      ],
+      "attributes": {
+        "region": [
+          "North"
+        ],
+        "dealer": [
+          "D-N-001"
+        ]
+      }
+    },
+    {
+      "username": "dealer.south@dam.local",
+      "email": "dealer.south@dam.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Sara",
+      "lastName": "South",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dam",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Dealer"
+      ],
+      "groups": [
+        "/dealers"
+      ],
+      "attributes": {
+        "region": [
+          "South"
+        ],
+        "dealer": [
+          "D-S-001"
+        ]
+      }
+    },
+    {
+      "username": "dealer.noregion@dam.local",
+      "email": "dealer.noregion@dam.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Nora",
+      "lastName": "Noregion",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dam",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Dealer"
+      ],
+      "groups": [
+        "/dealers"
+      ]
     }
   ],
   "revokeRefreshToken": true,
-  "refreshTokenMaxReuse": 0
+  "refreshTokenMaxReuse": 0,
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\": [{\"name\": \"username\", \"displayName\": \"${username}\", \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false, \"validations\": {\"length\": {\"min\": 3, \"max\": 255}, \"username-prohibited-characters\": {}, \"up-username-not-idn-homograph\": {}}}, {\"name\": \"email\", \"displayName\": \"${email}\", \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false, \"validations\": {\"email\": {}, \"length\": {\"max\": 255}}}, {\"name\": \"firstName\", \"displayName\": \"${firstName}\", \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false, \"validations\": {\"length\": {\"max\": 255}, \"person-name-prohibited-characters\": {}}}, {\"name\": \"lastName\", \"displayName\": \"${lastName}\", \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\", \"user\"]}, \"multivalued\": false, \"validations\": {\"length\": {\"max\": 255}, \"person-name-prohibited-characters\": {}}}, {\"name\": \"region\", \"displayName\": \"Region\", \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": true}, {\"name\": \"dealer\", \"displayName\": \"Dealer\", \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": true}, {\"name\": \"brand\", \"displayName\": \"Brand\", \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": true}, {\"name\": \"channel\", \"displayName\": \"Channel\", \"permissions\": {\"view\": [\"admin\"], \"edit\": [\"admin\"]}, \"multivalued\": true}]}"
+          ]
+        }
+      }
+    ]
+  },
+  "groups": [
+    {
+      "name": "brand-approvers"
+    },
+    {
+      "name": "dealers"
+    }
+  ]
 }

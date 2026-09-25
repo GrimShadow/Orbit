@@ -95,4 +95,21 @@ public static class SecuritySql
         CREATE POLICY system_relay ON outbox TO dam_system USING (true) WITH CHECK (true);
         GRANT SELECT, INSERT ON processed_messages TO dam_app;
         """;
+
+    /// <summary>The tenants table has no tenant_id: a session may see and change only the row whose id is its tenant.</summary>
+    public const string TenantsRls = """
+        ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE tenants FORCE ROW LEVEL SECURITY;
+        CREATE POLICY tenant_self ON tenants
+            USING (id = nullif(current_setting('app.tenant_id', true), '')::uuid)
+            WITH CHECK (id = nullif(current_setting('app.tenant_id', true), '')::uuid);
+        """;
+
+    public const string IdentityGrants = """
+        GRANT SELECT, INSERT, UPDATE ON tenants, users TO dam_app;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON groups, roles, access_rules, user_groups, user_roles, group_roles TO dam_app;
+        -- Names are unique per tenant, ignoring case.
+        CREATE UNIQUE INDEX ux_groups_tenant_lower_name ON groups (tenant_id, lower(name));
+        CREATE UNIQUE INDEX ux_roles_tenant_lower_name ON roles (tenant_id, lower(name));
+        """;
 }

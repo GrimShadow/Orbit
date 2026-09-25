@@ -22,6 +22,7 @@ public sealed class PersistenceTests(PostgresFixture fx)
     {
         public bool IsAuthenticated => false;
         public Guid? UserId => null;
+        public string? Subject => null;
         public IReadOnlyCollection<string> Roles => [];
     }
     private sealed class Clock : IClock { public DateTimeOffset UtcNow => DateTimeOffset.UtcNow; }

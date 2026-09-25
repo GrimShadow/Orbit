@@ -127,6 +127,7 @@ public sealed class MessagingTests(PostgresFixture pg, RabbitFixture mq) : IClas
         await using var stopping = new StoppingHost(WorkerHost());
         await stopping.Host.StartAsync();
         await using var api = new ApiTestHost(pg).Factory();
+        await ApiTestHost.EnsureTenantAsync(api, tenant);
         using var client = api.CreateClient();
 
         HttpRequestMessage Ping(string token) => new(HttpMethod.Post, "/api/v1/system/ping")
