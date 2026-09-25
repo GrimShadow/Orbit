@@ -26,7 +26,7 @@ jobs:
         run: tools/smoke.sh
       # Unauthenticated surface only for now; an authenticated scan is added in Step 4.2 (security hardening).
       - name: ZAP API scan
-        uses: zaproxy/action-api-scan@v0.9.0
+        uses: zaproxy/action-api-scan@v0.10.0
         with:
           target: http://localhost:5080/openapi/v1.json
           format: openapi
