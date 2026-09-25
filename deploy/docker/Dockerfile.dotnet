@@ -1,5 +1,5 @@
 # One Dockerfile for every .NET host: docker build --build-arg PROJECT=Dam.Api -f deploy/docker/Dockerfile.dotnet .
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG PROJECT
 ARG TARGETARCH
 SHELL ["/bin/bash", "-c"]
