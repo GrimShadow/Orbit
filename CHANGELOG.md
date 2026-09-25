@@ -4,3 +4,4 @@
 - Step 0.2: Docker Compose dev stack (Mac-friendly profiles), Keycloak realm, ADR-0001 (SeaweedFS instead of MinIO).
 - Step 0.3: domain primitives (Entity, AggregateRoot, UUID v7, Result<T>) and command pipeline (validation, authorization, transaction, outbox).
 - Step 0.4: EF Core 9 persistence, tenant query filter + Postgres RLS (forced), outbox, hash-chained append-only audit_log, Testcontainers integration tests; `make migrate`.
+- Step 0.5: API host (Keycloak JWT, tenant/user from claims, problem+json, correlation IDs, OpenTelemetry, health, rate limiting, OpenAPI); realm now emits sub/email/tenant (UUID)/roles claims.
