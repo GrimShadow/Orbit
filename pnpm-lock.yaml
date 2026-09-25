@@ -112,8 +112,8 @@ importers:
         version: 18.3.1(react@18.3.1)
     devDependencies:
       '@storybook/addon-a11y':
-        specifier: '8'
-        version: 8.6.18(storybook@8.6.18(prettier@3.9.9))
+        specifier: '10'
+        version: 10.6.0(storybook@8.6.18(prettier@3.9.9))
       '@storybook/addon-essentials':
         specifier: '8'
         version: 8.6.14(@types/react@18.3.31)(storybook@8.6.18(prettier@3.9.9))
@@ -676,10 +676,10 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@storybook/addon-a11y@8.6.18':
-    resolution: {integrity: sha512-LFvudttdIfDTNWprA8/N1vbiWbJRrNscyt2OP9Qwi85E1d3LKLy+e8AWiqY08gpy2OUYujK7AjxfpKtNeddrxw==}
+  '@storybook/addon-a11y@10.6.0':
+    resolution: {integrity: sha512-Z/CZor/F8H74/+IoeLroEQXQoVxvmjVtUgATJ95KPBolHxMaHLXLsYU0wosIiiORxmfRCnpen5pQl1n4+pBWQw==}
     peerDependencies:
-      storybook: ^8.6.18
+      storybook: ^10.6.0
 
   '@storybook/addon-actions@8.6.14':
     resolution: {integrity: sha512-mDQxylxGGCQSK7tJPkD144J8jWh9IU9ziJMHfB84PKpI/V5ZgqMDnpr2bssTrUaGDqU5e1/z8KcRF+Melhs9pQ==}
@@ -710,11 +710,6 @@ packages:
     resolution: {integrity: sha512-4H19OJlapkofiE9tM6K/vsepf4ir9jMm9T+zw5L85blJZxhKZIbJ6FO0TCG9PDc4iPt3L6+aq5B0X29s9zicNQ==}
     peerDependencies:
       storybook: ^8.6.14
-
-  '@storybook/addon-highlight@8.6.18':
-    resolution: {integrity: sha512-wTFJ1DPM0C8gK6nGTJxH75byayQj7BPAz02fME4AOmT6clrBpVl1zSTFTkXaSr+k4xOfeMR/xNUfVskaXz6T9w==}
-    peerDependencies:
-      storybook: ^8.6.18
 
   '@storybook/addon-measure@8.6.14':
     resolution: {integrity: sha512-1Tlyb72NX8aAqm6I6OICsUuGOP6hgnXcuFlXucyhKomPa6j3Eu2vKu561t/f0oGtAK2nO93Z70kVaEh5X+vaGw==}
@@ -3057,11 +3052,9 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.63.5':
     optional: true
 
-  '@storybook/addon-a11y@8.6.18(storybook@8.6.18(prettier@3.9.9))':
+  '@storybook/addon-a11y@10.6.0(storybook@8.6.18(prettier@3.9.9))':
     dependencies:
-      '@storybook/addon-highlight': 8.6.18(storybook@8.6.18(prettier@3.9.9))
       '@storybook/global': 5.0.0
-      '@storybook/test': 8.6.18(storybook@8.6.18(prettier@3.9.9))
       axe-core: 4.13.0
       storybook: 8.6.18(prettier@3.9.9)
 
@@ -3118,11 +3111,6 @@ snapshots:
       - '@types/react'
 
   '@storybook/addon-highlight@8.6.14(storybook@8.6.18(prettier@3.9.9))':
-    dependencies:
-      '@storybook/global': 5.0.0
-      storybook: 8.6.18(prettier@3.9.9)
-
-  '@storybook/addon-highlight@8.6.18(storybook@8.6.18(prettier@3.9.9))':
     dependencies:
       '@storybook/global': 5.0.0
       storybook: 8.6.18(prettier@3.9.9)
@@ -3212,6 +3200,7 @@ snapshots:
       '@storybook/global': 5.0.0
       '@vitest/utils': 2.1.9
       storybook: 8.6.18(prettier@3.9.9)
+    optional: true
 
   '@storybook/manager-api@8.6.18(storybook@8.6.18(prettier@3.9.9))':
     dependencies:
@@ -3280,6 +3269,7 @@ snapshots:
       '@vitest/expect': 2.0.5
       '@vitest/spy': 2.0.5
       storybook: 8.6.18(prettier@3.9.9)
+    optional: true
 
   '@storybook/theming@8.6.18(storybook@8.6.18(prettier@3.9.9))':
     dependencies:
@@ -3302,6 +3292,7 @@ snapshots:
       dom-accessibility-api: 0.5.16
       lz-string: 1.5.0
       pretty-format: 27.5.1
+    optional: true
 
   '@testing-library/dom@10.4.2':
     dependencies:
@@ -3323,6 +3314,7 @@ snapshots:
       dom-accessibility-api: 0.6.3
       lodash: 4.18.1
       redent: 3.0.0
+    optional: true
 
   '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.2)(vitest@3.2.7(@types/node@22.20.4)(jsdom@30.1.1))':
     dependencies:
@@ -3349,6 +3341,7 @@ snapshots:
   '@testing-library/user-event@14.5.2(@testing-library/dom@10.4.0)':
     dependencies:
       '@testing-library/dom': 10.4.0
+    optional: true
 
   '@testing-library/user-event@14.6.7(@testing-library/dom@10.4.2)':
     dependencies:
@@ -3520,6 +3513,7 @@ snapshots:
       '@vitest/utils': 2.0.5
       chai: 5.3.3
       tinyrainbow: 1.2.0
+    optional: true
 
   '@vitest/expect@3.2.7':
     dependencies:
@@ -3540,10 +3534,12 @@ snapshots:
   '@vitest/pretty-format@2.0.5':
     dependencies:
       tinyrainbow: 1.2.0
+    optional: true
 
   '@vitest/pretty-format@2.1.9':
     dependencies:
       tinyrainbow: 1.2.0
+    optional: true
 
   '@vitest/pretty-format@3.2.7':
     dependencies:
@@ -3564,6 +3560,7 @@ snapshots:
   '@vitest/spy@2.0.5':
     dependencies:
       tinyspy: 3.0.2
+    optional: true
 
   '@vitest/spy@3.2.7':
     dependencies:
@@ -3575,12 +3572,14 @@ snapshots:
       estree-walker: 3.0.3
       loupe: 3.2.1
       tinyrainbow: 1.2.0
+    optional: true
 
   '@vitest/utils@2.1.9':
     dependencies:
       '@vitest/pretty-format': 2.1.9
       loupe: 3.2.1
       tinyrainbow: 1.2.0
+    optional: true
 
   '@vitest/utils@3.2.7':
     dependencies:
@@ -3751,6 +3750,7 @@ snapshots:
     dependencies:
       ansi-styles: 4.3.0
       supports-color: 7.2.0
+    optional: true
 
   chalk@4.1.2:
     dependencies:
@@ -4484,7 +4484,8 @@ snapshots:
 
   lodash.merge@4.6.2: {}
 
-  lodash@4.18.1: {}
+  lodash@4.18.1:
+    optional: true
 
   loose-envify@1.4.0:
     dependencies:
@@ -4991,11 +4992,13 @@ snapshots:
 
   tinypool@1.1.1: {}
 
-  tinyrainbow@1.2.0: {}
+  tinyrainbow@1.2.0:
+    optional: true
 
   tinyrainbow@2.0.0: {}
 
-  tinyspy@3.0.2: {}
+  tinyspy@3.0.2:
+    optional: true
 
   tinyspy@4.0.6: {}
 
