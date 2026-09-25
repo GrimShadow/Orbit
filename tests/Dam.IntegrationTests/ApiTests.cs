@@ -56,12 +56,13 @@ public sealed class ApiTests(PostgresFixture fx)
     {
         await using var f = Factory();
         using var c = f.CreateClient();
+        await ApiTestHost.EnsureTenantAsync(f, Tenant);
         var res = await c.SendAsync(Me(Token(Tenant, roles: ["Editor", "Approver"])));
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         var body = await res.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(Tenant, body.GetProperty("tenantId").GetGuid());
         Assert.Equal("u@dam.local", body.GetProperty("email").GetString());
-        Assert.Equal(["Editor", "Approver"], body.GetProperty("roles").EnumerateArray().Select(x => x.GetString()!).ToArray());
+        Assert.Equal(["Approver", "Editor"], body.GetProperty("roles").EnumerateArray().Select(x => x.GetString()!).ToArray());
     }
 
     [Fact]
@@ -89,6 +90,7 @@ public sealed class ApiTests(PostgresFixture fx)
     public async Task Rate_limit_returns_429_after_the_configured_budget()
     {
         await using var f = Factory(rateLimit: 3);
+        await ApiTestHost.EnsureTenantAsync(f, Tenant);
         using var c = f.CreateClient();
         var codes = new List<HttpStatusCode>();
         for (var i = 0; i < 5; i++) codes.Add((await c.SendAsync(Me(Token(Tenant)))).StatusCode);

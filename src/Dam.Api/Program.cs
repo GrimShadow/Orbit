@@ -3,6 +3,8 @@ using Dam.Api.Auth;
 using Dam.Api.Endpoints;
 using Dam.Api.Middleware;
 using Dam.Application;
+using Dam.Application.Identity;
+using Dam.Application.Messaging;
 using Dam.Application.Abstractions;
 using Dam.Infrastructure;
 using Dam.Infrastructure.Persistence;
@@ -36,8 +38,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<HttpCurrentUser>();
 builder.Services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<HttpCurrentUser>());
+builder.Services.AddScoped<TenantOverride>();
 builder.Services.AddScoped<ITenantContext, ClaimsTenantContext>();
-builder.Services.AddSingleton<IAuthorizationService, AdminOnlyAuthorizationService>();
+builder.Services.AddMemoryCache();
 
 // ---- Application + persistence
 builder.Services.AddDamApplication();
@@ -96,12 +99,15 @@ builder.Services.AddOpenTelemetry()
 
 var app = builder.Build();
 
+await BootstrapTenantAsync(app);
+
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<UserProvisioningMiddleware>();
 
 app.MapHealthChecks("/healthz", new() { Predicate = _ => false }).AllowAnonymous();       // liveness
 app.MapHealthChecks("/readyz", new() { Predicate = c => c.Tags.Contains("ready") }).AllowAnonymous();
@@ -110,6 +116,28 @@ app.MapOpenApi().AllowAnonymous();
 app.MapDamEndpoints();
 
 app.Run();
+
+/// <summary>
+/// Creates the configured tenant and its built-in roles if missing (single-tenant / on-prem installs, dev).
+/// Set DAM_BOOTSTRAP_TENANT_ID, DAM_BOOTSTRAP_TENANT_NAME and DAM_BOOTSTRAP_TENANT_SLUG. Failures are logged, not fatal.
+/// </summary>
+static async Task BootstrapTenantAsync(WebApplication app)
+{
+    var cfg = app.Configuration;
+    if (!Guid.TryParse(cfg["DAM_BOOTSTRAP_TENANT_ID"], out var id)) return;
+    try
+    {
+        await using var scope = app.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<TenantOverride>().Value = id;
+        var result = await scope.ServiceProvider.GetRequiredService<IDispatcher>().Send(new EnsureTenantCommand(
+            id, cfg["DAM_BOOTSTRAP_TENANT_NAME"] ?? "Default", cfg["DAM_BOOTSTRAP_TENANT_SLUG"] ?? "default"));
+        if (result.IsFailure) app.Logger.LogError("Tenant bootstrap failed: {Error}", result.Error.Message);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Tenant bootstrap failed (is the database migrated?)");
+    }
+}
 
 public sealed class DbReadyCheck(DamDbContext db) : IHealthCheck
 {

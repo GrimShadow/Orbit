@@ -1,3 +1,4 @@
+using Dam.Application.Abstractions;
 using Dam.Application.Behaviors;
 using Dam.Application.Messaging;
 using FluentValidation;
@@ -11,6 +12,9 @@ public static class DependencyInjection
     {
         var asm = typeof(DependencyInjection).Assembly;
         services.AddScoped<IDispatcher, Dispatcher>();
+        services.AddScoped<IAuthorizationService, Authorization.AuthorizationService>();
+        services.AddScoped<Identity.IdentityReader>();
+        services.AddScoped<Identity.BuiltInRoleSeeder>();
         services.AddValidatorsFromAssembly(asm, includeInternalTypes: true);
 
         foreach (var t in asm.GetTypes().Where(t => t is { IsAbstract: false, IsInterface: false }))

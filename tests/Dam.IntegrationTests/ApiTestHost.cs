@@ -56,6 +56,34 @@ public sealed class ApiTestHost(PostgresFixture fx)
         return new JwtSecurityTokenHandler { SetDefaultTimesOnTokenCreation = false }.WriteToken(jwt);
     }
 
+    /// <summary>Creates the tenant (and its built-in roles) in the fixture database, like a startup bootstrap would.</summary>
+    public static async Task EnsureTenantAsync(WebApplicationFactory<Program> api, Guid tenant)
+    {
+        await using var scope = api.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<Dam.Api.Auth.TenantOverride>().Value = tenant;
+        var r = await scope.ServiceProvider.GetRequiredService<Dam.Application.Messaging.IDispatcher>()
+            .Send(new Dam.Application.Identity.EnsureTenantCommand(tenant, "Test tenant", "t-" + tenant.ToString("N")[..12]));
+        if (r.IsFailure) throw new InvalidOperationException(r.Error.Message);
+    }
+
+    /// <summary>A token like Keycloak's: subject, tenant, roles, groups and ABAC attribute claims.</summary>
+    public static string TokenFor(Guid tenant, Guid subject, string[]? roles = null, string[]? groups = null,
+        Dictionary<string, string[]>? attributes = null, string? name = null, string? email = null)
+    {
+        var claims = new List<Claim>
+        {
+            new("sub", subject.ToString()), new("tenant", tenant.ToString()),
+            new("email", email ?? $"{subject:N}@dam.local"), new("name", name ?? "Test User"),
+        };
+        claims.AddRange((roles ?? []).Select(r => new Claim("roles", r)));
+        claims.AddRange((groups ?? []).Select(g => new Claim("groups", g)));
+        foreach (var (dim, values) in attributes ?? []) claims.AddRange(values.Select(v => new Claim(dim, v)));
+        var now = DateTime.UtcNow;
+        var jwt = new JwtSecurityToken(Issuer, "dam-api", claims, now.AddMinutes(-10), now.AddMinutes(10),
+            new SigningCredentials(Key, SecurityAlgorithms.HmacSha256));
+        return new JwtSecurityTokenHandler { SetDefaultTimesOnTokenCreation = false }.WriteToken(jwt);
+    }
+
     public static HttpRequestMessage Me(string? token, string? correlation = null)
     {
         var r = new HttpRequestMessage(HttpMethod.Get, "/api/v1/me");

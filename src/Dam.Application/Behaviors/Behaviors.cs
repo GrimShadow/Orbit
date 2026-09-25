@@ -23,13 +23,11 @@ public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidat
 public sealed class AuthorizationBehavior<TRequest, TResponse>(ICurrentUser user, IAuthorizationService authz)
     : IPipelineBehavior<TRequest, TResponse> where TRequest : IRequest<TResponse>
 {
-    public Task<Result<TResponse>> Handle(TRequest request, HandlerDelegate<TResponse> next, CancellationToken ct)
+    public async Task<Result<TResponse>> Handle(TRequest request, HandlerDelegate<TResponse> next, CancellationToken ct)
     {
-        if (request is not IAuthorizedRequest ar) return next();
-        if (!user.IsAuthenticated) return Task.FromResult<Result<TResponse>>(Error.Unauthorized());
-        return authz.Can(user, ar.Permission, request)
-            ? next()
-            : Task.FromResult<Result<TResponse>>(Error.Forbidden());
+        if (request is not IAuthorizedRequest ar) return await next();
+        if (!user.IsAuthenticated) return Error.Unauthorized();
+        return await authz.CanAsync(ar.Permission, ar.Resource, ct) ? await next() : Error.Forbidden();
     }
 }
 

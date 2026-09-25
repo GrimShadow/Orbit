@@ -1,5 +1,3 @@
-using Dam.Api.Auth;
-using Dam.Application.Abstractions;
 using Dam.Application.Messaging;
 using Dam.Application.Ping;
 using Dam.Domain.Common;
@@ -9,21 +7,11 @@ namespace Dam.Api.Endpoints;
 public sealed record PingRequest(string Message);
 public sealed record PingResponse(string Reply);
 
-public sealed record MeResponse(Guid? UserId, string? Email, string? DisplayName, Guid TenantId, IReadOnlyCollection<string> Roles);
-
 public static class ApiEndpoints
 {
     public static void MapDamEndpoints(this WebApplication app)
     {
         var v1 = app.MapGroup("/api/v1").RequireAuthorization();
-
-        v1.MapGet("/me", (HttpCurrentUser user, ITenantContext tenant) =>
-            tenant.TenantId == Guid.Empty
-                ? Results.Problem(statusCode: 403, title: "No tenant", detail: "Token has no valid 'tenant' claim.")
-                : Results.Ok(new MeResponse(user.UserId, user.Email, user.DisplayName, tenant.TenantId, user.Roles)))
-            .WithName("GetMe")
-            .WithSummary("Current user, tenant and roles")
-            .Produces<MeResponse>();
 
         v1.MapPost("/system/ping", async (PingRequest req, IDispatcher dispatcher, CancellationToken ct) =>
             {
@@ -33,6 +21,8 @@ public static class ApiEndpoints
             .WithName("SystemPing")
             .WithSummary("Emits a system.ping event through the outbox (Admin only); consumed by the worker")
             .Produces<PingResponse>();
+
+        v1.MapIdentityEndpoints();
     }
 
     /// <summary>Maps a failed application Result to RFC 9457 problem+json.</summary>
