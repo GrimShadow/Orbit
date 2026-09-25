@@ -42,7 +42,7 @@ jobs:
   codeql:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions: { contents: read, actions: read }
+    permissions: { contents: read, actions: read, security-events: write }
     strategy:
       fail-fast: false
       matrix: { language: [csharp, javascript-typescript] }
@@ -55,10 +55,10 @@ jobs:
         with: { languages: "${{ matrix.language }}", build-mode: "${{ matrix.language == 'csharp' && 'manual' || 'none' }}" }
       - if: matrix.language == 'csharp'
         run: dotnet build Dam.sln -c Release
-      # Uploading to the Security tab needs GitHub code scanning (paid on private repos), so results stay in the job:
-      # the SARIF is kept as an artifact and the job fails on any error-level finding.
+      # Results go to the Security tab (free on public repos) and the job also fails on any error-level finding.
+      # Dependabot PRs run with a read-only token and cannot upload, so they only get the in-job gate.
       - uses: github/codeql-action/analyze@87ef0dc97def48aa960fbf026a2563ee9dbdb470 # v3
-        with: { upload: never, output: sarif-results, category: "/language:${{ matrix.language }}" }
+        with: { upload: "${{ github.actor == 'dependabot[bot]' && 'never' || 'always' }}", output: sarif-results, category: "/language:${{ matrix.language }}" }
       - name: Fail on error-level findings
         run: |
           n=$(jq '[.runs[].results[] | select(.level=="error")] | length' sarif-results/*.sarif)
@@ -114,9 +114,9 @@ jobs:
           - { name: worker, file: deploy/docker/Dockerfile.dotnet, args: "PROJECT=Dam.Worker" }
           - { name: scheduler, file: deploy/docker/Dockerfile.dotnet, args: "PROJECT=Dam.Scheduler" }
           - { name: console, file: web/console/Dockerfile, args: "" }
-    env:
-      IMAGE: "ghcr.io/${{ github.repository }}/${{ matrix.name }}"
     steps:
+      - name: Image name (Docker requires lowercase)
+        run: echo "IMAGE=ghcr.io/$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')/${{ matrix.name }}" >> "$GITHUB_ENV"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3

@@ -1,5 +1,6 @@
 # Build from the repo root: docker build -f web/console/Dockerfile .
-FROM node:22-alpine AS build
+# Static output only, so always build on the runner's native platform (no QEMU for the arm64 image).
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
