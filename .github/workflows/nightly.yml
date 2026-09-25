@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with: { global-json-file: global.json }
       - run: dotnet tool restore
       - run: make up
@@ -26,7 +26,7 @@ jobs:
         run: tools/smoke.sh
       # Unauthenticated surface only for now; an authenticated scan is added in Step 4.2 (security hardening).
       - name: ZAP API scan
-        uses: zaproxy/action-api-scan@v0.9.0
+        uses: zaproxy/action-api-scan@a9a916402665623ce9d37a6998d7b48e6b35dd6c # v0.9.0
         with:
           target: http://localhost:5080/openapi/v1.json
           format: openapi
@@ -35,5 +35,5 @@ jobs:
       - if: always()
         run: docker compose -f deploy/docker-compose.yml logs --no-color > /tmp/compose.log; tail -n 50 /tmp/api.log /tmp/worker.log || true
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with: { name: nightly-logs, path: "/tmp/*.log" }

@@ -8,3 +8,4 @@
 - Step 0.6: RabbitMQ topology (per-consumer queues, tiered retry, DLQ), outbox relay (restricted dam_system role), idempotent consumer host, Quartz-backed IJobScheduler, Worker and Scheduler hosts, `POST /api/v1/system/ping`.
 - Step 0.7: UI kit (tokens, light/dark, 11 accessible components, Storybook), console shell (Keycloak OIDC+PKCE, TanStack Query, i18n en/hi, tenant switcher, user menu, error boundary), ESLint+Prettier, Keycloak realm: refresh rotation and post-logout redirect.
 - Step 0.8: CI (build, test, lint, CodeQL, Semgrep, Trivy fs+image, CycloneDX SBOMs, helm lint), multi-arch GHCR images by git SHA, nightly stack smoke + ZAP, Dependabot, Dockerfiles (non-root), `tools/smoke.sh`.
+- CI first-run fixes: actions pinned by commit SHA, Trivy from a digest-pinned container, CodeQL gated in-job (no paid upload), nginx security headers at server level, favicon file, pnpm 10 with release-age/trust safeguards, Dependabot cooldown.

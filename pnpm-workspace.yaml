@@ -1,2 +1,11 @@
 packages:
   - web/*
+
+# Supply-chain hardening (pnpm >= 10.21)
+minimumReleaseAge: 10080        # never install a version published in the last 7 days
+blockExoticSubdeps: true        # transitive deps must come from the registry, not git/tarball URLs
+trustPolicy: no-downgrade       # refuse a version whose publish provenance is weaker than an earlier one
+
+# pnpm 10 skips dependency install scripts by default; esbuild needs its postinstall to fetch the native binary.
+onlyBuiltDependencies:
+  - esbuild

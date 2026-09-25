@@ -24,6 +24,7 @@ public sealed class TenantConnectionInterceptor(ITenantContext tenant) : DbConne
     private DbCommand Build(DbConnection c)
     {
         var cmd = c.CreateCommand();
+        // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- Sql is a compile-time constant; the tenant id is bound as @t.
         cmd.CommandText = Sql;
         var p = cmd.CreateParameter();
         p.ParameterName = "t";
