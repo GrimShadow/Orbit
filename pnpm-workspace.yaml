@@ -1,2 +1,15 @@
 packages:
   - web/*
+
+# Supply-chain hardening (pnpm >= 10.21)
+minimumReleaseAge: 10080        # never install a version published in the last 7 days
+blockExoticSubdeps: true        # transitive deps must come from the registry, not git/tarball URLs
+trustPolicy: no-downgrade       # refuse a version whose publish provenance is weaker than an earlier one
+
+# pnpm 10 skips dependency install scripts by default; esbuild needs its postinstall to fetch the native binary.
+onlyBuiltDependencies:
+  - esbuild
+
+# GHSA-w5hq-g745-h8pq: Storybook's actions addon pins uuid@9; it only calls v4(), which v11 keeps.
+overrides:
+  uuid: ^11.1.1
