@@ -13,3 +13,12 @@ csharp_style_namespace_declarations = file_scoped:warning
 dotnet_style_qualification_for_field = false:suggestion
 [Makefile]
 indent_style = tab
+
+[*.cs]
+# Deliberate: Result<T>.Success/Failure factories, an `Error` type, and terse DI registrations.
+dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.CA1000.severity = none
+dotnet_diagnostic.CA1062.severity = none
+dotnet_diagnostic.CA1711.severity = none
+[tests/**.cs]
+dotnet_diagnostic.CA1707.severity = none
