@@ -1,0 +1,12 @@
+bin/
+obj/
+node_modules/
+dist/
+.vite/
+storybook-static/
+*.user
+.env
+.env.*
+!.env.example
+.DS_Store
+TestResults/
