@@ -27,3 +27,10 @@ public abstract class AggregateRoot : TenantEntity
     protected void Raise(DomainEvent e) => _events.Add(e);
     public IReadOnlyList<DomainEvent> PullEvents() { var copy = _events.ToArray(); _events.Clear(); return copy; }
 }
+
+/// <summary>Events that concern one entity; used to fill audit_log.entity_type/entity_id.</summary>
+public interface IEntityEvent
+{
+    string EntityType { get; }
+    Guid EntityId { get; }
+}
