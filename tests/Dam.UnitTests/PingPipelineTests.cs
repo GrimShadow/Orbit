@@ -27,9 +27,10 @@ public sealed class PingPipelineTests
         public Task CommitAsync(CancellationToken ct) { Log.Add("commit"); return Task.CompletedTask; }
         public Task RollbackAsync(CancellationToken ct) { Log.Add("rollback"); return Task.CompletedTask; }
     }
-    private sealed class FakeEvents : IDomainEventSource, IOutbox
+    private sealed class FakeEvents : IDomainEventSource, IOutbox, IEventCollector
     {
         public List<DomainEvent> Outboxed { get; } = [];
+        public void Raise(DomainEvent e) { }
         public IReadOnlyList<DomainEvent> Drain() => [new PingEvent()];
         public Task EnqueueAsync(IEnumerable<DomainEvent> events, CancellationToken ct) { Outboxed.AddRange(events); return Task.CompletedTask; }
     }
@@ -43,6 +44,7 @@ public sealed class PingPipelineTests
         sc.AddSingleton<IUnitOfWork>(uow);
         sc.AddSingleton<IDomainEventSource>(ev);
         sc.AddSingleton<IOutbox>(ev);
+        sc.AddSingleton<IEventCollector>(ev);
         return (sc.BuildServiceProvider().GetRequiredService<IDispatcher>(), uow, ev);
     }
 

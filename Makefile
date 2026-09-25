@@ -1,5 +1,5 @@
 export DAM_MIGRATION_CONNECTION ?= Host=localhost;Port=15432;Database=dam;Username=dam;Password=dam
-.PHONY: run-api openapi migrate build test up up-search up-scan up-obs up-all down reset
+.PHONY: run-worker run-scheduler run-api openapi migrate build test up up-search up-scan up-obs up-all down reset
 build: ; dotnet build Dam.sln && pnpm -r build
 test:  ; dotnet test Dam.sln && pnpm test
 up:    ; docker compose -f deploy/docker-compose.yml up -d --wait
@@ -11,8 +11,12 @@ down:  ; docker compose -f deploy/docker-compose.yml --profile all down
 reset: ; docker compose -f deploy/docker-compose.yml --profile all down -v && $(MAKE) up
 migrate:
 	dotnet ef database update -p src/Dam.Infrastructure -s src/Dam.Infrastructure
-	docker compose -f deploy/docker-compose.yml exec -T postgres psql -U dam -d dam -c "GRANT dam_app TO dam_app_login"
+	docker compose -f deploy/docker-compose.yml exec -T postgres psql -U dam -d dam -c "GRANT dam_app TO dam_app_login; GRANT dam_system TO dam_system_login"
 run-api:
 	cd src/Dam.Api && dotnet run
 openapi:
 	UPDATE_OPENAPI=1 dotnet test tests/Dam.IntegrationTests --filter openapi
+run-worker:
+	cd src/Dam.Worker && dotnet run
+run-scheduler:
+	cd src/Dam.Scheduler && dotnet run

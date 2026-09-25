@@ -27,11 +27,20 @@ public sealed class EfUnitOfWork(DamDbContext db) : IUnitOfWork
     }
 }
 
-/// <summary>Collects events raised on tracked aggregates.</summary>
-public sealed class EfDomainEventSource(DamDbContext db) : IDomainEventSource
+/// <summary>Collects events raised on tracked aggregates plus loose events raised via <see cref="IEventCollector"/>.</summary>
+public sealed class EfDomainEventSource(DamDbContext db) : IDomainEventSource, IEventCollector
 {
-    public IReadOnlyList<DomainEvent> Drain() =>
-        db.ChangeTracker.Entries<AggregateRoot>().SelectMany(e => e.Entity.PullEvents()).ToList();
+    private readonly List<DomainEvent> _loose = [];
+
+    public void Raise(DomainEvent e) => _loose.Add(e);
+
+    public IReadOnlyList<DomainEvent> Drain()
+    {
+        var events = db.ChangeTracker.Entries<AggregateRoot>().SelectMany(e => e.Entity.PullEvents()).ToList();
+        events.AddRange(_loose);
+        _loose.Clear();
+        return events;
+    }
 }
 
 /// <summary>

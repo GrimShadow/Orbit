@@ -9,6 +9,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
 {
     public DbSet<OutboxMessage> Outbox => Set<OutboxMessage>();
     public DbSet<AuditLogEntry> AuditLog => Set<AuditLogEntry>();
+    public DbSet<ProcessedMessage> ProcessedMessages => Set<ProcessedMessage>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -21,6 +22,11 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasKey(x => x.Id);
             e.Property(x => x.Payload).HasColumnType("jsonb");
             e.HasIndex(x => x.CreatedAt).HasFilter("published_at IS NULL");
+        });
+        b.Entity<ProcessedMessage>(e =>
+        {
+            e.ToTable("processed_messages");
+            e.HasKey(x => new { x.Consumer, x.MessageId });
         });
         b.Entity<AuditLogEntry>(e =>
         {

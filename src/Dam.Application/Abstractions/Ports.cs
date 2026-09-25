@@ -30,3 +30,21 @@ public interface IUnitOfWork
 public interface IDomainEventSource { IReadOnlyList<DomainEvent> Drain(); }
 
 public interface IOutbox { Task EnqueueAsync(IEnumerable<DomainEvent> events, CancellationToken ct); }
+
+/// <summary>Lets handlers raise events that are not tied to a tracked aggregate. Drained by the outbox behaviour.</summary>
+public interface IEventCollector { void Raise(DomainEvent e); }
+
+/// <summary>Work that runs on a schedule, resolved by <see cref="Key"/> when its trigger fires (host: Dam.Scheduler).</summary>
+public interface IScheduledJob
+{
+    string Key { get; }
+    Task RunAsync(IReadOnlyDictionary<string, string> data, CancellationToken ct);
+}
+
+public interface IJobScheduler
+{
+    /// <summary>Fire <paramref name="jobKey"/> once. Re-scheduling the same <paramref name="scheduleId"/> replaces the trigger.</summary>
+    Task ScheduleOnceAsync(string scheduleId, string jobKey, DateTimeOffset at, IReadOnlyDictionary<string, string>? data = null, CancellationToken ct = default);
+    Task ScheduleCronAsync(string scheduleId, string jobKey, string cron, IReadOnlyDictionary<string, string>? data = null, CancellationToken ct = default);
+    Task<bool> CancelAsync(string scheduleId, CancellationToken ct = default);
+}

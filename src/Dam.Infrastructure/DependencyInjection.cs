@@ -17,7 +17,9 @@ public static class DependencyInjection
             .UseSnakeCaseNamingConvention()
             .AddInterceptors(sp.GetRequiredService<TenantConnectionInterceptor>()));
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
-        services.AddScoped<IDomainEventSource, EfDomainEventSource>();
+        services.AddScoped<EfDomainEventSource>();
+        services.AddScoped<IDomainEventSource>(sp => sp.GetRequiredService<EfDomainEventSource>());
+        services.AddScoped<IEventCollector>(sp => sp.GetRequiredService<EfDomainEventSource>());
         services.AddScoped<IOutbox, EfOutbox>();
         return services;
     }

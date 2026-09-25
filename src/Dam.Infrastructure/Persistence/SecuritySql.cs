@@ -79,4 +79,20 @@ public static class SecuritySql
         GRANT SELECT, INSERT ON audit_log TO dam_app;
         GRANT EXECUTE ON FUNCTION audit_verify(uuid) TO dam_app;
         """;
+
+    /// <summary>
+    /// Restricted role for the outbox relay: may read/mark outbox rows across tenants, touches nothing else.
+    /// (RLS is still forced; this role gets its own permissive policy on the one table.)
+    /// </summary>
+    public const string SystemRelayRole = """
+        DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'dam_system') THEN
+                CREATE ROLE dam_system NOLOGIN NOSUPERUSER NOBYPASSRLS;
+            END IF;
+        END $$;
+        GRANT USAGE ON SCHEMA public TO dam_system;
+        GRANT SELECT, UPDATE ON outbox TO dam_system;
+        CREATE POLICY system_relay ON outbox TO dam_system USING (true) WITH CHECK (true);
+        GRANT SELECT, INSERT ON processed_messages TO dam_app;
+        """;
 }

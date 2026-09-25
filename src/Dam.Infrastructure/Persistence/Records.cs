@@ -31,3 +31,12 @@ public sealed class AuditLogEntry : ITenantScoped
     public string PrevHash { get; set; } = "";
     public string Hash { get; set; } = "";
 }
+
+/// <summary>De-duplication ledger written in the same transaction as a consumer's effects.</summary>
+public sealed class ProcessedMessage : ITenantScoped
+{
+    public string Consumer { get; set; } = "";
+    public Guid MessageId { get; set; }
+    public Guid TenantId { get; set; }
+    public DateTimeOffset ProcessedAt { get; set; }
+}

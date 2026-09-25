@@ -30,6 +30,37 @@
           }
         }
       }
+    },
+    "/api/v1/system/ping": {
+      "post": {
+        "tags": [
+          "Dam.Api"
+        ],
+        "summary": "Emits a system.ping event through the outbox (Admin only); consumed by the worker",
+        "operationId": "SystemPing",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -66,6 +97,28 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "PingRequest": {
+        "required": [
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "PingResponse": {
+        "required": [
+          "reply"
+        ],
+        "type": "object",
+        "properties": {
+          "reply": {
+            "type": "string"
           }
         }
       }

@@ -18,6 +18,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     public string OwnerConnection => _pg.GetConnectionString();
     public string AppConnection { get; private set; } = "";
+    public string SystemConnection { get; private set; } = "";
 
     public async Task InitializeAsync()
     {
@@ -28,10 +29,15 @@ public sealed class PostgresFixture : IAsyncLifetime
         await using var conn = new NpgsqlConnection(OwnerConnection);
         await conn.OpenAsync();
         await using var cmd = conn.CreateCommand();
-        cmd.CommandText = "CREATE ROLE app_login LOGIN PASSWORD 'app_pw' NOSUPERUSER NOBYPASSRLS IN ROLE dam_app";
+        cmd.CommandText = """
+            CREATE ROLE app_login LOGIN PASSWORD 'app_pw' NOSUPERUSER NOBYPASSRLS IN ROLE dam_app;
+            CREATE ROLE sys_login LOGIN PASSWORD 'sys_pw' NOSUPERUSER NOBYPASSRLS IN ROLE dam_system;
+            """;
         await cmd.ExecuteNonQueryAsync();
         AppConnection = new NpgsqlConnectionStringBuilder(OwnerConnection)
             { Username = "app_login", Password = "app_pw", Pooling = false }.ConnectionString;
+        SystemConnection = new NpgsqlConnectionStringBuilder(OwnerConnection)
+            { Username = "sys_login", Password = "sys_pw" }.ConnectionString;
     }
 
     public Task DisposeAsync() => _pg.DisposeAsync().AsTask();
