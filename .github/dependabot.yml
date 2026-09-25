@@ -1,7 +1,26 @@
+# Majors (a new .NET, Node, Vite/Vitest/Storybook line) are upgraded deliberately, never automatically.
+# Minor/patch updates arrive as ONE grouped PR per ecosystem, monthly, to keep CI cost and review load low.
 version: 2
 updates:
-  - { package-ecosystem: nuget, directory: "/", schedule: { interval: weekly }, open-pull-requests-limit: 5 }
-  - { package-ecosystem: npm, directory: "/", schedule: { interval: weekly }, open-pull-requests-limit: 5 }
-  - { package-ecosystem: github-actions, directory: "/", schedule: { interval: weekly } }
-  - { package-ecosystem: docker, directory: "/deploy/docker", schedule: { interval: weekly } }
-  - { package-ecosystem: docker, directory: "/web/console", schedule: { interval: weekly } }
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 2
+    ignore: [{ dependency-name: "*", update-types: ["version-update:semver-major"] }]
+    groups: { nuget-minor-patch: { update-types: [minor, patch] } }
+  - package-ecosystem: npm
+    directory: "/"
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 2
+    ignore: [{ dependency-name: "*", update-types: ["version-update:semver-major"] }]
+    groups: { npm-minor-patch: { update-types: [minor, patch] } }
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 2
+    groups: { actions: { update-types: [minor, patch, major] } }
+  - package-ecosystem: docker
+    directories: ["/deploy/docker", "/web/console"]
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 2
+    ignore: [{ dependency-name: "*", update-types: ["version-update:semver-major"] }]
