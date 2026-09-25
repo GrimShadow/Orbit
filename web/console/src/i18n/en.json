@@ -1,0 +1,36 @@
+{
+  "app": { "name": "PADS4 DAM", "skip": "Skip to main content" },
+  "nav": { "primary": "Primary", "home": "Home", "account": "My account" },
+  "shell": {
+    "tenant": "Tenant",
+    "language": "Language",
+    "userMenu": "Account menu",
+    "signOut": "Sign out",
+    "defaultTenant": "Tenant {{id}}"
+  },
+  "login": {
+    "title": "Sign in to PADS4 DAM",
+    "body": "Use your organisation account to manage and publish digital assets.",
+    "action": "Sign in",
+    "redirecting": "Redirecting to sign-in…"
+  },
+  "home": { "title": "Welcome, {{name}}", "body": "Your library, approvals and analytics will appear here as they are built." },
+  "me": {
+    "title": "My account",
+    "name": "Name",
+    "email": "Email",
+    "tenant": "Tenant ID",
+    "roles": "Roles",
+    "noRoles": "No roles assigned",
+    "loadFailed": "Could not load your account",
+    "reference": "Reference: {{id}}",
+    "retry": "Try again"
+  },
+  "notFound": { "title": "Page not found", "body": "The page you asked for does not exist.", "home": "Back to home" },
+  "error": {
+    "title": "Something went wrong",
+    "body": "An unexpected error occurred. Reload the page to continue.",
+    "reload": "Reload"
+  },
+  "callback": { "signingIn": "Signing you in…", "failed": "Sign-in failed", "retry": "Try again" }
+}

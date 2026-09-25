@@ -12,4 +12,8 @@ jobs:
         with: { node-version: 22, cache: pnpm }
       - run: dotnet build Dam.sln -c Release
       - run: dotnet test Dam.sln -c Release --no-build
-      - run: pnpm install --frozen-lockfile=false && pnpm -r build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check && pnpm lint
+      - run: pnpm build
+      - run: pnpm test
+      - run: pnpm --filter @dam/ui-kit build-storybook
