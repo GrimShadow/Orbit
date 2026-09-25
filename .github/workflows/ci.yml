@@ -19,7 +19,7 @@ jobs:
       # They also fail if docs/api/openapi.json drifts from the running API (the OpenAPI diff check).
       - run: dotnet test Dam.sln -c Release --no-build --logger "trx;LogFileName=results.trx"
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with: { name: dotnet-test-results, path: "**/TestResults/*.trx" }
 
   web:
@@ -78,7 +78,7 @@ jobs:
           exit-code: "1"
       - uses: aquasecurity/trivy-action@0.28.0
         with: { scan-type: fs, format: cyclonedx, output: sbom-source.cdx.json, skip-dirs: "node_modules,tests" }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: sbom-source, path: sbom-source.cdx.json }
 
   helm:
@@ -131,7 +131,7 @@ jobs:
           image-ref: scan/${{ matrix.name }}:${{ github.sha }}
           format: cyclonedx
           output: sbom-${{ matrix.name }}.cdx.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: "sbom-${{ matrix.name }}", path: "sbom-${{ matrix.name }}.cdx.json" }
       - name: Log in to GHCR
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
