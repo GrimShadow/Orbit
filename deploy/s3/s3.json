@@ -1,0 +1,3 @@
+{ "identities": [ { "name": "dam",
+  "credentials": [ { "accessKey": "damaccess", "secretKey": "damsecret-change-me" } ],
+  "actions": ["Admin", "Read", "Write", "List", "Tagging"] } ] }

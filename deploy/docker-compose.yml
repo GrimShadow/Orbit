@@ -1,0 +1,136 @@
+# Laptop-friendly dev stack (Apple Silicon OK, all images multi-arch).
+# Core (default):  make up          -> postgres, s3, redis, rabbitmq, keycloak  (~2.5 GB RAM)
+# Search:          make up-search   -> + opensearch (single node, 1 GB heap)
+# Scanning:        make up-scan     -> + clamav (~1.5 GB RAM)
+# Observability:   make up-obs      -> + otel-collector, tempo, loki, prometheus, grafana
+# Everything:      make up-all      (needs Docker Desktop with >= 8 GB RAM)
+name: dam
+
+x-healthy: &hc { interval: 5s, timeout: 5s, retries: 20 }
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: dam, POSTGRES_PASSWORD: dam, POSTGRES_DB: dam }
+    ports: ["${DAM_PORT_PG:-15432}:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data, ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U dam"], <<: *hc }
+    mem_limit: 512m
+
+  # S3-compatible object store. MinIO stopped publishing public images, so dev uses SeaweedFS (ADR-0001).
+  s3:
+    image: chrislusf/seaweedfs:latest
+    command: server -dir=/data -s3 -s3.port=9000 -s3.config=/etc/s3.json -master.volumeSizeLimitMB=1024
+    ports: ["${DAM_PORT_S3:-19000}:9000"]
+    volumes: [s3data:/data, ./s3/s3.json:/etc/s3.json:ro]
+    healthcheck: { test: ["CMD-SHELL", "wget -qO- http://$$(hostname -i):9333/cluster/status >/dev/null"], <<: *hc }
+    mem_limit: 768m
+
+  s3-init:
+    image: amazon/aws-cli:latest
+    depends_on: { s3: { condition: service_healthy } }
+    environment: { AWS_ACCESS_KEY_ID: damaccess, AWS_SECRET_ACCESS_KEY: damsecret-change-me, AWS_DEFAULT_REGION: us-east-1 }
+    entrypoint: >
+      /bin/sh -c "
+      until aws --endpoint-url http://s3:9000 s3 ls >/dev/null 2>&1; do sleep 2; done;
+      for b in dam-originals dam-renditions dam-quarantine; do
+        aws --endpoint-url http://s3:9000 s3api create-bucket --bucket $$b 2>/dev/null;
+        aws --endpoint-url http://s3:9000 s3api put-bucket-versioning --bucket $$b --versioning-configuration Status=Enabled;
+      done; aws --endpoint-url http://s3:9000 s3 ls"
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    ports: ["${DAM_PORT_REDIS:-16379}:6379"]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], <<: *hc }
+    mem_limit: 128m
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment: { RABBITMQ_DEFAULT_USER: dam, RABBITMQ_DEFAULT_PASS: dam }
+    ports: ["${DAM_PORT_AMQP:-15673}:5672", "${DAM_PORT_RMQ_UI:-25672}:15672"]
+    healthcheck: { test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"], interval: 10s, timeout: 10s, retries: 20 }
+    mem_limit: 512m
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: dam
+      KC_DB_PASSWORD: dam
+      KC_HEALTH_ENABLED: "true"
+      JAVA_OPTS_KC_HEAP: "-Xms256m -Xmx512m"
+    ports: ["${DAM_PORT_KC:-18080}:8080"]
+    volumes: [./keycloak/realm-dam.json:/opt/keycloak/data/import/realm-dam.json:ro]
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -q '\"status\": \"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+    mem_limit: 1g
+
+  opensearch:
+    profiles: [search, all]
+    image: opensearchproject/opensearch:2.17.1
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"      # dev only
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx1g"
+      bootstrap.memory_lock: "false"
+    ports: ["${DAM_PORT_OS:-19200}:9200"]
+    volumes: [osdata:/usr/share/opensearch/data]
+    healthcheck: { test: ["CMD-SHELL", "curl -sf localhost:9200/_cluster/health"], interval: 10s, timeout: 5s, retries: 30 }
+    mem_limit: 2g
+
+  opensearch-dashboards:
+    profiles: [dashboards]
+    image: opensearchproject/opensearch-dashboards:2.17.1
+    environment: { OPENSEARCH_HOSTS: '["http://opensearch:9200"]', DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true" }
+    ports: ["${DAM_PORT_OSD:-15601}:5601"]
+    depends_on: [opensearch]
+
+  clamav:
+    profiles: [scan, all]
+    image: clamav/clamav:1.4
+    ports: ["${DAM_PORT_CLAM:-13310}:3310"]
+    healthcheck: { test: ["CMD", "clamdcheck.sh"], interval: 30s, timeout: 10s, retries: 20, start_period: 120s }
+    mem_limit: 2g
+
+  otel-collector:
+    profiles: [obs, all]
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    command: ["--config=/etc/otel.yaml"]
+    volumes: [./otel/otel-collector.yaml:/etc/otel.yaml:ro]
+    ports: ["${DAM_PORT_OTLP:-14317}:4317", "${DAM_PORT_OTLPH:-14318}:4318"]
+
+  tempo:
+    profiles: [obs, all]
+    image: grafana/tempo:2.6.1
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes: [./otel/tempo.yaml:/etc/tempo.yaml:ro]
+
+  loki:
+    profiles: [obs, all]
+    image: grafana/loki:3.2.1
+
+  prometheus:
+    profiles: [obs, all]
+    image: prom/prometheus:v2.55.0
+    command: ["--config.file=/etc/prometheus.yml", "--web.enable-remote-write-receiver"]
+    volumes: [./otel/prometheus.yml:/etc/prometheus.yml:ro]
+
+  grafana:
+    profiles: [obs, all]
+    image: grafana/grafana:11.3.0
+    environment: { GF_AUTH_ANONYMOUS_ENABLED: "true", GF_AUTH_ANONYMOUS_ORG_ROLE: Admin }
+    volumes: [./otel/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/ds.yaml:ro]
+    ports: ["${DAM_PORT_GRAFANA:-13000}:3000"]
+
+volumes: { pgdata: {}, s3data: {}, osdata: {} }
