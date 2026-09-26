@@ -124,4 +124,8 @@ public static class SecuritySql
     public const string AssetGrants = """
         GRANT SELECT, INSERT, UPDATE ON assets, uploads TO dam_app;   -- assets are soft-deleted; nothing is ever hard-deleted by the app
         """;
+
+    public const string VersionGrants = """
+        GRANT SELECT, INSERT ON asset_versions TO dam_app;   -- versions are immutable: never updated or deleted
+        """;
 }

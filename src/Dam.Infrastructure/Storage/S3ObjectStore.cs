@@ -20,6 +20,9 @@ public sealed class S3Options
     public string BucketOriginals { get; set; } = "dam-originals";
     public string BucketRenditions { get; set; } = "dam-renditions";
     public string BucketQuarantine { get; set; } = "dam-quarantine";
+    /// <summary>Above this size a copy is done in parts (single S3 copies are capped at 5 GB).</summary>
+    public long CopyMultipartThresholdBytes { get; set; } = 4L * 1024 * 1024 * 1024;
+    public long CopyPartBytes { get; set; } = 512L * 1024 * 1024;
 }
 
 /// <summary>
@@ -64,7 +67,11 @@ public sealed class S3ObjectStore : IObjectStore, IDisposable
     public string PresignPart(string bucket, string key, string s3UploadId, int partNumber, TimeSpan ttl) =>
         _signer.GetPreSignedURL(new GetPreSignedUrlRequest
         {
-            BucketName = bucket, Key = key, Verb = HttpVerb.PUT, UploadId = s3UploadId, PartNumber = partNumber,
+            BucketName = bucket,
+            Key = key,
+            Verb = HttpVerb.PUT,
+            UploadId = s3UploadId,
+            PartNumber = partNumber,
             Expires = DateTime.UtcNow.Add(ttl),
             // The SDK defaults presigned URLs to HTTPS whatever the endpoint is; follow the configured endpoint's scheme instead.
             Protocol = _publicScheme,
@@ -88,7 +95,9 @@ public sealed class S3ObjectStore : IObjectStore, IDisposable
     {
         var r = await _client.CompleteMultipartUploadAsync(new CompleteMultipartUploadRequest
         {
-            BucketName = bucket, Key = key, UploadId = s3UploadId,
+            BucketName = bucket,
+            Key = key,
+            UploadId = s3UploadId,
             PartETags = parts.Select(p => new PartETag(p.PartNumber, p.ETag)).ToList(),
         }, ct);
         var head = await HeadAsync(bucket, key, ct);
@@ -116,6 +125,62 @@ public sealed class S3ObjectStore : IObjectStore, IDisposable
         var r = await _client.GetObjectAsync(new GetObjectRequest { BucketName = bucket, Key = key }, ct);
         return new OwningStream(r.ResponseStream, r);
     }
+
+    public async Task<byte[]> ReadRangeAsync(string bucket, string key, long offset, long length, CancellationToken ct)
+    {
+        if (length <= 0) return [];
+        using var r = await _client.GetObjectAsync(new GetObjectRequest { BucketName = bucket, Key = key, ByteRange = new ByteRange(offset, offset + length - 1) }, ct);
+        using var ms = new MemoryStream();
+        await r.ResponseStream.CopyToAsync(ms, ct);
+        return ms.ToArray();
+    }
+
+    public async Task CopyAsync(string sourceBucket, string sourceKey, string destinationBucket, string destinationKey, long size, CancellationToken ct)
+    {
+        if (size <= _options.CopyMultipartThresholdBytes)
+        {
+            await _client.CopyObjectAsync(new CopyObjectRequest { SourceBucket = sourceBucket, SourceKey = sourceKey, DestinationBucket = destinationBucket, DestinationKey = destinationKey }, ct);
+            return;
+        }
+        var init = await _client.InitiateMultipartUploadAsync(new InitiateMultipartUploadRequest { BucketName = destinationBucket, Key = destinationKey }, ct);
+        try
+        {
+            var etags = new List<PartETag>();
+            var part = 1;
+            for (long start = 0; start < size; start += _options.CopyPartBytes, part++)
+            {
+                var end = Math.Min(start + _options.CopyPartBytes, size) - 1;
+                var r = await _client.CopyPartAsync(new CopyPartRequest
+                {
+                    SourceBucket = sourceBucket,
+                    SourceKey = sourceKey,
+                    DestinationBucket = destinationBucket,
+                    DestinationKey = destinationKey,
+                    UploadId = init.UploadId,
+                    PartNumber = part,
+                    FirstByte = start,
+                    LastByte = end,
+                }, ct);
+                etags.Add(new PartETag(part, r.ETag));
+            }
+            await _client.CompleteMultipartUploadAsync(new CompleteMultipartUploadRequest { BucketName = destinationBucket, Key = destinationKey, UploadId = init.UploadId, PartETags = etags }, ct);
+        }
+        catch
+        {
+            await AbortMultipartAsync(destinationBucket, destinationKey, init.UploadId, CancellationToken.None);
+            throw;
+        }
+    }
+
+    public string PresignGet(string bucket, string key, TimeSpan ttl) =>
+        _client.GetPreSignedURL(new GetPreSignedUrlRequest
+        {
+            BucketName = bucket,
+            Key = key,
+            Verb = HttpVerb.GET,
+            Expires = DateTime.UtcNow.Add(ttl),
+            Protocol = new Uri(_options.Endpoint).Scheme == Uri.UriSchemeHttp ? Protocol.HTTP : Protocol.HTTPS,
+        });
 
     public Task DeleteAsync(string bucket, string key, CancellationToken ct) =>
         _client.DeleteObjectAsync(new DeleteObjectRequest { BucketName = bucket, Key = key }, ct);
@@ -162,6 +227,8 @@ public static class StorageRegistration
             BucketRenditions = cfg["DAM_S3_BUCKET_RENDITIONS"] ?? "dam-renditions",
             BucketQuarantine = cfg["DAM_S3_BUCKET_QUARANTINE"] ?? "dam-quarantine",
         };
+        if (long.TryParse(cfg["DAM_COPY_MULTIPART_THRESHOLD_MB"], out var thresholdMb) && thresholdMb > 0) s3.CopyMultipartThresholdBytes = thresholdMb * 1024 * 1024;
+        if (long.TryParse(cfg["DAM_COPY_PART_MB"], out var partMb) && partMb >= 5) s3.CopyPartBytes = partMb * 1024 * 1024;
         var uploads = new UploadSettings();
         if (int.TryParse(cfg["DAM_UPLOAD_PART_SIZE_MB"], out var mb) && mb > 0)
             uploads.PartSizeBytes = Math.Max(UploadSettings.MinPartSize, mb * 1024 * 1024);

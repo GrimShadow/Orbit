@@ -81,6 +81,8 @@ public sealed class Asset : AggregateRoot
     public void SetTags(IEnumerable<string> tags, DateTimeOffset now) { Tags = Normalize(tags); UpdatedAt = now; }
     public void MoveTo(Guid? folderId, DateTimeOffset now) { FolderId = folderId; UpdatedAt = now; }
     public void SetChecksum(string sha256, DateTimeOffset now) { ChecksumSha256 = sha256; UpdatedAt = now; }
+    public void SetCurrentVersion(Guid versionId, DateTimeOffset now) { CurrentVersionId = versionId; UpdatedAt = now; }
+    public void SetPhash(string? phash, DateTimeOffset now) { Phash = phash; UpdatedAt = now; }
 
     public void ChangeStatus(string to, string reason, DateTimeOffset now)
     {
@@ -98,7 +100,13 @@ public sealed class Asset : AggregateRoot
     /// <summary>The facts the policy engine needs about this asset.</summary>
     public ResourceContext ToResource(string? folderPath) => new()
     {
-        Type = "asset", TenantId = TenantId, Status = Status, FolderPath = folderPath, AssetType = Type, OwnerId = OwnerId, Attributes = Attributes,
+        Type = "asset",
+        TenantId = TenantId,
+        Status = Status,
+        FolderPath = folderPath,
+        AssetType = Type,
+        OwnerId = OwnerId,
+        Attributes = Attributes,
     };
 
     /// <summary>What is derived from metadata: term codes and access attributes.</summary>
@@ -117,6 +125,10 @@ public enum UploadStatus
     Duplicate,
     Failed,
     Aborted,
+    /// <summary>The virus scan found malware. The file is kept apart in quarantine and the asset is blocked.</summary>
+    Blocked,
+    /// <summary>Scanned, checked, described and stored as a version: the upload's work is done.</summary>
+    Ingested,
 }
 
 /// <summary>One resumable file transfer for an asset. The bytes go straight to object storage, never through the API.</summary>
@@ -140,6 +152,12 @@ public sealed class Upload : TenantEntity
     public long? SizeBytes { get; private set; }
     public Guid? DuplicateOfAssetId { get; private set; }
     public string Error { get; private set; } = "";
+    /// <summary>Where the ingest pipeline has got to: hashed, scanned, sniffed, extracted, promoted (or rejected/blocked).</summary>
+    public string IngestStage { get; private set; } = "";
+    /// <summary>Type detected from the file's bytes (never from its name).</summary>
+    public string? DetectedMime { get; private set; }
+    /// <summary>Everything learned about the file so far: scan verdict, detected kind, EXIF, video streams, PDF properties…</summary>
+    public Dictionary<string, JsonElement> TechnicalMetadata { get; private set; } = [];
     public Guid? CreatedBy { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset ExpiresAt { get; private set; }
@@ -150,9 +168,22 @@ public sealed class Upload : TenantEntity
     {
         return new Upload
         {
-            Id = id, TenantId = tenantId, AssetId = assetId, BatchId = batchId, Status = UploadStatus.Initiated, FileName = fileName,
-            DeclaredSize = size, ContentType = contentType, Bucket = bucket, StorageKey = KeyFor(tenantId, assetId, id), S3UploadId = s3UploadId,
-            PartSize = partSize, PartCount = PartsFor(size, partSize), AllowDuplicate = allowDuplicate, CreatedBy = createdBy, CreatedAt = now,
+            Id = id,
+            TenantId = tenantId,
+            AssetId = assetId,
+            BatchId = batchId,
+            Status = UploadStatus.Initiated,
+            FileName = fileName,
+            DeclaredSize = size,
+            ContentType = contentType,
+            Bucket = bucket,
+            StorageKey = KeyFor(tenantId, assetId, id),
+            S3UploadId = s3UploadId,
+            PartSize = partSize,
+            PartCount = PartsFor(size, partSize),
+            AllowDuplicate = allowDuplicate,
+            CreatedBy = createdBy,
+            CreatedAt = now,
             ExpiresAt = now + lifetime,
         };
     }
@@ -163,11 +194,129 @@ public sealed class Upload : TenantEntity
     public static int PartsFor(long size, int partSize) => (int)Math.Max(1, (size + partSize - 1) / partSize);
 
     public void MarkProcessing(DateTimeOffset now) { Status = UploadStatus.Processing; CompletedAt = now; }
-    public void MarkReady(string sha256, long size) { Status = UploadStatus.Ready; Sha256 = sha256; SizeBytes = size; }
+    public void MarkReady(string sha256, long size) { Status = UploadStatus.Ready; Sha256 = sha256; SizeBytes = size; IngestStage = "hashed"; }
     public void MarkDuplicate(string sha256, long size, Guid duplicateOf) { Status = UploadStatus.Duplicate; Sha256 = sha256; SizeBytes = size; DuplicateOfAssetId = duplicateOf; }
     public void MarkFailed(string error) { Status = UploadStatus.Failed; Error = error.Length > 500 ? error[..500] : error; }
     public void MarkAborted() => Status = UploadStatus.Aborted;
+
+    // ---- ingest stages (Step 1.4). Each moves the stage forward and can be repeated safely by checking the current stage first.
+    public bool IsAt(string stage) => Status == UploadStatus.Ready && IngestStage == stage;
+
+    public void MarkScanned(Dictionary<string, JsonElement> scan) { IngestStage = "scanned"; Merge(scan); }
+
+    public void MarkSniffed(string mime, Dictionary<string, JsonElement> sniff) { IngestStage = "sniffed"; DetectedMime = mime; Merge(sniff); }
+
+    public void MarkExtracted(Dictionary<string, JsonElement> extracted) { IngestStage = "extracted"; Merge(extracted); }
+
+    public void MarkIngested() { Status = UploadStatus.Ingested; IngestStage = "promoted"; }
+
+    public void MarkBlocked(string reason) { Status = UploadStatus.Blocked; IngestStage = "blocked"; Error = reason.Length > 500 ? reason[..500] : reason; }
+
+    public void MarkRejected(string reason) { Status = UploadStatus.Failed; IngestStage = "rejected"; Error = reason.Length > 500 ? reason[..500] : reason; }
+
+    private void Merge(Dictionary<string, JsonElement> more)
+    {
+        var merged = new Dictionary<string, JsonElement>(TechnicalMetadata);
+        foreach (var (k, v) in more) merged[k] = v;
+        TechnicalMetadata = merged; // a new instance, so change tracking sees the edit
+    }
     public bool IsOpen => Status == UploadStatus.Initiated;
+}
+
+/// <summary>One stored file of an asset. Versions are immutable; restoring an old one creates a new version (spec A4.1).</summary>
+public sealed class AssetVersion : TenantEntity
+{
+    private AssetVersion() { }
+
+    public Guid AssetId { get; private set; }
+    public int VersionNo { get; private set; }
+    public string Bucket { get; private set; } = "";
+    public string StorageKey { get; private set; } = "";
+    public long SizeBytes { get; private set; }
+    public string Mime { get; private set; } = "";
+    public string Sha256 { get; private set; } = "";
+    public Dictionary<string, JsonElement> TechnicalMetadata { get; private set; } = [];
+    public string ChangeNote { get; private set; } = "";
+    /// <summary>The upload that produced this version. Makes promotion safe to repeat: one upload, one version.</summary>
+    public Guid UploadId { get; private set; }
+    public Guid? CreatedBy { get; private set; }
+    public DateTimeOffset CreatedAt { get; private set; }
+
+    /// <summary>The id is derived from the upload, so a redelivered message finds the same version instead of making a second.</summary>
+    public static Guid IdFor(Guid uploadId)
+    {
+        var bytes = System.Security.Cryptography.SHA256.HashData(uploadId.ToByteArray().Concat("version"u8.ToArray()).ToArray());
+        return new Guid(bytes.AsSpan(0, 16));
+    }
+
+    public static string KeyFor(Guid tenantId, Guid assetId, Guid versionId) => $"{tenantId:N}/{assetId:N}/{versionId:N}";
+
+    public static AssetVersion Create(Guid tenantId, Guid assetId, int versionNo, string bucket, Guid uploadId, long size, string mime, string sha256,
+        Dictionary<string, JsonElement> technical, string changeNote, Guid? createdBy, DateTimeOffset now)
+    {
+        var id = IdFor(uploadId);
+        return new AssetVersion
+        {
+            Id = id,
+            TenantId = tenantId,
+            AssetId = assetId,
+            VersionNo = versionNo,
+            Bucket = bucket,
+            StorageKey = KeyFor(tenantId, assetId, id),
+            SizeBytes = size,
+            Mime = mime,
+            Sha256 = sha256,
+            TechnicalMetadata = technical,
+            ChangeNote = changeNote,
+            UploadId = uploadId,
+            CreatedBy = createdBy,
+            CreatedAt = now,
+        };
+    }
+}
+
+public sealed record AssetVersionAdded(Guid AssetId, Guid VersionId, int VersionNo) : DomainEvent, IEntityEvent
+{
+    public override string Name => "asset.version.added";
+    public string EntityType => "asset";
+    public Guid EntityId => AssetId;
+}
+
+public sealed record IngestScanned(Guid UploadId, Guid AssetId) : DomainEvent, IEntityEvent
+{
+    public override string Name => "ingest.scanned";
+    public string EntityType => "upload";
+    public Guid EntityId => UploadId;
+}
+
+public sealed record IngestSniffed(Guid UploadId, Guid AssetId) : DomainEvent, IEntityEvent
+{
+    public override string Name => "ingest.sniffed";
+    public string EntityType => "upload";
+    public Guid EntityId => UploadId;
+}
+
+public sealed record IngestExtracted(Guid UploadId, Guid AssetId) : DomainEvent, IEntityEvent
+{
+    public override string Name => "ingest.extracted";
+    public string EntityType => "upload";
+    public Guid EntityId => UploadId;
+}
+
+/// <summary>The virus scan found malware; the asset is blocked and the file is kept apart.</summary>
+public sealed record IngestBlocked(Guid UploadId, Guid AssetId, string Signature) : DomainEvent, IEntityEvent
+{
+    public override string Name => "ingest.blocked";
+    public string EntityType => "upload";
+    public Guid EntityId => UploadId;
+}
+
+/// <summary>The file was refused (wrong content for its type, executable, oversize…). Recorded for the audit trail.</summary>
+public sealed record IngestRejected(Guid UploadId, Guid AssetId, string Reason) : DomainEvent, IEntityEvent
+{
+    public override string Name => "ingest.rejected";
+    public string EntityType => "upload";
+    public Guid EntityId => UploadId;
 }
 
 public sealed record UploadCompleted(Guid UploadId, Guid AssetId) : DomainEvent, IEntityEvent

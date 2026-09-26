@@ -22,6 +22,8 @@ public static class AssetStatuses
     public const string Expired = "expired";
     public const string Archived = "archived";
     public const string Deleted = "deleted";
+    /// <summary>The virus scan found malware in the upload (Step 1.4).</summary>
+    public const string Blocked = "blocked";
 }
 
 public enum PrincipalType { User, Group, Role }
@@ -60,8 +62,13 @@ public sealed record ResourceContext
         if (channel is not null) attrs[Dimensions.Channel] = channel;
         return new ResourceContext
         {
-            Status = status, FolderPath = folderPath, OwnerId = ownerId, AssetType = assetType, TenantId = tenantId,
-            CollectionIds = collections ?? [], Attributes = attrs,
+            Status = status,
+            FolderPath = folderPath,
+            OwnerId = ownerId,
+            AssetType = assetType,
+            TenantId = tenantId,
+            CollectionIds = collections ?? [],
+            Attributes = attrs,
         };
     }
 }

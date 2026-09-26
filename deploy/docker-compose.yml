@@ -101,10 +101,16 @@ services:
 
   clamav:
     profiles: [scan, all]
-    image: clamav/clamav:1.4
+    # The Debian-based image is multi-arch (amd64 + arm64); the Alpine one has no Apple Silicon build.
+    image: clamav/clamav-debian:1.4
+    environment:
+      # clamd skips anything above these limits; keep them in step with DAM_SCAN_MAX_MB (default 2048).
+      CLAMD_CONF_StreamMaxLength: 2000M
+      CLAMD_CONF_MaxFileSize: 2000M
+      CLAMD_CONF_MaxScanSize: 2000M
     ports: ["${DAM_PORT_CLAM:-13310}:3310"]
     healthcheck: { test: ["CMD", "clamdcheck.sh"], interval: 30s, timeout: 10s, retries: 20, start_period: 120s }
-    mem_limit: 2g
+    mem_limit: 3g
 
   otel-collector:
     profiles: [obs, all]
