@@ -167,13 +167,13 @@ public sealed record UpdateAccessRuleCommand(
 
 internal static partial class ScopeRules
 {
-    /// <summary>Dotted lowercase labels, like an ltree path: brand.thar.hero</summary>
+    /// <summary>Dotted lowercase labels, like an ltree path: brand.roadster.hero</summary>
     [GeneratedRegex("^[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)*$")]
     private static partial Regex FolderPath();
 
     public static IRuleBuilderOptions<T, string?> ValidScope<T>(this IRuleBuilder<T, string?> valueRule, Func<T, string> type) =>
         valueRule.Must((cmd, value) => Check(type(cmd), value)).WithMessage(
-            "Scope value: folder = dotted path (brand.thar), collection = id, asset_type = name, all = leave empty.");
+            "Scope value: folder = dotted path (brand.roadster), collection = id, asset_type = name, all = leave empty.");
 
     private static bool Check(string type, string? value) => Enum.TryParse<ScopeType>(type.Replace("_", ""), true, out var t) && t switch
     {

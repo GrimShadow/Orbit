@@ -217,11 +217,11 @@ public sealed class IdentityTests(PostgresFixture pg) : IAsyncLifetime
         Assert.True(builtInAdmin.GetProperty("isBuiltIn").GetBoolean());
 
         var created = await Call(HttpMethod.Post, "/api/v1/roles", admin, new
-            { name = "Ask Assist", description = "Reviews", permissions = new[] { "assets.read", "assets.read.in_review" }, attributeRestricted = false });
+            { name = "Reviewer", description = "Reviews", permissions = new[] { "assets.read", "assets.read.in_review" }, attributeRestricted = false });
         Assert.Equal(HttpStatusCode.Created, created.Status);
         var id = created.Body.GetProperty("id").GetGuid();
 
-        var dupe = await Call(HttpMethod.Post, "/api/v1/roles", admin, new { name = "ask assist", permissions = new[] { "assets.read" } });
+        var dupe = await Call(HttpMethod.Post, "/api/v1/roles", admin, new { name = "reviewer", permissions = new[] { "assets.read" } });
         Assert.Equal(HttpStatusCode.Conflict, dupe.Status); // case-insensitive
 
         var bad = await Call(HttpMethod.Post, "/api/v1/roles", admin, new { name = "Bad", permissions = new[] { "assets.fly" } });
@@ -279,13 +279,13 @@ public sealed class IdentityTests(PostgresFixture pg) : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Conflict, (await Call(HttpMethod.Delete, $"/api/v1/groups/{idpId}", admin)).Status);
         Assert.Equal(HttpStatusCode.Conflict, (await Call(HttpMethod.Put, $"/api/v1/groups/{idpId}/members", admin, new { ids = Array.Empty<Guid>() })).Status);
 
-        var created = await Call(HttpMethod.Post, "/api/v1/groups", admin, new { name = "Thar approvers" });
+        var created = await Call(HttpMethod.Post, "/api/v1/groups", admin, new { name = "Roadster approvers" });
         Assert.Equal(HttpStatusCode.Created, created.Status);
         var gid = created.Body.GetProperty("group").GetProperty("id").GetGuid();
-        Assert.Equal(HttpStatusCode.Conflict, (await Call(HttpMethod.Post, "/api/v1/groups", admin, new { name = "thar APPROVERS" })).Status);
+        Assert.Equal(HttpStatusCode.Conflict, (await Call(HttpMethod.Post, "/api/v1/groups", admin, new { name = "roadster APPROVERS" })).Status);
 
         var rule = await Call(HttpMethod.Post, "/api/v1/access-rules", admin, new
-            { principalType = "group", principalId = gid, scopeType = "folder", scopeValue = "brand.thar", permissions = new[] { "assets.approve" } });
+            { principalType = "group", principalId = gid, scopeType = "folder", scopeValue = "brand.roadster", permissions = new[] { "assets.approve" } });
         Assert.Equal(HttpStatusCode.Created, rule.Status);
 
         Assert.Equal(HttpStatusCode.NoContent, (await Call(HttpMethod.Delete, $"/api/v1/groups/{gid}", admin)).Status);
@@ -350,14 +350,14 @@ public sealed class IdentityTests(PostgresFixture pg) : IAsyncLifetime
         var t = await NewTenantAsync(); var admin = Admin(t);
         var uid = (await Call(HttpMethod.Get, "/api/v1/me", ApiTestHost.TokenFor(t, Guid.NewGuid(), ["Approver"]))).Body.GetProperty("userId").GetGuid();
 
-        object Rule(string principalType = "user", Guid? principal = null, string scopeType = "folder", string? scopeValue = "brand.thar",
+        object Rule(string principalType = "user", Guid? principal = null, string scopeType = "folder", string? scopeValue = "brand.roadster",
             string[]? perms = null, object? attrs = null) =>
             new { principalType, principalId = principal ?? uid, scopeType, scopeValue, permissions = perms ?? ["assets.approve"], attributes = attrs };
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Call(HttpMethod.Post, "/api/v1/access-rules", admin, Rule(perms: ["nope"]))).Status);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Call(HttpMethod.Post, "/api/v1/access-rules", admin, Rule(perms: []))).Status);
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Call(HttpMethod.Post, "/api/v1/access-rules", admin, Rule(scopeValue: "brand..thar"))).Status);
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Call(HttpMethod.Post, "/api/v1/access-rules", admin, Rule(scopeValue: "brand/thar; drop"))).Status);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Call(HttpMethod.Post, "/api/v1/access-rules", admin, Rule(scopeValue: "brand..roadster"))).Status);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Call(HttpMethod.Post, "/api/v1/access-rules", admin, Rule(scopeValue: "brand/roadster; drop"))).Status);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Call(HttpMethod.Post, "/api/v1/access-rules", admin, Rule(scopeType: "collection", scopeValue: "not-a-guid"))).Status);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Call(HttpMethod.Post, "/api/v1/access-rules", admin, Rule(scopeType: "all", scopeValue: "x"))).Status);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Call(HttpMethod.Post, "/api/v1/access-rules", admin, Rule(scopeType: "galaxy"))).Status);
@@ -434,22 +434,22 @@ public sealed class IdentityTests(PostgresFixture pg) : IAsyncLifetime
         var userId = (await Call(HttpMethod.Get, "/api/v1/me", token)).Body.GetProperty("userId").GetGuid();
         var groupId = (await Call(HttpMethod.Get, "/api/v1/groups", admin)).Body.EnumerateArray().First().GetProperty("id").GetGuid();
 
-        var thar = ResourceContext.Asset(AssetStatuses.InReview, "brand.thar.hero");
-        var xuv = ResourceContext.Asset(AssetStatuses.InReview, "brand.xuv");
-        var scorpio = ResourceContext.Asset(AssetStatuses.InReview, "brand.scorpio.launch");
+        var roadster = ResourceContext.Asset(AssetStatuses.InReview, "brand.roadster.hero");
+        var trail = ResourceContext.Asset(AssetStatuses.InReview, "brand.trail");
+        var sedan = ResourceContext.Asset(AssetStatuses.InReview, "brand.sedan.launch");
 
-        Assert.False(PolicyEngine.Can(await ProfileOf(t, sub, "Approver"), Permissions.AssetsApprove, thar)); // role alone approves nothing
+        Assert.False(PolicyEngine.Can(await ProfileOf(t, sub, "Approver"), Permissions.AssetsApprove, roadster)); // role alone approves nothing
 
         await Call(HttpMethod.Post, "/api/v1/access-rules", admin, new
-            { principalType = "user", principalId = userId, scopeType = "folder", scopeValue = "brand.thar", permissions = new[] { "assets.approve" } });
+            { principalType = "user", principalId = userId, scopeType = "folder", scopeValue = "brand.roadster", permissions = new[] { "assets.approve" } });
         await Call(HttpMethod.Post, "/api/v1/access-rules", admin, new
-            { principalType = "group", principalId = groupId, scopeType = "folder", scopeValue = "brand.scorpio", permissions = new[] { "assets.approve" } });
+            { principalType = "group", principalId = groupId, scopeType = "folder", scopeValue = "brand.sedan", permissions = new[] { "assets.approve" } });
 
         var p = await ProfileOf(t, sub, "Approver");
-        Assert.True(PolicyEngine.Can(p, Permissions.AssetsApprove, thar));      // assigned to the user
-        Assert.True(PolicyEngine.Can(p, Permissions.AssetsApprove, scorpio));   // assigned to their group
-        Assert.False(PolicyEngine.Can(p, Permissions.AssetsApprove, xuv));      // not assigned
-        Assert.True(PolicyEngine.Can(p, Permissions.AssetsRead, xuv));          // but they can still read it for review
+        Assert.True(PolicyEngine.Can(p, Permissions.AssetsApprove, roadster));      // assigned to the user
+        Assert.True(PolicyEngine.Can(p, Permissions.AssetsApprove, sedan));   // assigned to their group
+        Assert.False(PolicyEngine.Can(p, Permissions.AssetsApprove, trail));      // not assigned
+        Assert.True(PolicyEngine.Can(p, Permissions.AssetsRead, trail));          // but they can still read it for review
     }
 
     [Fact]

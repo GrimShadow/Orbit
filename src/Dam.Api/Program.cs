@@ -71,7 +71,12 @@ builder.Services.AddRateLimiter(o =>
 builder.Services.AddHealthChecks().AddCheck<DbReadyCheck>("postgres", tags: ["ready"]);
 
 // ---- OpenAPI
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(o => o.AddDocumentTransformer((doc, _, _) =>
+{
+    doc.Info.Title = "Orbit API";
+    doc.Info.Description = "Digital asset management: assets, metadata, taxonomy, access control and delivery.";
+    return Task.CompletedTask;
+}));
 
 // ---- OpenTelemetry (traces + metrics + logs). OTLP export only when an endpoint is configured.
 var otlp = cfg["OTEL_EXPORTER_OTLP_ENDPOINT"];

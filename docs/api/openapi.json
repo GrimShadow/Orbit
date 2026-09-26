@@ -1,7 +1,8 @@
 {
   "openapi": "3.0.4",
   "info": {
-    "title": "Dam.Api | v1",
+    "title": "Orbit API",
+    "description": "Digital asset management: assets, metadata, taxonomy, access control and delivery.",
     "version": "1.0.0"
   },
   "servers": [

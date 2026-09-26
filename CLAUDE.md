@@ -1,4 +1,4 @@
-# pads4-dam (Orbit)
+# Orbit (repo: pads4-dam)
 
 Read `docs/DAM-Build-Spec.md` (Part A) at the start of every session. Build steps are in Part B; implement one step at a time.
 Key decisions D1–D15 are fixed; changing one needs an ADR in `docs/adr/`.
