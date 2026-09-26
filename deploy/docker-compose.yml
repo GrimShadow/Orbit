@@ -20,11 +20,11 @@ services:
   # S3-compatible object store. MinIO stopped publishing public images, so dev uses SeaweedFS (ADR-0001).
   s3:
     image: chrislusf/seaweedfs:latest
-    command: server -dir=/data -s3 -s3.port=9000 -s3.config=/etc/s3.json -master.volumeSizeLimitMB=1024
+    command: server -dir=/data -s3 -s3.port=9000 -s3.config=/etc/s3.json -master.volumeSizeLimitMB=1024 -volume.max=100
     ports: ["${DAM_PORT_S3:-19000}:9000"]
     volumes: [s3data:/data, ./s3/s3.json:/etc/s3.json:ro]
     healthcheck: { test: ["CMD-SHELL", "wget -qO- http://$$(hostname -i):9333/cluster/status >/dev/null"], <<: *hc }
-    mem_limit: 768m
+    mem_limit: 2g   # assembling a multi-GB multipart object needs headroom (768m was OOM-killed at 5 GB)
 
   s3-init:
     image: amazon/aws-cli:latest
@@ -36,7 +36,10 @@ services:
       for b in dam-originals dam-renditions dam-quarantine; do
         aws --endpoint-url http://s3:9000 s3api create-bucket --bucket $$b 2>/dev/null;
         aws --endpoint-url http://s3:9000 s3api put-bucket-versioning --bucket $$b --versioning-configuration Status=Enabled;
-      done; aws --endpoint-url http://s3:9000 s3 ls"
+      done;
+      aws --endpoint-url http://s3:9000 s3api put-bucket-cors --bucket dam-quarantine --cors-configuration '{\"CORSRules\":[{\"AllowedOrigins\":[\"http://localhost:5173\"],\"AllowedMethods\":[\"PUT\",\"GET\",\"HEAD\"],\"AllowedHeaders\":[\"*\"],\"ExposeHeaders\":[\"ETag\"],\"MaxAgeSeconds\":3000}]}';
+      aws --endpoint-url http://s3:9000 s3api put-bucket-lifecycle-configuration --bucket dam-quarantine --lifecycle-configuration '{\"Rules\":[{\"ID\":\"abort-stale-multipart\",\"Status\":\"Enabled\",\"Filter\":{\"Prefix\":\"\"},\"AbortIncompleteMultipartUpload\":{\"DaysAfterInitiation\":2}}]}';
+      aws --endpoint-url http://s3:9000 s3 ls"
     restart: "no"
 
   redis:

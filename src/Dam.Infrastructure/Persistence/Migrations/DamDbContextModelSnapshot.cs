@@ -23,6 +23,258 @@ namespace Dam.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Dam.Domain.Assets.Asset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Attributes")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("attributes");
+
+                    b.Property<string>("ChecksumSha256")
+                        .HasColumnType("char(64)")
+                        .HasColumnName("checksum_sha256");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CurrentVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("current_version_id");
+
+                    b.Property<DateTimeOffset?>("ExpireAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expire_at");
+
+                    b.Property<Guid?>("FolderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("folder_id");
+
+                    b.Property<string>("Metadata")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("metadata");
+
+                    b.Property<int>("MetadataSchemaVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("metadata_schema_version");
+
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
+                    b.Property<string>("Phash")
+                        .HasColumnType("text")
+                        .HasColumnName("phash");
+
+                    b.Property<DateTimeOffset?>("PublishAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("publish_at");
+
+                    b.Property<Guid?>("RetentionPolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("retention_policy_id");
+
+                    b.Property<Guid?>("RightsId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rights_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StatusReason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("status_reason");
+
+                    b.PrimitiveCollection<List<string>>("Tags")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("tags");
+
+                    b.PrimitiveCollection<List<string>>("TaxonomyTerms")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("taxonomy_terms");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("title");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_assets");
+
+                    b.HasIndex("FolderId")
+                        .HasDatabaseName("ix_assets_folder_id");
+
+                    b.HasIndex("TenantId", "ChecksumSha256")
+                        .HasDatabaseName("ix_assets_tenant_id_checksum_sha256")
+                        .HasFilter("checksum_sha256 IS NOT NULL");
+
+                    b.HasIndex("TenantId", "FolderId")
+                        .HasDatabaseName("ix_assets_tenant_id_folder_id");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("ix_assets_tenant_id_status");
+
+                    b.ToTable("assets", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_assets_status", "status IN ('draft','in_review','approved','published','expired','archived','deleted','blocked')");
+
+                            t.HasCheckConstraint("ck_assets_type", "type IN ('image','video','audio','document','manual','3d','html5','other')");
+                        });
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.Upload", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllowDuplicate")
+                        .HasColumnType("boolean")
+                        .HasColumnName("allow_duplicate");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<Guid?>("BatchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("batch_id");
+
+                    b.Property<string>("Bucket")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bucket");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<long>("DeclaredSize")
+                        .HasColumnType("bigint")
+                        .HasColumnName("declared_size");
+
+                    b.Property<Guid?>("DuplicateOfAssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("duplicate_of_asset_id");
+
+                    b.Property<string>("Error")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("error");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("file_name");
+
+                    b.Property<int>("PartCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("part_count");
+
+                    b.Property<int>("PartSize")
+                        .HasColumnType("integer")
+                        .HasColumnName("part_size");
+
+                    b.Property<string>("S3UploadId")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("s3upload_id");
+
+                    b.Property<string>("Sha256")
+                        .HasColumnType("char(64)")
+                        .HasColumnName("sha256");
+
+                    b.Property<long?>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_uploads");
+
+                    b.HasIndex("AssetId")
+                        .HasDatabaseName("ix_uploads_asset_id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_uploads_storage_key");
+
+                    b.HasIndex("TenantId", "AssetId")
+                        .HasDatabaseName("ix_uploads_tenant_id_asset_id");
+
+                    b.HasIndex("TenantId", "BatchId")
+                        .HasDatabaseName("ix_uploads_tenant_id_batch_id")
+                        .HasFilter("batch_id IS NOT NULL");
+
+                    b.ToTable("uploads", (string)null);
+                });
+
             modelBuilder.Entity("Dam.Domain.Content.Folder", b =>
                 {
                     b.Property<Guid>("Id")
@@ -723,6 +975,25 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasName("pk_processed_messages");
 
                     b.ToTable("processed_messages", (string)null);
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.Asset", b =>
+                {
+                    b.HasOne("Dam.Domain.Content.Folder", null)
+                        .WithMany()
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_assets_folders_folder_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.Upload", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_uploads_assets_asset_id");
                 });
 #pragma warning restore 612, 618
         }

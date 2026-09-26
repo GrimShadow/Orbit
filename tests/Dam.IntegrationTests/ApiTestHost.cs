@@ -27,6 +27,10 @@ public sealed class ApiTestHost(PostgresFixture fx)
             Environment.SetEnvironmentVariable("DAM_OIDC_AUTHORITY", Issuer);
             Environment.SetEnvironmentVariable("DAM_OIDC_AUDIENCE", "dam-api");
             Environment.SetEnvironmentVariable("DAM_DB_CONNECTION", dbConnection ?? fx.AppConnection);
+            Environment.SetEnvironmentVariable("DAM_S3_ENDPOINT", fx.S3Endpoint);
+            Environment.SetEnvironmentVariable("DAM_S3_ACCESS_KEY", fx.S3AccessKey);
+            Environment.SetEnvironmentVariable("DAM_S3_SECRET_KEY", fx.S3SecretKey);
+            Environment.SetEnvironmentVariable("DAM_UPLOAD_PART_SIZE_MB", "5"); // the smallest S3 allows, so tests stay small
             Environment.SetEnvironmentVariable("DAM_RATE_LIMIT_PER_MINUTE", rateLimit?.ToString());
             var f = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.ConfigureServices(s =>
                 s.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>

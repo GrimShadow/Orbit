@@ -18,10 +18,15 @@ namespace Dam.Application.Content;
 public sealed class MetadataValidationService(IRepository<Vocabulary> vocabularies, IRepository<Term> terms, IRepository<Tenant> tenants, IQueryExecutor q)
 {
     /// <returns>Field-level errors keyed "metadata.&lt;field&gt;", empty when valid.</returns>
-    public async Task<Dictionary<string, string[]>> ValidateAsync(MetadataSchema schema, JsonElement metadata, bool allowDeprecatedTerms, CancellationToken ct)
+    public Task<Dictionary<string, string[]>> ValidateAsync(MetadataSchema schema, JsonElement metadata, bool allowDeprecatedTerms, CancellationToken ct) =>
+        ValidateFieldsAsync(schema.Fields, metadata, allowDeprecatedTerms, requireFields: true, ct);
+
+    /// <param name="requireFields">False while an asset is still being described: values are checked, missing required fields are not reported.</param>
+    public async Task<Dictionary<string, string[]>> ValidateFieldsAsync(
+        IReadOnlyList<FieldDefinition> fields, JsonElement metadata, bool allowDeprecatedTerms, bool requireFields, CancellationToken ct)
     {
         var languages = await EnabledLanguagesAsync(ct);
-        var check = MetadataValidator.Check(schema.Fields, metadata, languages);
+        var check = MetadataValidator.Check(fields, metadata, languages, requireFields);
         var errors = check.Errors.ToDictionary(kv => kv.Key, kv => kv.Value);
         void Add(string field, string msg) { var k = "metadata." + field; if (!errors.TryGetValue(k, out var l)) errors[k] = l = []; l.Add(msg); }
 

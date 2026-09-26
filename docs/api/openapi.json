@@ -1615,6 +1615,459 @@
           }
         }
       }
+    },
+    "/api/v1/assets": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Assets the caller may read (interim listing; search arrives in Step 1.7)",
+        "operationId": "ListAssets",
+        "parameters": [
+          {
+            "name": "folderId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "includeSubfolders",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOfAssetDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Create an asset shell (draft). Metadata is validated against the type\u0027s schema",
+        "operationId": "CreateAsset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "operationId": "GetAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Assets"
+        ],
+        "operationId": "UpdateAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAssetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Soft delete: the asset becomes \u0027deleted\u0027",
+        "operationId": "DeleteAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/move": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "operationId": "MoveAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveAssetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/uploads": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Open a resumable multipart upload; returns presigned part URLs. File bytes go straight to storage",
+        "operationId": "InitiateUpload",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitiateUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadStartDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/bulk-upload": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "One draft asset and one upload per file, all sharing the batch metadata and tags. Failures are per file",
+        "operationId": "BulkUpload",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkUploadResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uploads/{id}": {
+      "get": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "State of a transfer. While open it lists the parts storage already has, which is where to resume from",
+        "operationId": "GetUpload",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uploads/{id}/parts": {
+      "post": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Fresh short-lived URLs for specific parts",
+        "operationId": "PresignParts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartNumbersRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PartUrlDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uploads/{id}/complete": {
+      "post": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Assemble the parts. Returns 202; poll the upload for ready, duplicate or failed",
+        "operationId": "CompleteUpload",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uploads/{id}/abort": {
+      "post": {
+        "tags": [
+          "Uploads"
+        ],
+        "operationId": "AbortUpload",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1671,6 +2124,232 @@
           }
         }
       },
+      "AssetDto": {
+        "required": [
+          "id",
+          "folderId",
+          "type",
+          "status",
+          "title",
+          "metadata",
+          "metadataSchemaVersion",
+          "taxonomyTerms",
+          "tags",
+          "attributes",
+          "ownerId",
+          "currentVersionId",
+          "checksumSha256",
+          "statusReason",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folderId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "metadataSchemaVersion": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "taxonomyTerms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "attributes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "ownerId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "currentVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "checksumSha256": {
+            "type": "string",
+            "nullable": true
+          },
+          "statusReason": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BulkFileRequest": {
+        "required": [
+          "fileName",
+          "size",
+          "contentType"
+        ],
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "BulkUploadItemDto": {
+        "required": [
+          "fileName",
+          "assetId",
+          "upload",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "upload": {
+            "$ref": "#/components/schemas/UploadStartDto2"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "BulkUploadRequest": {
+        "required": [
+          "folderId",
+          "batchId",
+          "metadata",
+          "tags",
+          "files"
+        ],
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "batchId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkFileRequest"
+            }
+          }
+        }
+      },
+      "BulkUploadResultDto": {
+        "required": [
+          "batchId",
+          "created",
+          "failed",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkUploadItemDto"
+            }
+          }
+        }
+      },
+      "CompleteUploadRequest": {
+        "type": "object",
+        "properties": {
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartEtag"
+            },
+            "default": null,
+            "nullable": true
+          },
+          "sha256": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
       "CreateAccessRuleRequest": {
         "required": [
           "principalType",
@@ -1711,6 +2390,43 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "CreateAssetRequest": {
+        "required": [
+          "folderId",
+          "type",
+          "title",
+          "metadata",
+          "tags"
+        ],
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "allowIncomplete": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -1909,6 +2625,11 @@
           },
           "facet": {
             "type": "boolean"
+          },
+          "accessDimension": {
+            "type": "string",
+            "default": null,
+            "nullable": true
           }
         }
       },
@@ -2069,6 +2790,36 @@
           }
         }
       },
+      "InitiateUploadRequest": {
+        "required": [
+          "fileName",
+          "size",
+          "contentType"
+        ],
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "type": "string",
+            "nullable": true
+          },
+          "allowDuplicate": {
+            "type": "boolean",
+            "default": false
+          },
+          "sha256": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
       "JsonElement": {},
       "MeDto": {
         "required": [
@@ -2146,6 +2897,19 @@
           }
         }
       },
+      "MoveAssetRequest": {
+        "required": [
+          "folderId"
+        ],
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        }
+      },
       "MoveRequest": {
         "required": [
           "newParentId"
@@ -2173,6 +2937,25 @@
       "NullableOfJsonElement": {
         "nullable": true
       },
+      "PageOfAssetDto": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "PageOfUserDto": {
         "required": [
           "items",
@@ -2189,6 +2972,58 @@
           "nextCursor": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "PartEtag": {
+        "required": [
+          "partNumber",
+          "eTag"
+        ],
+        "type": "object",
+        "properties": {
+          "partNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "eTag": {
+            "type": "string"
+          }
+        }
+      },
+      "PartNumbersRequest": {
+        "required": [
+          "partNumbers"
+        ],
+        "type": "object",
+        "properties": {
+          "partNumbers": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "PartUrlDto": {
+        "required": [
+          "partNumber",
+          "url",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "partNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "url": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -2210,6 +3045,27 @@
         "type": "object",
         "properties": {
           "reply": {
+            "type": "string"
+          }
+        }
+      },
+      "ReceivedPartDto": {
+        "required": [
+          "partNumber",
+          "size",
+          "eTag"
+        ],
+        "type": "object",
+        "properties": {
+          "partNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "eTag": {
             "type": "string"
           }
         }
@@ -2579,6 +3435,30 @@
           }
         }
       },
+      "UpdateAssetRequest": {
+        "required": [
+          "title",
+          "metadata",
+          "tags"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        }
+      },
       "UpdateFolderRequest": {
         "required": [
           "name",
@@ -2727,6 +3607,132 @@
             "nullable": true
           }
         }
+      },
+      "UploadDto": {
+        "required": [
+          "id",
+          "assetId",
+          "batchId",
+          "status",
+          "fileName",
+          "declaredSize",
+          "contentType",
+          "partSize",
+          "partCount",
+          "sha256",
+          "sizeBytes",
+          "duplicateOfAssetId",
+          "error",
+          "createdAt",
+          "expiresAt",
+          "receivedParts"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "batchId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "declaredSize": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "partSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "partCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sha256": {
+            "type": "string",
+            "nullable": true
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "duplicateOfAssetId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "error": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "receivedParts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceivedPartDto"
+            },
+            "nullable": true
+          }
+        }
+      },
+      "UploadStartDto": {
+        "required": [
+          "upload",
+          "parts"
+        ],
+        "type": "object",
+        "properties": {
+          "upload": {
+            "$ref": "#/components/schemas/UploadDto"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartUrlDto"
+            }
+          }
+        }
+      },
+      "UploadStartDto2": {
+        "required": [
+          "upload",
+          "parts"
+        ],
+        "type": "object",
+        "properties": {
+          "upload": {
+            "$ref": "#/components/schemas/UploadDto"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartUrlDto"
+            }
+          }
+        },
+        "nullable": true
       },
       "UserDto": {
         "required": [
@@ -2915,6 +3921,12 @@
     },
     {
       "name": "Templates"
+    },
+    {
+      "name": "Assets"
+    },
+    {
+      "name": "Uploads"
     }
   ]
 }

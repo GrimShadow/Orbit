@@ -1,6 +1,7 @@
 using Dam.Application.Abstractions;
 using System.Text.Json;
 using Dam.Domain.Authorization;
+using Dam.Domain.Assets;
 using Dam.Domain.Common;
 using Dam.Domain.Content;
 using Dam.Domain.Identity;
@@ -28,6 +29,8 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<Vocabulary> Vocabularies => Set<Vocabulary>();
     public DbSet<Term> Terms => Set<Term>();
     public DbSet<MetadataSchema> MetadataSchemas => Set<MetadataSchema>();
+    public DbSet<Asset> Assets => Set<Asset>();
+    public DbSet<Upload> Uploads => Set<Upload>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -61,6 +64,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
 
         ConfigureIdentity(b);
         ConfigureContent(b);
+        ConfigureAssets(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -164,6 +168,51 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.Property(x => x.Fields).AsJson();
             e.HasIndex(x => new { x.TenantId, x.AssetType, x.Version }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.AssetType }).IsUnique().HasFilter("is_current").HasDatabaseName("ux_metadata_schemas_current");
+        });
+    }
+
+    private static void ConfigureAssets(ModelBuilder b)
+    {
+        b.Entity<Asset>(e =>
+        {
+            e.ToTable("assets", t =>
+            {
+                t.HasCheckConstraint("ck_assets_type", "type IN ('image','video','audio','document','manual','3d','html5','other')");
+                t.HasCheckConstraint("ck_assets_status", "status IN ('draft','in_review','approved','published','expired','archived','deleted','blocked')");
+            });
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.Type).HasMaxLength(16);
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.Property(x => x.Title).HasMaxLength(300);
+            e.Property(x => x.StatusReason).HasMaxLength(500);
+            e.Property(x => x.ChecksumSha256).HasColumnType("char(64)");
+            e.Property(x => x.Metadata).AsJson();
+            e.Property(x => x.Attributes).AsJsonDictionary();
+            e.Property(x => x.TaxonomyTerms).HasColumnType("text[]");
+            e.Property(x => x.Tags).HasColumnType("text[]");
+            // A folder that still holds assets cannot be removed, even by a bug: the database refuses.
+            e.HasOne<Folder>().WithMany().HasForeignKey(x => x.FolderId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.FolderId });
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => new { x.TenantId, x.ChecksumSha256 }).HasFilter("checksum_sha256 IS NOT NULL");
+        });
+        b.Entity<Upload>(e =>
+        {
+            e.ToTable("uploads");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.FileName).HasMaxLength(255);
+            e.Property(x => x.ContentType).HasMaxLength(200);
+            e.Property(x => x.Bucket).HasMaxLength(100);
+            e.Property(x => x.StorageKey).HasMaxLength(300);
+            e.Property(x => x.S3UploadId).HasMaxLength(500);
+            e.Property(x => x.Sha256).HasColumnType("char(64)");
+            e.Property(x => x.Error).HasMaxLength(500);
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.AssetId });
+            e.HasIndex(x => new { x.TenantId, x.BatchId }).HasFilter("batch_id IS NOT NULL");
+            e.HasIndex(x => x.StorageKey).IsUnique();
         });
     }
 

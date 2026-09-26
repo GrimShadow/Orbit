@@ -29,6 +29,12 @@ public abstract class EventConsumer
     public abstract string Name { get; }
     public abstract IReadOnlyList<string> RoutingKeys { get; }
     public abstract Task HandleAsync(EventEnvelope message, CancellationToken ct);
+
+    /// <summary>
+    /// Called once when a message has failed every attempt and is parked in the DLQ, inside its own transaction. Override to
+    /// move whatever the message was about into a truthful state (e.g. an upload that must not stay "processing" forever).
+    /// </summary>
+    public virtual Task OnParkedAsync(EventEnvelope message, string error, CancellationToken ct) => Task.CompletedTask;
 }
 
 public static class Topology

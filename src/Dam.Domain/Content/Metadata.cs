@@ -46,6 +46,11 @@ public sealed record FieldDefinition
     public decimal? Max { get; init; }
     public bool WholeNumbers { get; init; }
     public int? MaxLength { get; init; }
+    /// <summary>
+    /// Makes this field drive access control: its term codes become the asset's region/dealer/brand/channel attribute,
+    /// matched against the same-named attribute of the user (ADR-0002). Vocabulary and term_tree fields only.
+    /// </summary>
+    public string? AccessDimension { get; init; }
     public bool Searchable { get; init; } = true;
     public bool Facet { get; init; }
 }
@@ -117,6 +122,10 @@ public static class SchemaDefinitionValidator
             if (f.Min > f.Max) Add($"{key}.min", "Min cannot exceed max.");
             if ((f.Min is not null || f.Max is not null || f.WholeNumbers) && f.Type != FieldType.Number) Add($"{key}.min", "Min, max and wholeNumbers apply to number fields only.");
             if (f.MaxLength is <= 0 or > 100_000) Add($"{key}.maxLength", "Max length must be between 1 and 100000.");
+            if (f.AccessDimension is not null && !Dam.Domain.Authorization.Dimensions.All.Contains(f.AccessDimension))
+                Add($"{key}.accessDimension", $"Must be one of: {string.Join(", ", Dam.Domain.Authorization.Dimensions.All)}.");
+            else if (f.AccessDimension is not null && f.Type is not (FieldType.Vocabulary or FieldType.TermTree))
+                Add($"{key}.accessDimension", "Only vocabulary and term_tree fields can drive access control.");
         }
         return errors.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray());
     }
@@ -142,7 +151,8 @@ public static class MetadataValidator
     public const string AiSuggestions = "ai_suggestions"; // reserved key: AI output awaiting an editor's decision
     public const int MaxTextLength = 5_000;
 
-    public static MetadataCheck Check(IReadOnlyList<FieldDefinition> fields, JsonElement metadata, IReadOnlySet<string>? allowedLanguages = null)
+    /// <param name="requireFields">False while an asset is still being described (draft, bulk upload): types and values are checked, but missing required fields are not reported.</param>
+    public static MetadataCheck Check(IReadOnlyList<FieldDefinition> fields, JsonElement metadata, IReadOnlySet<string>? allowedLanguages = null, bool requireFields = true)
     {
         var errors = new Dictionary<string, List<string>>();
         var refs = new List<VocabularyReference>();
@@ -162,7 +172,7 @@ public static class MetadataValidator
         {
             if (!metadata.TryGetProperty(f.Name, out var value) || IsEmpty(value))
             {
-                if (f.Required) Add(f.Name, "This field is required.");
+                if (f.Required && requireFields) Add(f.Name, "This field is required.");
                 continue;
             }
             CheckField(f, value, allowedLanguages, Add, refs);

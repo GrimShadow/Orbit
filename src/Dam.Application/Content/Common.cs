@@ -16,14 +16,14 @@ internal static class ContentMapping
         new(t.Id, t.VocabularyId, t.ParentId, t.Code, t.Path, t.Labels, t.SortOrder, t.Status.ToString().ToLowerInvariant(), t.Attributes);
 
     public static FieldDto ToDto(FieldDefinition f) =>
-        new(f.Name, f.Label, ToWire(f.Type), f.Required, f.Multi, f.Vocabulary, f.Options, f.Min, f.Max, f.WholeNumbers, f.MaxLength, f.Searchable, f.Facet);
+        new(f.Name, f.Label, ToWire(f.Type), f.Required, f.Multi, f.Vocabulary, f.Options, f.Min, f.Max, f.WholeNumbers, f.MaxLength, f.Searchable, f.Facet, f.AccessDimension);
 
     public static FieldDefinition FromDto(FieldDto f) =>
         new()
         {
             Name = f.Name, Label = f.Label, Type = FromWire(f.Type), Required = f.Required, Multi = f.Multi, Vocabulary = f.Vocabulary,
             Options = f.Options?.ToList(), Min = f.Min, Max = f.Max, WholeNumbers = f.WholeNumbers, MaxLength = f.MaxLength,
-            Searchable = f.Searchable, Facet = f.Facet,
+            Searchable = f.Searchable, Facet = f.Facet, AccessDimension = f.AccessDimension,
         };
 
     public static SchemaDto ToDto(MetadataSchema s) =>
