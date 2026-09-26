@@ -20,13 +20,13 @@ public sealed class UploadTests(PostgresFixture pg, RabbitFixture mq) : AssetTes
     private const int MiB = 1024 * 1024;
     private static readonly HttpClient S3Http = new();
 
-    private IHost StartWorker()
+    private IHost StartWorker(string? s3Endpoint = null)
     {
         var b = Host.CreateApplicationBuilder();
         b.Logging.SetMinimumLevel(LogLevel.Warning);
         var cfg = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["DAM_S3_ENDPOINT"] = Pg.S3Endpoint, ["DAM_S3_ACCESS_KEY"] = Pg.S3AccessKey, ["DAM_S3_SECRET_KEY"] = Pg.S3SecretKey,
+            ["DAM_S3_ENDPOINT"] = s3Endpoint ?? Pg.S3Endpoint, ["DAM_S3_ACCESS_KEY"] = Pg.S3AccessKey, ["DAM_S3_SECRET_KEY"] = Pg.S3SecretKey,
         }).Build();
         b.Services.AddDamWorkerIdentity();
         b.Services.AddDamInfrastructure(Pg.AppConnection);
@@ -71,9 +71,9 @@ public sealed class UploadTests(PostgresFixture pg, RabbitFixture mq) : AssetTes
         return await Call(HttpMethod.Post, $"/api/v1/uploads/{start.GetProperty("upload").GetProperty("id").GetGuid()}/complete", token, sendEtags ? new { parts = etags } : new { });
     }
 
-    private async Task<JsonElement> WaitForOutcome(string token, Guid upload)
+    private async Task<JsonElement> WaitForOutcome(string token, Guid upload, int seconds = 20)
     {
-        for (var i = 0; i < 200; i++)
+        for (var i = 0; i < seconds * 10; i++)
         {
             var u = (await Call(HttpMethod.Get, $"/api/v1/uploads/{upload}", token)).Body;
             if (u.GetProperty("status").GetString() is not ("processing" or "initiated")) return u;
@@ -189,6 +189,26 @@ public sealed class UploadTests(PostgresFixture pg, RabbitFixture mq) : AssetTes
         Assert.Equal(HttpStatusCode.UnprocessableEntity, badEtag.Status);
         var ok = await Call(HttpMethod.Post, $"/api/v1/uploads/{id}/complete", admin, new { parts = new[] { new { partNumber = 1, eTag = good1 } } });
         Assert.Equal(HttpStatusCode.Accepted, ok.Status);
+    }
+
+    [Fact]
+    public async Task When_the_worker_cannot_reach_storage_it_gives_up_and_the_upload_is_marked_failed_not_left_processing()
+    {
+        var (t, admin, folder) = await Setup();
+        using var worker = StartWorker(s3Endpoint: "http://127.0.0.1:1"); // nothing listens here: every attempt fails
+        await worker.StartAsync();
+        var asset = await NewAsset(admin, folder);
+        var file = Bytes(6 * MiB, 11);
+        var start = await Start(admin, asset, "x.jpg", file.Length);
+        await UploadWhole(admin, start, file);
+
+        var outcome = await WaitForOutcome(admin, start.GetProperty("upload").GetProperty("id").GetGuid(), seconds: 90);
+        Assert.Equal("failed", outcome.GetProperty("status").GetString());
+        Assert.Contains("failed after several attempts", outcome.GetProperty("error").GetString());
+        Assert.Equal(0, Count(t, "SELECT count(*) FROM outbox WHERE event_type = 'ingest.requested'"));
+
+        // ...and the asset is free to try again with a new upload
+        Assert.Equal(HttpStatusCode.Created, (await Call(HttpMethod.Post, $"/api/v1/assets/{asset}/uploads", admin, new { fileName = "again.jpg", size = 1000 })).Status);
     }
 
     // ---- duplicates --------------------------------------------------------------------------------------------

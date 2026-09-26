@@ -124,7 +124,26 @@ public sealed class ConsumerHost<T>(
             await SafeRollbackAsync(uow);
             log.LogWarning(ex, "{Consumer}: attempt {Attempt}/{Max} failed for {MessageId}", _name, attempt, options.MaxAttempts, messageId);
             if (attempt < options.MaxAttempts) await RetryAsync(ch, ea, attempt, body);
-            else await ParkAsync(ch, ea, attempt, ex.Message, body);
+            else await ParkAsync(ch, ea, attempt, ex.Message, body, envelope);
+        }
+    }
+
+    /// <summary>Runs the consumer's parked hook in a fresh scope and transaction. A failure here is logged, never rethrown.</summary>
+    private async Task NotifyParkedAsync(EventEnvelope envelope, string error)
+    {
+        try
+        {
+            await using var scope = services.CreateAsyncScope();
+            var sp = scope.ServiceProvider;
+            sp.GetRequiredService<MutableTenantContext>().TenantId = envelope.TenantId;
+            var uow = sp.GetRequiredService<IUnitOfWork>();
+            await uow.BeginAsync(default);
+            await sp.GetRequiredService<T>().OnParkedAsync(envelope, error, default);
+            await uow.CommitAsync(default);
+        }
+        catch (Exception ex)
+        {
+            log.LogError(ex, "{Consumer}: the parked-message hook failed for {MessageId}", _name, envelope.MessageId);
         }
     }
 
@@ -140,13 +159,14 @@ public sealed class ConsumerHost<T>(
         await ch.BasicAckAsync(ea.DeliveryTag, false);
     }
 
-    private async Task ParkAsync(IChannel ch, BasicDeliverEventArgs ea, int attempt, string error, byte[] body)
+    private async Task ParkAsync(IChannel ch, BasicDeliverEventArgs ea, int attempt, string error, byte[] body, EventEnvelope? envelope = null)
     {
         var props = Clone(ea.BasicProperties, attempt);
         props.Headers!["x-error"] = error.Length > 500 ? error[..500] : error;
         props.Headers["x-consumer"] = _name;
         props.Headers["x-failed-at"] = DateTimeOffset.UtcNow.ToString("O");
         await ch.BasicPublishAsync("", Topology.Dlq(_name), mandatory: true, props, body);
+        if (envelope is not null) await NotifyParkedAsync(envelope, error);
         await ch.BasicAckAsync(ea.DeliveryTag, false);
         log.LogError("{Consumer}: message {MessageId} moved to DLQ after {Attempt} attempts: {Error}", _name, ea.BasicProperties.MessageId, attempt, error);
     }

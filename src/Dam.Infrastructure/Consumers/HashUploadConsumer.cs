@@ -61,6 +61,14 @@ public sealed class HashUploadConsumer(DamDbContext db, IObjectStore store, IOut
         await outbox.EnqueueAsync([new IngestRequested(upload.Id, asset.Id, upload.Bucket, upload.StorageKey, upload.FileName, upload.ContentType, size, sha256)], ct);
     }
 
+    /// <summary>The worker gave up (e.g. storage unreachable): say so, rather than leaving the upload "processing" forever.</summary>
+    public override async Task OnParkedAsync(EventEnvelope message, string error, CancellationToken ct)
+    {
+        var uploadId = JsonDocument.Parse(message.Payload).RootElement.GetProperty("UploadId").GetGuid();
+        var upload = await db.Uploads.FirstOrDefaultAsync(u => u.Id == uploadId, ct);
+        if (upload is { Status: UploadStatus.Processing }) upload.MarkFailed($"Processing failed after several attempts: {error}");
+    }
+
     private async Task<(string Sha256, long Size)> HashAsync(Upload upload, CancellationToken ct)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
