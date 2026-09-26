@@ -34,7 +34,7 @@ upload() {   # $1 asset id; $2 = number of parts to send before the simulated dr
     local batch=() n
     flush() {
       [ ${#batch[@]} -eq 0 ] && return
-      local list; list=$(IFS=,; echo "${batch[*]}")
+      local list; list=$(printf '%s,' "${batch[@]}"); list=${list%,}
       call POST "/api/v1/uploads/$id/parts" -d "{\"partNumbers\":[$list]}" | python3 -c "
 import sys,json
 for p in json.load(sys.stdin): print(p['partNumber'], p['url'])" | while read -r num url; do
