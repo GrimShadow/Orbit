@@ -11,7 +11,7 @@ RUN pnpm install --frozen-lockfile
 COPY web ./web
 RUN pnpm --filter @dam/console build
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.29-alpine
 # Pull OS security fixes that the pinned base image lags behind on (needs root; the image drops to uid 101 below).
 USER root
 RUN apk upgrade --no-cache
