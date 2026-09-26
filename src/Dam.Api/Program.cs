@@ -8,6 +8,7 @@ using Dam.Application.Messaging;
 using Dam.Application.Abstractions;
 using Dam.Infrastructure;
 using Dam.Infrastructure.Persistence;
+using Dam.Infrastructure.Delivery;
 using Dam.Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -47,6 +48,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddDamApplication();
 builder.Services.AddDamInfrastructure(Required("DAM_DB_CONNECTION"));
 builder.Services.AddDamStorage(cfg);
+builder.Services.AddDamDelivery(cfg);
 
 // ---- Errors: RFC 9457 problem+json everywhere, including bare 401/403/404.
 builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>

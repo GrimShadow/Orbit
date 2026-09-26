@@ -225,3 +225,37 @@ public sealed class PerceptualHashConsumer(DamDbContext db, IObjectStore store, 
         asset.SetPhash(PerceptualHash.ToHex(hash.Value), Clock.UtcNow);
     }
 }
+
+/// <summary>
+/// Makes the image renditions of a new version ahead of time so the first viewer does not wait. Anything missed is made on demand by
+/// the delivery origin, so this stage never blocks or fails an upload.
+/// </summary>
+public sealed class RenditionConsumer(DamDbContext db, IObjectStore store, IOutbox outbox, IClock clock, Delivery.RenditionService renditions, ILogger<RenditionConsumer> log)
+    : IngestConsumer(db, store, outbox, clock)
+{
+    public override string Name => "renditions";
+    public override IReadOnlyList<string> RoutingKeys => ["asset.version.added"];
+    public override Task OnParkedAsync(EventEnvelope message, string error, CancellationToken ct) => Task.CompletedTask;
+
+    public override async Task HandleAsync(EventEnvelope message, CancellationToken ct)
+    {
+        var versionId = JsonDocument.Parse(message.Payload).RootElement.GetProperty("VersionId").GetGuid();
+        var version = await Db.AssetVersions.FirstOrDefaultAsync(v => v.Id == versionId, ct);
+        if (version is null || !Delivery.RenditionService.CanRender(version)) return;
+
+        foreach (var profile in RenditionProfiles.Images)
+        {
+            try { await renditions.GenerateProfileAsync(version, profile, ct); }
+            catch (Delivery.UnsupportedImageException ex)
+            {
+                log.LogInformation("Version {Version} cannot be rendered as {Profile}: {Reason}", version.Id, profile.Name, ex.Message);
+                return;     // an image we cannot decode fails every profile alike
+            }
+            catch (Delivery.SourceTooLargeException ex)
+            {
+                log.LogInformation("Version {Version} is too large to render eagerly: {Reason}", version.Id, ex.Message);
+                return;
+            }
+        }
+    }
+}

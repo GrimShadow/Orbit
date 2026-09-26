@@ -240,6 +240,87 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.ToTable("asset_versions", (string)null);
                 });
 
+            modelBuilder.Entity("Dam.Domain.Assets.Rendition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<string>("Bucket")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bucket");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("integer")
+                        .HasColumnName("height");
+
+                    b.Property<string>("Mime")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("mime");
+
+                    b.Property<string>("Profile")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("profile");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("version_id");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("integer")
+                        .HasColumnName("width");
+
+                    b.HasKey("Id")
+                        .HasName("pk_renditions");
+
+                    b.HasIndex("VersionId")
+                        .HasDatabaseName("ix_renditions_version_id");
+
+                    b.HasIndex("TenantId", "AssetId")
+                        .HasDatabaseName("ix_renditions_tenant_id_asset_id");
+
+                    b.HasIndex("TenantId", "VersionId", "Profile")
+                        .IsUnique()
+                        .HasDatabaseName("ix_renditions_tenant_id_version_id_profile");
+
+                    b.ToTable("renditions", (string)null);
+                });
+
             modelBuilder.Entity("Dam.Domain.Assets.Upload", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1100,6 +1181,16 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_asset_versions_assets_asset_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.Rendition", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.AssetVersion", null)
+                        .WithMany()
+                        .HasForeignKey("VersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_renditions_asset_versions_version_id");
                 });
 
             modelBuilder.Entity("Dam.Domain.Assets.Upload", b =>

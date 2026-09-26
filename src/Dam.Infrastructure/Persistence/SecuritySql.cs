@@ -128,4 +128,8 @@ public static class SecuritySql
     public const string VersionGrants = """
         GRANT SELECT, INSERT ON asset_versions TO dam_app;   -- versions are immutable: never updated or deleted
         """;
+
+    public const string RenditionGrants = """
+        GRANT SELECT, INSERT, UPDATE, DELETE ON renditions TO dam_app;   -- a cache: rows may be replaced or dropped and regenerated
+        """;
 }

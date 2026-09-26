@@ -19,6 +19,14 @@ public static class TestImages
         return Encode(pixels, size, size, 1, format);
     }
 
+    /// <summary>A landscape or portrait picture of an exact size: the disc, stretched with edge pixels.</summary>
+    public static byte[] Sized(int width, int height, string format = ".jpg", double radiusFraction = 0.35)
+    {
+        using var disc = Image.NewFromBuffer(Disc(Math.Min(width, height), radiusFraction));
+        using var grown = disc.Embed((width - disc.Width) / 2, (height - disc.Height) / 2, width, height, extend: Enums.Extend.Copy);
+        return grown.WriteToBuffer(format);
+    }
+
     /// <summary>A very different picture: coarse black and white checks.</summary>
     public static byte[] Checkerboard(int size = 256, string format = ".jpg")
     {

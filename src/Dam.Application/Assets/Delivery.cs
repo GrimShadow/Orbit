@@ -1,0 +1,88 @@
+using Dam.Application.Abstractions;
+using Dam.Application.Content;
+using Dam.Application.Messaging;
+using Dam.Domain.Assets;
+using Dam.Domain.Authorization;
+using Dam.Domain.Common;
+using Dam.Domain.Content;
+using Dam.Shared.Content;
+
+namespace Dam.Application.Assets;
+
+/// <summary>
+/// Signs links to an asset's current version (spec A5 "Delivery"). The link carries what it may fetch, when it expires and,
+/// optionally, the one address that may use it. Assets that are not published get watermarked output.
+/// </summary>
+public sealed record CreateDeliveryLinkCommand(Guid AssetId, CreateLinkRequest Request) : ICommand<DeliveryLinkDto>;
+
+public sealed class CreateDeliveryLinkHandler(
+    IRepository<Asset> assets, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz,
+    DeliveryTokenSigner signer, DeliverySettings settings, ITenantContext tenant, IClock clock)
+    : IRequestHandler<CreateDeliveryLinkCommand, DeliveryLinkDto>
+{
+    private static string? Text(int? n) => n?.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    public async Task<Result<DeliveryLinkDto>> Handle(CreateDeliveryLinkCommand c, CancellationToken ct)
+    {
+        var (asset, path) = await AssetAccess.LoadAsync(assets, folders, q, c.AssetId, ct);
+        var resource = asset?.ToResource(path);
+        if (asset is null || !await authz.CanAsync(Permissions.AssetsRead, resource, ct)) return Error.NotFound("Asset not found.");
+        if (asset.Status is AssetStatuses.Deleted or AssetStatuses.Blocked) return Error.NotFound("Asset not found.");
+        if (asset.CurrentVersionId is null) return Error.Conflict("The asset has no file yet.");
+
+        var r = c.Request;
+        var problems = new Dictionary<string, string[]>();
+
+        var ttl = r.TtlSeconds is { } s ? TimeSpan.FromSeconds(s) : settings.DefaultTokenTtl;
+        if (ttl <= TimeSpan.Zero || ttl > settings.MaxTokenTtl) problems["ttlSeconds"] = [$"Must be between 1 and {(int)settings.MaxTokenTtl.TotalSeconds} seconds."];
+        if (r.Ip is not null && !System.Net.IPAddress.TryParse(r.Ip, out _)) problems["ip"] = ["Not a valid IP address."];
+
+        string scope;
+        List<string> names;
+        if (r.Transform is { } t)
+        {
+            var (spec, error) = TransformSpec.Parse(Text(t.W), Text(t.H), t.Fit, t.Fmt, Text(t.Q), t.Focal);
+            if (spec is null) { problems["transform"] = [error!]; scope = ""; names = []; }
+            else { scope = "t:" + spec.Canonical(); names = ["transform"]; }
+        }
+        else
+        {
+            names = (r.Renditions is { Count: > 0 } ? r.Renditions : ["preview"]).Select(x => x.Trim().ToLowerInvariant()).Distinct().ToList();
+            var unknown = names.Where(n => !RenditionProfiles.IsKnown(n)).ToList();
+            if (unknown.Count > 0) problems["renditions"] = [$"Unknown: {string.Join(", ", unknown)}."];
+            scope = "r:" + string.Join(',', names);
+        }
+        if (problems.Count > 0) return Error.Validation(problems);
+
+        if (names.Contains(RenditionProfiles.Original) && !await authz.CanAsync(Permissions.AssetsDownloadOriginal, resource, ct))
+            return Error.Forbidden("You may not download the original file of this asset.");
+
+        var watermark = asset.Status != AssetStatuses.Published;
+        if (watermark && names.Contains(RenditionProfiles.Original))
+            return Error.Conflict("The original file of an unpublished asset cannot be shared by link; other renditions carry a watermark.");
+        var expires = clock.UtcNow.Add(ttl);
+        var token = signer.Sign(new DeliveryClaims(tenant.TenantId, asset.Id, scope, expires, r.Ip, watermark));
+        var baseUrl = $"{settings.LinkBase}/d/{token}/{asset.Id}";
+        var links = r.Transform is not null
+            ? new Dictionary<string, string> { ["transform"] = $"{baseUrl}/t?{scope[2..]}" }
+            : names.ToDictionary(n => n, n => $"{baseUrl}/{n}");
+        return new DeliveryLinkDto(expires, watermark, links);
+    }
+}
+
+/// <summary>The renditions already made for an asset's current version. Missing ones are made on first request.</summary>
+public sealed record ListRenditionsQuery(Guid AssetId) : IQuery<IReadOnlyList<RenditionDto>>;
+
+public sealed class ListRenditionsHandler(
+    IRepository<Asset> assets, IRepository<Rendition> renditions, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz)
+    : IRequestHandler<ListRenditionsQuery, IReadOnlyList<RenditionDto>>
+{
+    public async Task<Result<IReadOnlyList<RenditionDto>>> Handle(ListRenditionsQuery r, CancellationToken ct)
+    {
+        var (asset, path) = await AssetAccess.LoadAsync(assets, folders, q, r.AssetId, ct);
+        if (asset is null || !await authz.CanAsync(Permissions.AssetsRead, asset.ToResource(path), ct)) return Error.NotFound("Asset not found.");
+        var versionId = asset.CurrentVersionId;
+        var list = await q.ToListAsync(renditions.Query().Where(x => x.VersionId == versionId).OrderBy(x => x.Profile), ct);
+        return list.Select(x => new RenditionDto(x.Profile, x.Mime, x.Width, x.Height, x.SizeBytes, x.Status, x.CreatedAt)).ToList();
+    }
+}

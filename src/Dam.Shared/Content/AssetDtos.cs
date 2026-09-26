@@ -34,3 +34,18 @@ public sealed record AssetVersionDto(
 
 /// <param name="Distance">How many of the 64 perceptual-hash bits differ: 0 is visually identical, small numbers are near-duplicates.</param>
 public sealed record SimilarAssetDto(Guid AssetId, string Title, string Type, string Status, Guid? FolderId, int Distance);
+
+/// <param name="Fit">cover (fill the box and crop), contain (fit inside), or fill (stretch).</param>
+/// <param name="Focal">Where to keep in frame when cropping, as "x,y" between 0 and 1 (default "0.5,0.5", the centre).</param>
+public sealed record TransformRequest(int? W, int? H, string? Fit, string? Fmt, int? Q, string? Focal);
+
+/// <param name="Renditions">Named renditions to allow ("thumb", "preview", "web", "web_jpeg", "mobile", "original"). Ignored when Transform is given.</param>
+/// <param name="TtlSeconds">How long the link works. Defaults to one hour; the server caps it.</param>
+/// <param name="Ip">Only this client address may use the link.</param>
+public sealed record CreateLinkRequest(IReadOnlyList<string>? Renditions, int? TtlSeconds, string? Ip, TransformRequest? Transform);
+
+/// <param name="Watermarked">True when the asset is not published: every image served by these links carries a watermark.</param>
+/// <param name="Links">Rendition name (or "transform") to a signed URL on the delivery origin or CDN.</param>
+public sealed record DeliveryLinkDto(DateTimeOffset ExpiresAt, bool Watermarked, IReadOnlyDictionary<string, string> Links);
+
+public sealed record RenditionDto(string Profile, string Mime, int Width, int Height, long SizeBytes, string Status, DateTimeOffset CreatedAt);

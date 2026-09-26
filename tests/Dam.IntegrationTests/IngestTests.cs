@@ -54,78 +54,9 @@ public sealed class ClamFixture : IAsyncLifetime
 }
 
 [Collection("pg")]
-public sealed class IngestTests(PostgresFixture pg, RabbitFixture mq, ClamFixture clam) : AssetTestBase(pg), IClassFixture<RabbitFixture>, IClassFixture<ClamFixture>
+public sealed class IngestTests(PostgresFixture pg, RabbitFixture mq, ClamFixture clam) : PipelineTestBase(pg, mq), IClassFixture<RabbitFixture>, IClassFixture<ClamFixture>
 {
-    private static readonly HttpClient S3Http = new();
-
-    private IHost StartWorker(int? clamPort = null)
-    {
-        var b = Host.CreateApplicationBuilder();
-        b.Logging.SetMinimumLevel(LogLevel.Warning);
-        var cfg = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["DAM_S3_ENDPOINT"] = Pg.S3Endpoint,
-            ["DAM_S3_ACCESS_KEY"] = Pg.S3AccessKey,
-            ["DAM_S3_SECRET_KEY"] = Pg.S3SecretKey,
-            ["DAM_CLAMAV_HOST"] = clam.Host,
-            ["DAM_CLAMAV_PORT"] = (clamPort ?? clam.Port).ToString(),
-            ["DAM_FFPROBE_PATH"] = "ffprobe-not-installed-in-tests",
-            ["DAM_COPY_MULTIPART_THRESHOLD_MB"] = "5",
-            ["DAM_COPY_PART_MB"] = "5",     // exercise the multipart-copy path with small files
-        }).Build();
-        b.Services.AddDamWorkerIdentity();
-        b.Services.AddDamInfrastructure(Pg.AppConnection);
-        b.Services.AddDamStorage(cfg);
-        b.Services.AddDamIngest(cfg);
-        b.Services.AddDamMessaging(new MessagingOptions { RabbitUrl = mq.Url, MaxAttempts = 2, RetryBaseDelayMs = 100, OutboxPollMs = 100 });
-        b.Services.AddEventConsumer<HashUploadConsumer>();
-        b.Services.AddEventConsumer<ScanUploadConsumer>();
-        b.Services.AddEventConsumer<SniffUploadConsumer>();
-        b.Services.AddEventConsumer<ExtractUploadConsumer>();
-        b.Services.AddEventConsumer<PromoteUploadConsumer>();
-        b.Services.AddEventConsumer<PerceptualHashConsumer>();
-        b.Services.AddOutboxRelay(Pg.SystemConnection);
-        return b.Build();
-    }
-
-    /// <summary>Uploads a file to an asset, straight to storage, and waits for the pipeline to finish; returns the final upload.</summary>
-    private async Task<JsonElement> Ingest(string token, Guid asset, byte[] file, string fileName, string contentType = "image/jpeg")
-    {
-        var start = (await Call(HttpMethod.Post, $"/api/v1/assets/{asset}/uploads", token, new { fileName, size = file.Length, contentType })).Body;
-        var partSize = start.GetProperty("upload").GetProperty("partSize").GetInt32();
-        var etags = new List<object>();
-        foreach (var p in start.GetProperty("parts").EnumerateArray())
-        {
-            var n = p.GetProperty("partNumber").GetInt32();
-            using var res = await S3Http.PutAsync(p.GetProperty("url").GetString()!, new ByteArrayContent(file.Skip((n - 1) * partSize).Take(partSize).ToArray()));
-            Assert.True(res.IsSuccessStatusCode);
-            etags.Add(new { partNumber = n, eTag = res.Headers.ETag!.Tag.Trim('"') });
-        }
-        var id = start.GetProperty("upload").GetProperty("id").GetGuid();
-        var done = await Call(HttpMethod.Post, $"/api/v1/uploads/{id}/complete", token, new { parts = etags });
-        Assert.Equal(HttpStatusCode.Accepted, done.Status);
-        return await WaitForEnd(token, id);
-    }
-
-    private async Task<JsonElement> WaitForEnd(string token, Guid upload, int seconds = 60)
-    {
-        for (var i = 0; i < seconds * 5; i++)
-        {
-            var u = (await Call(HttpMethod.Get, $"/api/v1/uploads/{upload}", token)).Body;
-            if (u.GetProperty("status").GetString() is "ingested" or "blocked" or "failed" or "duplicate") return u;
-            await Task.Delay(200);
-        }
-        throw new TimeoutException("The ingest pipeline did not finish.");
-    }
-
-    private async Task<bool> InStore(string bucket, string key)
-    {
-        using var s3 = Pg.S3Client();
-        try { await s3.GetObjectMetadataAsync(new GetObjectMetadataRequest { BucketName = bucket, Key = key }); return true; }
-        catch (Amazon.S3.AmazonS3Exception e) when (e.StatusCode == HttpStatusCode.NotFound) { return false; }
-    }
-
-    private async Task<JsonElement> Versions(string token, Guid asset) => (await Call(HttpMethod.Get, $"/api/v1/assets/{asset}/versions", token)).Body;
+    private Dictionary<string, string?> ClamSettings() => new() { ["DAM_CLAMAV_HOST"] = clam.Host, ["DAM_CLAMAV_PORT"] = clam.Port.ToString() };
 
     private async Task<string> WaitForPhash(Guid tenant, Guid asset)
     {
@@ -146,7 +77,7 @@ public sealed class IngestTests(PostgresFixture pg, RabbitFixture mq, ClamFixtur
     public async Task A_clean_jpeg_is_scanned_promoted_to_the_originals_bucket_and_its_technical_metadata_is_stored()
     {
         var (t, admin, folder) = await TenantWithPacks();
-        using var worker = StartWorker(); await worker.StartAsync();
+        using var worker = StartWorker(ClamSettings()); await worker.StartAsync();
         var asset = await NewAsset(admin, folder);
         var file = TestImages.WithExif(TestImages.Disc(320), "AcmeCam", "Model 7");
 
@@ -180,7 +111,7 @@ public sealed class IngestTests(PostgresFixture pg, RabbitFixture mq, ClamFixtur
     public async Task The_EICAR_test_file_is_blocked_quarantined_and_never_becomes_a_version()
     {
         var (t, admin, folder) = await TenantWithPacks();
-        using var worker = StartWorker(); await worker.StartAsync();
+        using var worker = StartWorker(ClamSettings()); await worker.StartAsync();
         var asset = await NewAsset(admin, folder, type: "document");
 
         var u = await Ingest(admin, asset, TestImages.Eicar(), "invoice.pdf", "application/pdf");
@@ -207,7 +138,7 @@ public sealed class IngestTests(PostgresFixture pg, RabbitFixture mq, ClamFixtur
     public async Task An_executable_renamed_to_jpg_is_refused_by_what_it_is_not_what_it_is_called()
     {
         var (t, admin, folder) = await TenantWithPacks();
-        using var worker = StartWorker(); await worker.StartAsync();
+        using var worker = StartWorker(ClamSettings()); await worker.StartAsync();
         var asset = await NewAsset(admin, folder);
         var exe = new byte[2048]; exe[0] = (byte)'M'; exe[1] = (byte)'Z';
 
@@ -222,7 +153,7 @@ public sealed class IngestTests(PostgresFixture pg, RabbitFixture mq, ClamFixtur
     public async Task A_png_uploaded_as_an_image_asset_is_accepted_even_when_named_with_the_wrong_extension()
     {
         var (_, admin, folder) = await TenantWithPacks();
-        using var worker = StartWorker(); await worker.StartAsync();
+        using var worker = StartWorker(ClamSettings()); await worker.StartAsync();
         var asset = await NewAsset(admin, folder);
         var u = await Ingest(admin, asset, TestImages.Disc(128, format: ".png"), "logo.jpg");
         Assert.Equal("ingested", u.GetProperty("status").GetString());
@@ -235,7 +166,7 @@ public sealed class IngestTests(PostgresFixture pg, RabbitFixture mq, ClamFixtur
     public async Task A_second_upload_becomes_version_two_and_the_first_stays_available()
     {
         var (t, admin, folder) = await TenantWithPacks();
-        using var worker = StartWorker(); await worker.StartAsync();
+        using var worker = StartWorker(ClamSettings()); await worker.StartAsync();
         var asset = await NewAsset(admin, folder);
         Assert.Equal("ingested", (await Ingest(admin, asset, TestImages.Disc(200), "a.jpg")).GetProperty("status").GetString());
         Assert.Equal("ingested", (await Ingest(admin, asset, TestImages.Checkerboard(200), "b.jpg")).GetProperty("status").GetString());
@@ -257,7 +188,7 @@ public sealed class IngestTests(PostgresFixture pg, RabbitFixture mq, ClamFixtur
     public async Task A_file_bigger_than_the_copy_threshold_is_promoted_intact_through_the_multipart_copy_path()
     {
         var (t, admin, folder) = await TenantWithPacks();
-        using var worker = StartWorker(); await worker.StartAsync();
+        using var worker = StartWorker(ClamSettings()); await worker.StartAsync();
         var asset = await NewAsset(admin, folder);
         var file = TestImages.Noise(1800, 1800, seed: 3);                     // a PNG of several MiB that cannot compress away
         Assert.True(file.Length > 5 * 1024 * 1024 + 1024, $"fixture too small: {file.Length}");
@@ -280,7 +211,7 @@ public sealed class IngestTests(PostgresFixture pg, RabbitFixture mq, ClamFixtur
     public async Task Similar_finds_a_resized_copy_and_not_a_different_picture_and_only_shows_what_the_caller_may_see()
     {
         var (t, admin, folder) = await TenantWithPacks();
-        using var worker = StartWorker(); await worker.StartAsync();
+        using var worker = StartWorker(ClamSettings()); await worker.StartAsync();
         var original = await NewAsset(admin, folder, title: "Original");
         var copy = await NewAsset(admin, folder, title: "Smaller copy");
         var other = await NewAsset(admin, folder, title: "Something else");
@@ -311,7 +242,7 @@ public sealed class IngestTests(PostgresFixture pg, RabbitFixture mq, ClamFixtur
     public async Task When_the_virus_scanner_is_unreachable_the_file_is_never_promoted_and_the_upload_is_visibly_failed()
     {
         var (t, admin, folder) = await TenantWithPacks();
-        using var worker = StartWorker(clamPort: 1); await worker.StartAsync();       // nothing listens there
+        using var worker = StartWorker(new() { ["DAM_CLAMAV_HOST"] = clam.Host, ["DAM_CLAMAV_PORT"] = "1" }); await worker.StartAsync();       // nothing listens there
         var asset = await NewAsset(admin, folder);
 
         var u = await Ingest(admin, asset, TestImages.Disc(100), "hero.jpg");
