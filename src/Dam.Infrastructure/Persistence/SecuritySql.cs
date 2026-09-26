@@ -112,4 +112,12 @@ public static class SecuritySql
         CREATE UNIQUE INDEX ux_groups_tenant_lower_name ON groups (tenant_id, lower(name));
         CREATE UNIQUE INDEX ux_roles_tenant_lower_name ON roles (tenant_id, lower(name));
         """;
+
+    public const string ContentGrants = """
+        GRANT SELECT, INSERT, UPDATE, DELETE ON folders, vocabularies, terms TO dam_app;
+        GRANT SELECT, INSERT, UPDATE ON metadata_schemas TO dam_app;   -- versions are never deleted
+        -- Subtree queries are prefix searches on the path.
+        CREATE INDEX ix_folders_path_prefix ON folders (tenant_id, path text_pattern_ops);
+        CREATE INDEX ix_terms_path_prefix ON terms (tenant_id, vocabulary_id, path text_pattern_ops);
+        """;
 }

@@ -1,0 +1,363 @@
+{
+  "id": "automotive-sample",
+  "name": "Automotive (sample)",
+  "description": "A worked example for vehicle makers: Brand > Model > Variant > Model year, campaigns, regions, manuals and folders. Uses a fictional brand, so replace it with your own.",
+  "requires": [
+    "core"
+  ],
+  "vocabularies": [
+    {
+      "key": "region",
+      "name": "Region",
+      "hierarchical": true,
+      "terms": [
+        {
+          "code": "global",
+          "labels": {
+            "en": "Global"
+          },
+          "children": [
+            {
+              "code": "north",
+              "labels": {
+                "en": "North"
+              }
+            },
+            {
+              "code": "south",
+              "labels": {
+                "en": "South"
+              }
+            },
+            {
+              "code": "east",
+              "labels": {
+                "en": "East"
+              }
+            },
+            {
+              "code": "west",
+              "labels": {
+                "en": "West"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "vehicle",
+      "name": "Vehicle",
+      "description": "Brand, model, variant and model year.",
+      "hierarchical": true,
+      "levels": [
+        "Brand",
+        "Model",
+        "Variant",
+        "Model year"
+      ],
+      "terms": [
+        {
+          "code": "acme",
+          "labels": {
+            "en": "Acme Motors"
+          },
+          "children": [
+            {
+              "code": "acme_roadster",
+              "labels": {
+                "en": "Roadster"
+              },
+              "children": [
+                {
+                  "code": "acme_roadster_gt",
+                  "labels": {
+                    "en": "GT"
+                  },
+                  "children": [
+                    {
+                      "code": "acme_roadster_gt_2025",
+                      "labels": {
+                        "en": "2025"
+                      },
+                      "attributes": {
+                        "modelYear": 2025
+                      }
+                    },
+                    {
+                      "code": "acme_roadster_gt_2026",
+                      "labels": {
+                        "en": "2026"
+                      },
+                      "attributes": {
+                        "modelYear": 2026
+                      }
+                    }
+                  ]
+                },
+                {
+                  "code": "acme_roadster_sport",
+                  "labels": {
+                    "en": "Sport"
+                  },
+                  "children": [
+                    {
+                      "code": "acme_roadster_sport_2026",
+                      "labels": {
+                        "en": "2026"
+                      },
+                      "attributes": {
+                        "modelYear": 2026
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "acme_trail",
+              "labels": {
+                "en": "Trail"
+              },
+              "children": [
+                {
+                  "code": "acme_trail_x",
+                  "labels": {
+                    "en": "X"
+                  },
+                  "children": [
+                    {
+                      "code": "acme_trail_x_2025",
+                      "labels": {
+                        "en": "2025"
+                      },
+                      "attributes": {
+                        "modelYear": 2025
+                      }
+                    },
+                    {
+                      "code": "acme_trail_x_2026",
+                      "labels": {
+                        "en": "2026"
+                      },
+                      "attributes": {
+                        "modelYear": 2026
+                      }
+                    }
+                  ]
+                },
+                {
+                  "code": "acme_trail_xl",
+                  "labels": {
+                    "en": "XL"
+                  },
+                  "children": [
+                    {
+                      "code": "acme_trail_xl_2026",
+                      "labels": {
+                        "en": "2026"
+                      },
+                      "attributes": {
+                        "modelYear": 2026
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "acme_sedan",
+              "labels": {
+                "en": "Sedan"
+              },
+              "children": [
+                {
+                  "code": "acme_sedan_s",
+                  "labels": {
+                    "en": "S"
+                  },
+                  "children": [
+                    {
+                      "code": "acme_sedan_s_2026",
+                      "labels": {
+                        "en": "2026"
+                      },
+                      "attributes": {
+                        "modelYear": 2026
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "campaign",
+      "name": "Campaign",
+      "hierarchical": false,
+      "terms": [
+        {
+          "code": "spring_launch",
+          "labels": {
+            "en": "Spring launch"
+          }
+        },
+        {
+          "code": "festive_offer",
+          "labels": {
+            "en": "Festive offer"
+          }
+        },
+        {
+          "code": "service_camp",
+          "labels": {
+            "en": "Service camp"
+          }
+        }
+      ]
+    }
+  ],
+  "schemas": [
+    {
+      "assetType": "image",
+      "fields": [
+        {
+          "name": "vehicle",
+          "label": "Vehicle",
+          "type": "term_tree",
+          "vocabulary": "vehicle",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "campaign",
+          "label": "Campaign",
+          "type": "vocabulary",
+          "vocabulary": "campaign",
+          "multi": true,
+          "facet": true
+        }
+      ]
+    },
+    {
+      "assetType": "video",
+      "fields": [
+        {
+          "name": "vehicle",
+          "label": "Vehicle",
+          "type": "term_tree",
+          "vocabulary": "vehicle",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "campaign",
+          "label": "Campaign",
+          "type": "vocabulary",
+          "vocabulary": "campaign",
+          "multi": true,
+          "facet": true
+        }
+      ]
+    },
+    {
+      "assetType": "document",
+      "fields": [
+        {
+          "name": "vehicle",
+          "label": "Vehicle",
+          "type": "term_tree",
+          "vocabulary": "vehicle",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "campaign",
+          "label": "Campaign",
+          "type": "vocabulary",
+          "vocabulary": "campaign",
+          "multi": true,
+          "facet": true
+        }
+      ]
+    },
+    {
+      "assetType": "manual",
+      "fields": [
+        {
+          "name": "vehicle",
+          "label": "Vehicle",
+          "type": "term_tree",
+          "vocabulary": "vehicle",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "campaign",
+          "label": "Campaign",
+          "type": "vocabulary",
+          "vocabulary": "campaign",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "manual_type",
+          "label": "Manual type",
+          "type": "enum",
+          "options": [
+            "owner_manual",
+            "service",
+            "faq",
+            "training",
+            "product_info"
+          ],
+          "facet": true
+        }
+      ]
+    }
+  ],
+  "folders": [
+    {
+      "name": "Brand assets",
+      "inheritedMetadata": {
+        "credit": "Acme Motors Marketing"
+      },
+      "children": [
+        {
+          "name": "Roadster"
+        },
+        {
+          "name": "Trail"
+        },
+        {
+          "name": "Sedan"
+        }
+      ]
+    },
+    {
+      "name": "Campaigns",
+      "children": [
+        {
+          "name": "Spring launch"
+        },
+        {
+          "name": "Festive offer"
+        }
+      ]
+    },
+    {
+      "name": "Manuals and documents",
+      "children": [
+        {
+          "name": "Owner manuals"
+        },
+        {
+          "name": "Service documents"
+        }
+      ]
+    }
+  ]
+}

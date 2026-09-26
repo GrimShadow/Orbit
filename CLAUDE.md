@@ -10,6 +10,11 @@ Key decisions D1–D15 are fixed; changing one needs an ADR in `docs/adr/`.
 - Writes = command -> validator -> handler -> domain event -> outbox. No file bytes through dam-api.
 - Config via env vars only (`DAM_*`, see spec Appendix A). No secrets in repo.
 
+## Multi-client rule
+Orbit is sold to many organisations. Never put a customer's names, taxonomy or business rules in code, tests or sample
+content. Customer content is data: tenant config, vocabularies, schemas, folders, roles, access rules, or a template pack
+(`src/Dam.Application/Templates`). Use fictional names ("Acme") in examples. See `docs/adr/0003-multi-client-content-model.md`.
+
 ## Commands
 - Build: `make build`   Test: `make test`   Stack: `make up` / `make down` / `make reset`
 

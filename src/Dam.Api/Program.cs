@@ -124,7 +124,7 @@ app.Run();
 
 /// <summary>
 /// Creates the configured tenant and its built-in roles if missing (single-tenant / on-prem installs, dev).
-/// Set DAM_BOOTSTRAP_TENANT_ID, DAM_BOOTSTRAP_TENANT_NAME and DAM_BOOTSTRAP_TENANT_SLUG. Failures are logged, not fatal.
+/// Set DAM_BOOTSTRAP_TENANT_ID, _NAME and _SLUG; DAM_BOOTSTRAP_TEMPLATES (comma-separated, e.g. "core") adds starter packs. Failures are logged, not fatal.
 /// </summary>
 static async Task BootstrapTenantAsync(WebApplication app)
 {
@@ -135,7 +135,8 @@ static async Task BootstrapTenantAsync(WebApplication app)
         await using var scope = app.Services.CreateAsyncScope();
         scope.ServiceProvider.GetRequiredService<TenantOverride>().Value = id;
         var result = await scope.ServiceProvider.GetRequiredService<IDispatcher>().Send(new EnsureTenantCommand(
-            id, cfg["DAM_BOOTSTRAP_TENANT_NAME"] ?? "Default", cfg["DAM_BOOTSTRAP_TENANT_SLUG"] ?? "default"));
+            id, cfg["DAM_BOOTSTRAP_TENANT_NAME"] ?? "Default", cfg["DAM_BOOTSTRAP_TENANT_SLUG"] ?? "default",
+            (cfg["DAM_BOOTSTRAP_TEMPLATES"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)));
         if (result.IsFailure) app.Logger.LogError("Tenant bootstrap failed: {Error}", result.Error.Message);
     }
     catch (Exception ex)
