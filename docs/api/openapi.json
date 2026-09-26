@@ -1921,6 +1921,83 @@
         }
       }
     },
+    "/api/v1/assets/{id}/renditions": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Renditions already made for the current version",
+        "operationId": "ListAssetRenditions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RenditionDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/links": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Signed, expiring URLs to renditions or one transform, served by the delivery origin / CDN",
+        "operationId": "CreateDeliveryLink",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLinkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryLinkDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assets/{id}/similar": {
       "get": {
         "tags": [
@@ -2636,6 +2713,36 @@
           }
         }
       },
+      "CreateLinkRequest": {
+        "required": [
+          "renditions",
+          "ttlSeconds",
+          "ip",
+          "transform"
+        ],
+        "type": "object",
+        "properties": {
+          "renditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "ttlSeconds": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "ip": {
+            "type": "string",
+            "nullable": true
+          },
+          "transform": {
+            "$ref": "#/components/schemas/TransformRequest"
+          }
+        }
+      },
       "CreateRoleRequest": {
         "required": [
           "name",
@@ -2735,6 +2842,29 @@
               "type": "string"
             },
             "nullable": true
+          }
+        }
+      },
+      "DeliveryLinkDto": {
+        "required": [
+          "expiresAt",
+          "watermarked",
+          "links"
+        ],
+        "type": "object",
+        "properties": {
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "watermarked": {
+            "type": "boolean"
+          },
+          "links": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       },
@@ -3250,6 +3380,45 @@
           }
         }
       },
+      "RenditionDto": {
+        "required": [
+          "profile",
+          "mime",
+          "width",
+          "height",
+          "sizeBytes",
+          "status",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "height": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "RoleDto": {
         "required": [
           "id",
@@ -3615,6 +3784,47 @@
             "items": {}
           }
         }
+      },
+      "TransformRequest": {
+        "required": [
+          "w",
+          "h",
+          "fit",
+          "fmt",
+          "q",
+          "focal"
+        ],
+        "type": "object",
+        "properties": {
+          "w": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "h": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "fit": {
+            "type": "string",
+            "nullable": true
+          },
+          "fmt": {
+            "type": "string",
+            "nullable": true
+          },
+          "q": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "focal": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "nullable": true
       },
       "UpdateAccessRuleRequest": {
         "required": [

@@ -56,6 +56,7 @@ public sealed class S3ObjectStore : IObjectStore, IDisposable
         });
 
     public string QuarantineBucket => _options.BucketQuarantine;
+    public string RenditionsBucket => _options.BucketRenditions;
     public string OriginalsBucket => _options.BucketOriginals;
 
     public async Task<string> StartMultipartAsync(string bucket, string key, string contentType, CancellationToken ct)
@@ -124,6 +125,12 @@ public sealed class S3ObjectStore : IObjectStore, IDisposable
     {
         var r = await _client.GetObjectAsync(new GetObjectRequest { BucketName = bucket, Key = key }, ct);
         return new OwningStream(r.ResponseStream, r);
+    }
+
+    public async Task PutAsync(string bucket, string key, byte[] content, string contentType, CancellationToken ct)
+    {
+        using var body = new MemoryStream(content, writable: false);
+        await _client.PutObjectAsync(new PutObjectRequest { BucketName = bucket, Key = key, InputStream = body, ContentType = contentType, AutoCloseStream = false }, ct);
     }
 
     public async Task<byte[]> ReadRangeAsync(string bucket, string key, long offset, long length, CancellationToken ct)

@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\src\Dam.Infrastructure\Dam.Infrastructure.csproj" />
     <Compile Include="..\Dam.UnitTests\Support\TestImages.cs" Link="Support\TestImages.cs" />
     <ProjectReference Include="..\..\src\Dam.Api\Dam.Api.csproj" />
+    <ProjectReference Include="..\..\src\Dam.Delivery\Dam.Delivery.csproj" />
   </ItemGroup>
 
 </Project>

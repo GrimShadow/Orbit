@@ -1,5 +1,5 @@
 export DAM_MIGRATION_CONNECTION ?= Host=localhost;Port=15432;Database=dam;Username=dam;Password=dam
-.PHONY: run-worker run-scheduler run-api openapi migrate build test up up-search up-scan up-obs up-all down reset
+.PHONY: run-worker run-scheduler run-delivery run-api openapi migrate build test up up-search up-scan up-obs up-all down reset
 build: ; dotnet build Dam.sln && pnpm -r build
 test:  ; dotnet test Dam.sln && pnpm test
 up:    ; docker compose -f deploy/docker-compose.yml up -d --wait
@@ -20,3 +20,5 @@ run-worker:
 	cd src/Dam.Worker && dotnet run
 run-scheduler:
 	cd src/Dam.Scheduler && dotnet run
+run-delivery:
+	cd src/Dam.Delivery && dotnet run

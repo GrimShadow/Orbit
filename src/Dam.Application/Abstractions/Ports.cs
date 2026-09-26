@@ -98,6 +98,8 @@ public interface IObjectStore
     /// <summary>The untrusted landing bucket. Everything uploaded lands here until it has been scanned (Step 1.4).</summary>
     string QuarantineBucket { get; }
     string OriginalsBucket { get; }
+    /// <summary>Derived files (renditions, transform cache). Safe to delete: everything here can be regenerated.</summary>
+    string RenditionsBucket { get; }
 
     Task<string> StartMultipartAsync(string bucket, string key, string contentType, CancellationToken ct);
     /// <summary>A time-limited URL the browser PUTs one part to. Computed locally; no network call.</summary>
@@ -107,6 +109,8 @@ public interface IObjectStore
     Task AbortMultipartAsync(string bucket, string key, string s3UploadId, CancellationToken ct);
     Task<ObjectInfo?> HeadAsync(string bucket, string key, CancellationToken ct);
     Task<Stream> OpenReadAsync(string bucket, string key, CancellationToken ct);
+    /// <summary>Stores a whole (small) object in one request. Used for renditions, never for uploads.</summary>
+    Task PutAsync(string bucket, string key, byte[] content, string contentType, CancellationToken ct);
     /// <summary>Reads <paramref name="length"/> bytes starting at <paramref name="offset"/> (fewer if the object is shorter).</summary>
     Task<byte[]> ReadRangeAsync(string bucket, string key, long offset, long length, CancellationToken ct);
     /// <summary>Server-side copy between buckets. Objects above the store's single-copy limit are copied in parts.</summary>
@@ -150,4 +154,22 @@ public interface IMediaProbe
 {
     /// <summary>Null when probing is unavailable (ffprobe not installed); throws when the file cannot be read as media.</summary>
     Task<System.Text.Json.JsonElement?> ProbeAsync(string bucket, string key, CancellationToken ct);
+}
+
+/// <summary>Delivery tunables (env: DAM_DELIVERY_*, DAM_CDN_BASE_URL). Links are built on the CDN address when there is one.</summary>
+public sealed class DeliverySettings
+{
+    /// <summary>Where the delivery origin can be reached by clients when there is no CDN in front.</summary>
+    public string PublicBaseUrl { get; set; } = "http://localhost:5290";
+    /// <summary>When set, links point here instead: the CDN in front of the origin.</summary>
+    public string? CdnBaseUrl { get; set; }
+    /// <summary>Spec A7.6: download tokens last at most an hour unless the caller asks for longer, up to <see cref="MaxTokenTtl"/>.</summary>
+    public TimeSpan DefaultTokenTtl { get; set; } = TimeSpan.FromHours(1);
+    public TimeSpan MaxTokenTtl { get; set; } = TimeSpan.FromHours(24);
+    /// <summary>How long a CDN or browser may reuse a response, capped by the time left on the token.</summary>
+    public int MaxAgeSeconds { get; set; } = 300;
+    /// <summary>Images larger than this are not transformed on the fly.</summary>
+    public long MaxSourceBytes { get; set; } = 200L * 1024 * 1024;
+
+    public string LinkBase => (CdnBaseUrl is { Length: > 0 } cdn ? cdn : PublicBaseUrl).TrimEnd('/');
 }

@@ -113,6 +113,7 @@ jobs:
           - { name: api, file: deploy/docker/Dockerfile.dotnet, args: "PROJECT=Dam.Api" }
           - { name: worker, file: deploy/docker/Dockerfile.dotnet, args: "PROJECT=Dam.Worker" }
           - { name: scheduler, file: deploy/docker/Dockerfile.dotnet, args: "PROJECT=Dam.Scheduler" }
+          - { name: delivery, file: deploy/docker/Dockerfile.dotnet, args: "PROJECT=Dam.Delivery" }
           - { name: console, file: web/console/Dockerfile, args: "" }
     steps:
       - name: Image name (Docker requires lowercase)

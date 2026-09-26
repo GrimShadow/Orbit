@@ -32,6 +32,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<Upload> Uploads => Set<Upload>();
     public DbSet<AssetVersion> AssetVersions => Set<AssetVersion>();
+    public DbSet<Rendition> Renditions => Set<Rendition>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -67,6 +68,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureContent(b);
         ConfigureAssets(b);
         ConfigureVersions(b);
+        ConfigureRenditions(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -237,6 +239,21 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasIndex(x => new { x.TenantId, x.AssetId, x.VersionNo }).IsUnique();
             e.HasIndex(x => x.UploadId).IsUnique();    // one upload produces at most one version
             e.HasIndex(x => x.StorageKey).IsUnique();
+        });
+
+    private static void ConfigureRenditions(ModelBuilder b) =>
+        b.Entity<Rendition>(e =>
+        {
+            e.ToTable("renditions");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Profile).HasMaxLength(64);
+            e.Property(x => x.Bucket).HasMaxLength(100);
+            e.Property(x => x.StorageKey).HasMaxLength(300);
+            e.Property(x => x.Mime).HasMaxLength(100);
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.HasOne<AssetVersion>().WithMany().HasForeignKey(x => x.VersionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.TenantId, x.VersionId, x.Profile }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.AssetId });
         });
 
     private LambdaExpression TenantFilter(Type entityType)

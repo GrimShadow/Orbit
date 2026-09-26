@@ -168,6 +168,8 @@ internal sealed class MemoryStore(byte[] content) : IObjectStore
 {
     public string QuarantineBucket => "q";
     public string OriginalsBucket => "o";
+    public string RenditionsBucket => "r";
+    public Task PutAsync(string bucket, string key, byte[] content, string contentType, CancellationToken ct) => throw new NotSupportedException();
     public Task<byte[]> ReadRangeAsync(string bucket, string key, long offset, long length, CancellationToken ct) =>
         Task.FromResult(content.Skip((int)offset).Take((int)length).ToArray());
     public Task<Stream> OpenReadAsync(string bucket, string key, CancellationToken ct) => Task.FromResult<Stream>(new MemoryStream(content));

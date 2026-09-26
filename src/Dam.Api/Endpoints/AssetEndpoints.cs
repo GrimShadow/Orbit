@@ -45,6 +45,11 @@ public static class AssetEndpoints
         assets.MapGet("/{id:guid}/versions/{versionNo:int}", (Guid id, int versionNo, IDispatcher d, CancellationToken ct) =>
                 Run(d, new GetVersionQuery(id, versionNo), v => Task.FromResult(Results.Ok(v)), ct))
             .WithName("GetAssetVersion").Produces<AssetVersionDto>();
+        assets.MapGet("/{id:guid}/renditions", (Guid id, IDispatcher d, CancellationToken ct) => Run(d, new ListRenditionsQuery(id), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("ListAssetRenditions").WithSummary("Renditions already made for the current version").Produces<IReadOnlyList<RenditionDto>>();
+        assets.MapPost("/{id:guid}/links", (Guid id, CreateLinkRequest r, IDispatcher d, CancellationToken ct) =>
+                Run(d, new CreateDeliveryLinkCommand(id, r), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("CreateDeliveryLink").WithSummary("Signed, expiring URLs to renditions or one transform, served by the delivery origin / CDN").Produces<DeliveryLinkDto>();
         assets.MapGet("/{id:guid}/similar", (Guid id, IDispatcher d, CancellationToken ct, string? by, int? maxDistance, int? limit) =>
                 by is null or "phash"
                     ? Run(d, new FindSimilarQuery(id, maxDistance, limit), v => Task.FromResult(Results.Ok(v)), ct)

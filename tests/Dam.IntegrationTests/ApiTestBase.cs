@@ -25,7 +25,7 @@ public abstract class ApiTestBase(PostgresFixture pg) : IAsyncLifetime
         return Task.CompletedTask;
     }
 
-    public async Task DisposeAsync()
+    public virtual async Task DisposeAsync()
     {
         _http.Dispose();
         await Api.DisposeAsync();
