@@ -83,3 +83,46 @@ public interface IQueryExecutor
     Task<bool> AnyAsync<T>(IQueryable<T> query, CancellationToken ct);
     Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken ct);
 }
+
+/// <param name="LastModified">Some stores list every stored version of a re-sent part; the newest one is the current one.</param>
+public sealed record StoredPart(int PartNumber, long Size, string ETag, DateTimeOffset? LastModified = null);
+
+public sealed record ObjectInfo(long Size, string ETag);
+
+/// <summary>
+/// Object storage over the S3 API only (decision D5), so one code path serves AWS, Azure via a gateway, and on-prem stores.
+/// File bytes never pass through the API: clients PUT parts straight to presigned URLs.
+/// </summary>
+public interface IObjectStore
+{
+    /// <summary>The untrusted landing bucket. Everything uploaded lands here until it has been scanned (Step 1.4).</summary>
+    string QuarantineBucket { get; }
+    string OriginalsBucket { get; }
+
+    Task<string> StartMultipartAsync(string bucket, string key, string contentType, CancellationToken ct);
+    /// <summary>A time-limited URL the browser PUTs one part to. Computed locally; no network call.</summary>
+    string PresignPart(string bucket, string key, string s3UploadId, int partNumber, TimeSpan ttl);
+    Task<IReadOnlyList<StoredPart>> ListPartsAsync(string bucket, string key, string s3UploadId, CancellationToken ct);
+    Task<ObjectInfo> CompleteMultipartAsync(string bucket, string key, string s3UploadId, IEnumerable<StoredPart> parts, CancellationToken ct);
+    Task AbortMultipartAsync(string bucket, string key, string s3UploadId, CancellationToken ct);
+    Task<ObjectInfo?> HeadAsync(string bucket, string key, CancellationToken ct);
+    Task<Stream> OpenReadAsync(string bucket, string key, CancellationToken ct);
+    Task DeleteAsync(string bucket, string key, CancellationToken ct);
+}
+
+/// <summary>Tunables for resumable uploads (env: DAM_UPLOAD_*).</summary>
+public sealed class UploadSettings
+{
+    /// <summary>S3 requires every part but the last to be at least 5 MiB and allows at most 10,000 parts.</summary>
+    public const int MinPartSize = 5 * 1024 * 1024;
+    public const int MaxParts = 10_000;
+
+    public int PartSizeBytes { get; set; } = 16 * 1024 * 1024;
+    /// <summary>How long an unfinished upload stays resumable.</summary>
+    public TimeSpan SessionLifetime { get; set; } = TimeSpan.FromHours(24);
+    /// <summary>Presigned part URLs are short-lived (spec A7.6: at most 15 minutes); clients ask for fresh ones as they go.</summary>
+    public TimeSpan PresignTtl { get; set; } = TimeSpan.FromMinutes(15);
+    /// <summary>How many part URLs come back with the start of an upload.</summary>
+    public int InitialPartUrls { get; set; } = 100;
+    public int MaxPartUrlsPerRequest { get; set; } = 200;
+}

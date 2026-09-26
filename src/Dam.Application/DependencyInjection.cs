@@ -17,6 +17,8 @@ public static class DependencyInjection
         services.AddScoped<Identity.BuiltInRoleSeeder>();
         services.AddScoped<Content.MetadataValidationService>();
         services.AddScoped<Content.TemplateApplier>();
+        services.AddScoped<Assets.AssetMetadataBuilder>();
+        services.AddScoped<Assets.UploadStarter>();
         services.AddValidatorsFromAssembly(asm, includeInternalTypes: true);
 
         foreach (var t in asm.GetTypes().Where(t => t is { IsAbstract: false, IsInterface: false }))

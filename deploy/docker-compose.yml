@@ -36,7 +36,10 @@ services:
       for b in dam-originals dam-renditions dam-quarantine; do
         aws --endpoint-url http://s3:9000 s3api create-bucket --bucket $$b 2>/dev/null;
         aws --endpoint-url http://s3:9000 s3api put-bucket-versioning --bucket $$b --versioning-configuration Status=Enabled;
-      done; aws --endpoint-url http://s3:9000 s3 ls"
+      done;
+      aws --endpoint-url http://s3:9000 s3api put-bucket-cors --bucket dam-quarantine --cors-configuration '{\"CORSRules\":[{\"AllowedOrigins\":[\"http://localhost:5173\"],\"AllowedMethods\":[\"PUT\",\"GET\",\"HEAD\"],\"AllowedHeaders\":[\"*\"],\"ExposeHeaders\":[\"ETag\"],\"MaxAgeSeconds\":3000}]}';
+      aws --endpoint-url http://s3:9000 s3api put-bucket-lifecycle-configuration --bucket dam-quarantine --lifecycle-configuration '{\"Rules\":[{\"ID\":\"abort-stale-multipart\",\"Status\":\"Enabled\",\"Filter\":{\"Prefix\":\"\"},\"AbortIncompleteMultipartUpload\":{\"DaysAfterInitiation\":2}}]}';
+      aws --endpoint-url http://s3:9000 s3 ls"
     restart: "no"
 
   redis:

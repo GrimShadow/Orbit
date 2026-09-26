@@ -291,13 +291,16 @@ public sealed record DeleteTermCommand(Guid Id) : ICommand<Guid>, IAuthorizedReq
     public string Permission => Permissions.TaxonomyManage;
 }
 
-public sealed class DeleteTermHandler(IRepository<Term> terms, IQueryExecutor q, IEventCollector events) : IRequestHandler<DeleteTermCommand, Guid>
+public sealed class DeleteTermHandler(IRepository<Term> terms, IRepository<Domain.Assets.Asset> assets, IQueryExecutor q, IEventCollector events) : IRequestHandler<DeleteTermCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(DeleteTermCommand c, CancellationToken ct)
     {
         var t = await q.FirstOrDefaultAsync(terms.Query().Where(x => x.Id == c.Id), ct);
         if (t is null) return Error.NotFound("Term not found.");
         if (await q.AnyAsync(terms.Query().Where(x => x.ParentId == t.Id), ct)) return Error.Conflict("The term has child terms. Delete or move them first, or deprecate this term.");
+        var code = t.Code;
+        var inUse = await q.CountAsync(assets.Query().Where(a => a.TaxonomyTerms.Contains(code)), ct);
+        if (inUse > 0) return Error.Conflict($"The term is used by {inUse} asset(s). Deprecate it instead of deleting it.");
         terms.Remove(t);
         events.Raise(Events.Changed("term.deleted", "term", t.Id));
         return t.Id;

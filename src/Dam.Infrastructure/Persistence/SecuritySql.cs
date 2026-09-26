@@ -120,4 +120,8 @@ public static class SecuritySql
         CREATE INDEX ix_folders_path_prefix ON folders (tenant_id, path text_pattern_ops);
         CREATE INDEX ix_terms_path_prefix ON terms (tenant_id, vocabulary_id, path text_pattern_ops);
         """;
+
+    public const string AssetGrants = """
+        GRANT SELECT, INSERT, UPDATE ON assets, uploads TO dam_app;   -- assets are soft-deleted; nothing is ever hard-deleted by the app
+        """;
 }

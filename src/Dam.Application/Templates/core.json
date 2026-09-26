@@ -242,7 +242,8 @@
           "type": "vocabulary",
           "vocabulary": "channel",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "channel"
         },
         {
           "name": "regions",
@@ -250,7 +251,8 @@
           "type": "term_tree",
           "vocabulary": "region",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "region"
         },
         {
           "name": "tags",
@@ -290,7 +292,8 @@
           "type": "vocabulary",
           "vocabulary": "channel",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "channel"
         },
         {
           "name": "regions",
@@ -298,7 +301,8 @@
           "type": "term_tree",
           "vocabulary": "region",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "region"
         },
         {
           "name": "tags",
@@ -338,7 +342,8 @@
           "type": "vocabulary",
           "vocabulary": "channel",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "channel"
         },
         {
           "name": "regions",
@@ -346,7 +351,8 @@
           "type": "term_tree",
           "vocabulary": "region",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "region"
         },
         {
           "name": "tags",
@@ -386,7 +392,8 @@
           "type": "vocabulary",
           "vocabulary": "channel",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "channel"
         },
         {
           "name": "regions",
@@ -394,7 +401,8 @@
           "type": "term_tree",
           "vocabulary": "region",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "region"
         },
         {
           "name": "tags",
@@ -434,7 +442,8 @@
           "type": "vocabulary",
           "vocabulary": "channel",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "channel"
         },
         {
           "name": "regions",
@@ -442,7 +451,8 @@
           "type": "term_tree",
           "vocabulary": "region",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "region"
         },
         {
           "name": "tags",
@@ -493,7 +503,8 @@
           "type": "vocabulary",
           "vocabulary": "channel",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "channel"
         },
         {
           "name": "regions",
@@ -501,7 +512,8 @@
           "type": "term_tree",
           "vocabulary": "region",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "region"
         },
         {
           "name": "tags",
@@ -541,7 +553,8 @@
           "type": "vocabulary",
           "vocabulary": "channel",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "channel"
         },
         {
           "name": "regions",
@@ -549,7 +562,8 @@
           "type": "term_tree",
           "vocabulary": "region",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "region"
         },
         {
           "name": "tags",
@@ -589,7 +603,8 @@
           "type": "vocabulary",
           "vocabulary": "channel",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "channel"
         },
         {
           "name": "regions",
@@ -597,7 +612,8 @@
           "type": "term_tree",
           "vocabulary": "region",
           "multi": true,
-          "facet": true
+          "facet": true,
+          "accessDimension": "region"
         },
         {
           "name": "tags",

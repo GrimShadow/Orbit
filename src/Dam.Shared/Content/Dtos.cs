@@ -25,7 +25,7 @@ public sealed record TermNodeDto(TermDto Term, IReadOnlyList<TermNodeDto> Childr
 
 public sealed record FieldDto(
     string Name, string Label, string Type, bool Required, bool Multi, string? Vocabulary, IReadOnlyList<string>? Options,
-    decimal? Min, decimal? Max, bool WholeNumbers, int? MaxLength, bool Searchable, bool Facet);
+    decimal? Min, decimal? Max, bool WholeNumbers, int? MaxLength, bool Searchable, bool Facet, string? AccessDimension = null);
 
 public sealed record SchemaDto(
     string AssetType, int Version, bool IsCurrent, IReadOnlyList<FieldDto> Fields, string ChangeNote, DateTimeOffset CreatedAt);

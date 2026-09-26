@@ -169,7 +169,7 @@ public sealed class MoveFolderHandler(IRepository<Folder> folders, IQueryExecuto
 
 public sealed record DeleteFolderCommand(Guid Id) : ICommand<Guid>;
 
-public sealed class DeleteFolderHandler(IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz, IEventCollector events)
+public sealed class DeleteFolderHandler(IRepository<Folder> folders, IRepository<Domain.Assets.Asset> assets, IQueryExecutor q, IAuthorizationService authz, IEventCollector events)
     : IRequestHandler<DeleteFolderCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(DeleteFolderCommand c, CancellationToken ct)
@@ -178,7 +178,7 @@ public sealed class DeleteFolderHandler(IRepository<Folder> folders, IQueryExecu
         if (f is null) return Error.NotFound("Folder not found.");
         if (!await FolderGuard.CanAsync(authz, Permissions.FoldersManage, f.Path, ct)) return Error.Forbidden();
         if (await q.AnyAsync(folders.Query().Where(x => x.ParentId == f.Id), ct)) return Error.Conflict("The folder still has sub-folders. Delete or move them first.");
-        // Assets arrive in Step 1.3, which adds the "folder still holds assets" check here.
+        if (await q.AnyAsync(assets.Query().Where(a => a.FolderId == f.Id), ct)) return Error.Conflict("The folder still holds assets. Move or delete them first.");
         folders.Remove(f);
         events.Raise(Events.Changed("folder.deleted", "folder", f.Id));
         return f.Id;
