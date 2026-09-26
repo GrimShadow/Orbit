@@ -36,6 +36,7 @@ public sealed class UploadStarter(
         if (errors.Count > 0) return Error.Validation(errors);
 
         if (asset.Status == AssetStatuses.Deleted) return Error.Conflict("The asset is deleted.");
+        if (asset.Status == AssetStatuses.Blocked) return Error.Conflict("The asset is blocked because malware was found in an earlier upload. An administrator must review it first.");
         if (await q.AnyAsync(uploads.Query().Where(u => u.AssetId == asset.Id && (u.Status == UploadStatus.Initiated || u.Status == UploadStatus.Processing)), ct))
             return Error.Conflict("This asset already has an upload in progress. Finish or abort it first.");
 
@@ -173,9 +174,15 @@ public sealed class CompleteUploadHandler(
         if (!u.IsOpen) return Error.Conflict($"The upload is {u.Status.ToString().ToLowerInvariant()}.");
         if (c.Sha256 is not null && !Hex.IsSha256(c.Sha256)) return Error.Validation(ContentMapping.Fail("sha256", "Expected 64 hexadecimal characters."));
 
-        // A part that was sent twice (a resume) can be listed twice by some stores; the newest write is the current one.
+        // A part that was sent twice (a resume) can be listed twice by some stores. Timestamps only have one-second resolution, so they
+        // cannot decide it alone: prefer the copy the client names by ETag, then one of the right size, then the newest.
+        var claimedTags = (c.Parts ?? []).ToDictionary(x => x.PartNumber, x => x.ETag.Trim('"'), EqualityComparer<int>.Default);
         var stored = (await store.ListPartsAsync(u.Bucket, u.StorageKey, u.S3UploadId, ct))
-            .GroupBy(p => p.PartNumber).ToDictionary(g => g.Key, g => g.OrderBy(p => p.LastModified ?? DateTimeOffset.MinValue).Last());
+            .GroupBy(p => p.PartNumber).ToDictionary(g => g.Key, g => g
+                .OrderBy(p => claimedTags.TryGetValue(p.PartNumber, out var tag) && string.Equals(p.ETag.Trim('"'), tag, StringComparison.OrdinalIgnoreCase) ? 1 : 0)
+                .ThenBy(p => p.Size == ExpectedSize(u, p.PartNumber) ? 1 : 0)
+                .ThenBy(p => p.LastModified ?? DateTimeOffset.MinValue)
+                .Last());
         var missing = Enumerable.Range(1, u.PartCount).Where(n => !stored.ContainsKey(n)).ToList();
         var wrongSize = Enumerable.Range(1, u.PartCount).Where(n => stored.TryGetValue(n, out var p) && p.Size != ExpectedSize(u, n)).ToList();
         if (missing.Count > 0 || wrongSize.Count > 0)

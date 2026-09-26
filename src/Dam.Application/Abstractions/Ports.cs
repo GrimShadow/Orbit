@@ -107,6 +107,12 @@ public interface IObjectStore
     Task AbortMultipartAsync(string bucket, string key, string s3UploadId, CancellationToken ct);
     Task<ObjectInfo?> HeadAsync(string bucket, string key, CancellationToken ct);
     Task<Stream> OpenReadAsync(string bucket, string key, CancellationToken ct);
+    /// <summary>Reads <paramref name="length"/> bytes starting at <paramref name="offset"/> (fewer if the object is shorter).</summary>
+    Task<byte[]> ReadRangeAsync(string bucket, string key, long offset, long length, CancellationToken ct);
+    /// <summary>Server-side copy between buckets. Objects above the store's single-copy limit are copied in parts.</summary>
+    Task CopyAsync(string sourceBucket, string sourceKey, string destinationBucket, string destinationKey, long size, CancellationToken ct);
+    /// <summary>A URL for server-side tools (ffprobe) to read the object with range requests. Not for browsers.</summary>
+    string PresignGet(string bucket, string key, TimeSpan ttl);
     Task DeleteAsync(string bucket, string key, CancellationToken ct);
 }
 
@@ -125,4 +131,23 @@ public sealed class UploadSettings
     /// <summary>How many part URLs come back with the start of an upload.</summary>
     public int InitialPartUrls { get; set; } = 100;
     public int MaxPartUrlsPerRequest { get; set; } = 200;
+}
+
+public enum ScanVerdict { Clean, Infected, Skipped }
+
+/// <param name="Signature">The malware signature name when infected.</param>
+/// <param name="Note">Why a scan was skipped, or engine detail.</param>
+public sealed record ScanOutcome(ScanVerdict Verdict, string Engine, string? Signature = null, string? Note = null);
+
+/// <summary>Scans file content for malware (ClamAV). Throws when the scanner cannot be reached: ingest must fail closed.</summary>
+public interface IVirusScanner
+{
+    Task<ScanOutcome> ScanAsync(Stream content, long length, CancellationToken ct);
+}
+
+/// <summary>Reads technical facts from audio and video (duration, codecs, resolution) without downloading the file.</summary>
+public interface IMediaProbe
+{
+    /// <summary>Null when probing is unavailable (ffprobe not installed); throws when the file cannot be read as media.</summary>
+    Task<System.Text.Json.JsonElement?> ProbeAsync(string bucket, string key, CancellationToken ct);
 }

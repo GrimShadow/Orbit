@@ -31,6 +31,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<MetadataSchema> MetadataSchemas => Set<MetadataSchema>();
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<Upload> Uploads => Set<Upload>();
+    public DbSet<AssetVersion> AssetVersions => Set<AssetVersion>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -65,6 +66,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureIdentity(b);
         ConfigureContent(b);
         ConfigureAssets(b);
+        ConfigureVersions(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -187,6 +189,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.Property(x => x.Title).HasMaxLength(300);
             e.Property(x => x.StatusReason).HasMaxLength(500);
             e.Property(x => x.ChecksumSha256).HasColumnType("char(64)");
+            e.Property(x => x.Phash).HasColumnType("char(16)");
             e.Property(x => x.Metadata).AsJson();
             e.Property(x => x.Attributes).AsJsonDictionary();
             e.Property(x => x.TaxonomyTerms).HasColumnType("text[]");
@@ -209,12 +212,32 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.Property(x => x.S3UploadId).HasMaxLength(500);
             e.Property(x => x.Sha256).HasColumnType("char(64)");
             e.Property(x => x.Error).HasMaxLength(500);
+            e.Property(x => x.IngestStage).HasMaxLength(16);
+            e.Property(x => x.DetectedMime).HasMaxLength(100);
+            e.Property(x => x.TechnicalMetadata).AsJson();
             e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.AssetId });
             e.HasIndex(x => new { x.TenantId, x.BatchId }).HasFilter("batch_id IS NOT NULL");
             e.HasIndex(x => x.StorageKey).IsUnique();
         });
     }
+
+    private static void ConfigureVersions(ModelBuilder b) =>
+        b.Entity<AssetVersion>(e =>
+        {
+            e.ToTable("asset_versions");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Bucket).HasMaxLength(100);
+            e.Property(x => x.StorageKey).HasMaxLength(300);
+            e.Property(x => x.Mime).HasMaxLength(100);
+            e.Property(x => x.Sha256).HasColumnType("char(64)");
+            e.Property(x => x.ChangeNote).HasMaxLength(500);
+            e.Property(x => x.TechnicalMetadata).AsJson();
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.AssetId, x.VersionNo }).IsUnique();
+            e.HasIndex(x => x.UploadId).IsUnique();    // one upload produces at most one version
+            e.HasIndex(x => x.StorageKey).IsUnique();
+        });
 
     private LambdaExpression TenantFilter(Type entityType)
     {

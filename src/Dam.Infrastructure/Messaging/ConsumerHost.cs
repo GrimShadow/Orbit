@@ -115,6 +115,7 @@ public sealed class ConsumerHost<T>(
             else
             {
                 await sp.GetRequiredService<T>().HandleAsync(envelope, default);
+                await PersistAggregateEventsAsync(sp);
                 await uow.CommitAsync(default);
             }
             await ch.BasicAckAsync(ea.DeliveryTag, false);
@@ -139,12 +140,23 @@ public sealed class ConsumerHost<T>(
             var uow = sp.GetRequiredService<IUnitOfWork>();
             await uow.BeginAsync(default);
             await sp.GetRequiredService<T>().OnParkedAsync(envelope, error, default);
+            await PersistAggregateEventsAsync(sp);
             await uow.CommitAsync(default);
         }
         catch (Exception ex)
         {
             log.LogError(ex, "{Consumer}: the parked-message hook failed for {MessageId}", _name, envelope.MessageId);
         }
+    }
+
+    /// <summary>
+    /// Events raised by aggregates the consumer changed (e.g. Asset.ChangeStatus) are written to the audit log and outbox in the
+    /// same transaction, exactly as they are for API commands. Without this they would be silently lost.
+    /// </summary>
+    private static async Task PersistAggregateEventsAsync(IServiceProvider sp)
+    {
+        var events = sp.GetRequiredService<IDomainEventSource>().Drain();
+        if (events.Count > 0) await sp.GetRequiredService<IOutbox>().EnqueueAsync(events, default);
     }
 
     private static async Task SafeRollbackAsync(IUnitOfWork uow)
@@ -178,8 +190,11 @@ public sealed class ConsumerHost<T>(
         headers["x-attempt"] = Encoding.UTF8.GetBytes(attempt.ToString(System.Globalization.CultureInfo.InvariantCulture));
         return new BasicProperties
         {
-            MessageId = src.MessageId, Type = src.Type, ContentType = src.ContentType,
-            DeliveryMode = DeliveryModes.Persistent, Headers = headers,
+            MessageId = src.MessageId,
+            Type = src.Type,
+            ContentType = src.ContentType,
+            DeliveryMode = DeliveryModes.Persistent,
+            Headers = headers,
         };
     }
 }

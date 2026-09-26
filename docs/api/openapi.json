@@ -1846,6 +1846,139 @@
         }
       }
     },
+    "/api/v1/assets/{id}/versions": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Every stored version, newest first, with the technical metadata read at ingest",
+        "operationId": "ListAssetVersions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssetVersionDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/versions/{versionNo}": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "operationId": "GetAssetVersion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "versionNo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetVersionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/similar": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Near-duplicate images by perceptual hash (?by=phash\u0026maxDistance=8)",
+        "operationId": "FindSimilarAssets",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxDistance",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SimilarAssetDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assets/{id}/uploads": {
       "post": {
         "tags": [
@@ -2213,6 +2346,53 @@
             "format": "date-time"
           },
           "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AssetVersionDto": {
+        "required": [
+          "id",
+          "versionNo",
+          "isCurrent",
+          "sizeBytes",
+          "mime",
+          "sha256",
+          "technicalMetadata",
+          "changeNote",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionNo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isCurrent": {
+            "type": "boolean"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "technicalMetadata": {
+            "type": "object"
+          },
+          "changeNote": {
+            "type": "string"
+          },
+          "createdAt": {
             "type": "string",
             "format": "date-time"
           }
@@ -3213,6 +3393,41 @@
         "properties": {
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "SimilarAssetDto": {
+        "required": [
+          "assetId",
+          "title",
+          "type",
+          "status",
+          "folderId",
+          "distance"
+        ],
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "folderId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "distance": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },

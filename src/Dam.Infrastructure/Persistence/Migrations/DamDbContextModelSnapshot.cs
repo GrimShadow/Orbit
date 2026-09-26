@@ -69,7 +69,7 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasColumnName("owner_id");
 
                     b.Property<string>("Phash")
-                        .HasColumnType("text")
+                        .HasColumnType("char(16)")
                         .HasColumnName("phash");
 
                     b.Property<DateTimeOffset?>("PublishAt")
@@ -150,6 +150,96 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Dam.Domain.Assets.AssetVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<string>("Bucket")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bucket");
+
+                    b.Property<string>("ChangeNote")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("change_note");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Mime")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("mime");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasColumnType("char(64)")
+                        .HasColumnName("sha256");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<string>("TechnicalMetadata")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("technical_metadata");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("UploadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("upload_id");
+
+                    b.Property<int>("VersionNo")
+                        .HasColumnType("integer")
+                        .HasColumnName("version_no");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_versions");
+
+                    b.HasIndex("AssetId")
+                        .HasDatabaseName("ix_asset_versions_asset_id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_asset_versions_storage_key");
+
+                    b.HasIndex("UploadId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_asset_versions_upload_id");
+
+                    b.HasIndex("TenantId", "AssetId", "VersionNo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_asset_versions_tenant_id_asset_id_version_no");
+
+                    b.ToTable("asset_versions", (string)null);
+                });
+
             modelBuilder.Entity("Dam.Domain.Assets.Upload", b =>
                 {
                     b.Property<Guid>("Id")
@@ -197,6 +287,11 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("declared_size");
 
+                    b.Property<string>("DetectedMime")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("detected_mime");
+
                     b.Property<Guid?>("DuplicateOfAssetId")
                         .HasColumnType("uuid")
                         .HasColumnName("duplicate_of_asset_id");
@@ -216,6 +311,12 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("file_name");
+
+                    b.Property<string>("IngestStage")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("ingest_stage");
 
                     b.Property<int>("PartCount")
                         .HasColumnType("integer")
@@ -250,6 +351,11 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
                         .HasColumnName("storage_key");
+
+                    b.Property<string>("TechnicalMetadata")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("technical_metadata");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -984,6 +1090,16 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasForeignKey("FolderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_assets_folders_folder_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.AssetVersion", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_versions_assets_asset_id");
                 });
 
             modelBuilder.Entity("Dam.Domain.Assets.Upload", b =>

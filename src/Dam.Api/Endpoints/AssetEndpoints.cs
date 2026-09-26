@@ -40,6 +40,17 @@ public static class AssetEndpoints
                 Run(d, new DeleteAssetCommand(id), _ => Task.FromResult(Results.NoContent()), ct))
             .WithName("DeleteAsset").WithSummary("Soft delete: the asset becomes 'deleted'");
 
+        assets.MapGet("/{id:guid}/versions", (Guid id, IDispatcher d, CancellationToken ct) => Run(d, new ListVersionsQuery(id), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("ListAssetVersions").WithSummary("Every stored version, newest first, with the technical metadata read at ingest").Produces<IReadOnlyList<AssetVersionDto>>();
+        assets.MapGet("/{id:guid}/versions/{versionNo:int}", (Guid id, int versionNo, IDispatcher d, CancellationToken ct) =>
+                Run(d, new GetVersionQuery(id, versionNo), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("GetAssetVersion").Produces<AssetVersionDto>();
+        assets.MapGet("/{id:guid}/similar", (Guid id, IDispatcher d, CancellationToken ct, string? by, int? maxDistance, int? limit) =>
+                by is null or "phash"
+                    ? Run(d, new FindSimilarQuery(id, maxDistance, limit), v => Task.FromResult(Results.Ok(v)), ct)
+                    : Task.FromResult(Results.ValidationProblem(new Dictionary<string, string[]> { ["by"] = ["Only 'phash' is supported."] }, statusCode: 422)))
+            .WithName("FindSimilarAssets").WithSummary("Near-duplicate images by perceptual hash (?by=phash&maxDistance=8)").Produces<IReadOnlyList<SimilarAssetDto>>();
+
         assets.MapPost("/{id:guid}/uploads", (Guid id, InitiateUploadRequest r, IDispatcher d, CancellationToken ct) =>
                 Run(d, new InitiateUploadCommand(id, r.FileName, r.Size, r.ContentType, r.AllowDuplicate, r.Sha256),
                     v => Task.FromResult(Results.Created($"/api/v1/uploads/{v.Upload.Id}", v)), ct))

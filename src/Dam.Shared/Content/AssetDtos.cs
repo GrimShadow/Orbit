@@ -26,3 +26,11 @@ public sealed record BulkFileRequest(string FileName, long Size, string? Content
 public sealed record BulkUploadItemDto(string FileName, Guid? AssetId, UploadStartDto? Upload, string? Error);
 
 public sealed record BulkUploadResultDto(Guid BatchId, int Created, int Failed, IReadOnlyList<BulkUploadItemDto> Items);
+
+/// <summary>One stored file of an asset. Where the bytes live is deliberately not exposed.</summary>
+public sealed record AssetVersionDto(
+    Guid Id, int VersionNo, bool IsCurrent, long SizeBytes, string Mime, string Sha256,
+    IReadOnlyDictionary<string, JsonElement> TechnicalMetadata, string ChangeNote, DateTimeOffset CreatedAt);
+
+/// <param name="Distance">How many of the 64 perceptual-hash bits differ: 0 is visually identical, small numbers are near-duplicates.</param>
+public sealed record SimilarAssetDto(Guid AssetId, string Title, string Type, string Status, Guid? FolderId, int Distance);
