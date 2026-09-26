@@ -23,6 +23,7 @@ public static class ApiEndpoints
             .Produces<PingResponse>();
 
         v1.MapIdentityEndpoints();
+        v1.MapContentEndpoints();
     }
 
     /// <summary>Maps a failed application Result to RFC 9457 problem+json.</summary>

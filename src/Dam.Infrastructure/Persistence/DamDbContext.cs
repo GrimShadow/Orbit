@@ -2,6 +2,7 @@ using Dam.Application.Abstractions;
 using System.Text.Json;
 using Dam.Domain.Authorization;
 using Dam.Domain.Common;
+using Dam.Domain.Content;
 using Dam.Domain.Identity;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -23,6 +24,10 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<UserGroup> UserGroups => Set<UserGroup>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<GroupRole> GroupRoles => Set<GroupRole>();
+    public DbSet<Folder> Folders => Set<Folder>();
+    public DbSet<Vocabulary> Vocabularies => Set<Vocabulary>();
+    public DbSet<Term> Terms => Set<Term>();
+    public DbSet<MetadataSchema> MetadataSchemas => Set<MetadataSchema>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -55,6 +60,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         });
 
         ConfigureIdentity(b);
+        ConfigureContent(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -112,6 +118,55 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         b.Entity<GroupRole>(e => { e.ToTable("group_roles"); e.HasKey(x => new { x.GroupId, x.RoleId }); e.HasIndex(x => x.RoleId); });
     }
 
+    private const string PathPattern = "'^[a-z0-9_]{1,64}(\\.[a-z0-9_]{1,64}){0,11}$'";
+
+    private static void ConfigureContent(ModelBuilder b)
+    {
+        b.Entity<Folder>(e =>
+        {
+            e.ToTable("folders", t => t.HasCheckConstraint("ck_folders_path", $"path ~ {PathPattern}"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Path).HasMaxLength(800);
+            e.Property(x => x.Label).HasMaxLength(64);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.InheritedMetadata).AsJson();
+            e.HasIndex(x => new { x.TenantId, x.Path }).IsUnique();
+            // Labels are unique among siblings. NULL parents never compare equal, so roots get their own index.
+            e.HasIndex(x => new { x.TenantId, x.ParentId, x.Label }).IsUnique().HasFilter("parent_id IS NOT NULL");
+            e.HasIndex(x => new { x.TenantId, x.Label }).IsUnique().HasFilter("parent_id IS NULL").HasDatabaseName("ux_folders_root_label");
+        });
+        b.Entity<Vocabulary>(e =>
+        {
+            e.ToTable("vocabularies");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Key).HasMaxLength(64);
+            e.Property(x => x.Levels).HasColumnType("text[]");
+            e.HasIndex(x => new { x.TenantId, x.Key }).IsUnique();
+        });
+        b.Entity<Term>(e =>
+        {
+            e.ToTable("terms", t => t.HasCheckConstraint("ck_terms_path", $"path ~ {PathPattern}"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(64);
+            e.Property(x => x.Path).HasMaxLength(800);
+            e.Property(x => x.Status).HasConversion<string>();
+            e.Property(x => x.Labels).AsJson();
+            e.Property(x => x.Attributes).AsJson();
+            e.HasIndex(x => new { x.TenantId, x.VocabularyId, x.Code }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.VocabularyId, x.ParentId });
+        });
+        b.Entity<MetadataSchema>(e =>
+        {
+            e.ToTable("metadata_schemas", t => t.HasCheckConstraint("ck_metadata_schemas_type",
+                "asset_type IN ('image','video','audio','document','manual','3d','html5','other')"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AssetType).HasMaxLength(16);
+            e.Property(x => x.Fields).AsJson();
+            e.HasIndex(x => new { x.TenantId, x.AssetType, x.Version }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.AssetType }).IsUnique().HasFilter("is_current").HasDatabaseName("ux_metadata_schemas_current");
+        });
+    }
+
     private LambdaExpression TenantFilter(Type entityType)
     {
         var e = Expression.Parameter(entityType, "e");
@@ -134,16 +189,19 @@ internal static class JsonDictionaryExtensions
 {
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
-    private static string ToJson(Dictionary<string, string[]> v) => JsonSerializer.Serialize(v, Options);
+    private static string ToJson<T>(T v) => JsonSerializer.Serialize(v, Options);
 
     /// <summary>Stores a Dictionary&lt;string, string[]&gt; as jsonb, with a comparer so EF detects in-place edits.</summary>
-    public static PropertyBuilder<Dictionary<string, string[]>> AsJsonDictionary(this PropertyBuilder<Dictionary<string, string[]>> p) =>
+    public static PropertyBuilder<Dictionary<string, string[]>> AsJsonDictionary(this PropertyBuilder<Dictionary<string, string[]>> p) => p.AsJson();
+
+    /// <summary>Stores any JSON-serialisable value as jsonb and compares by serialised form, so in-place edits are saved.</summary>
+    public static PropertyBuilder<T> AsJson<T>(this PropertyBuilder<T> p) where T : class, new() =>
         p.HasColumnType("jsonb")
          .HasConversion(
              v => ToJson(v),
-             s => JsonSerializer.Deserialize<Dictionary<string, string[]>>(s, Options) ?? new Dictionary<string, string[]>(),
-             new ValueComparer<Dictionary<string, string[]>>(
+             s => JsonSerializer.Deserialize<T>(s, Options) ?? new T(),
+             new ValueComparer<T>(
                  (a, b) => ToJson(a!) == ToJson(b!),
                  v => ToJson(v).GetHashCode(StringComparison.Ordinal),
-                 v => JsonSerializer.Deserialize<Dictionary<string, string[]>>(ToJson(v), Options)!));
+                 v => JsonSerializer.Deserialize<T>(ToJson(v), Options)!));
 }

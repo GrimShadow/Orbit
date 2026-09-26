@@ -166,18 +166,18 @@ public sealed class PolicyMatrixTests
 
     // ---- 3. Approver only in assigned folders (acceptance criterion) -----------------------------------------
 
-    private static readonly RuleGrant ThatharFolder = Rule(ScopeSpec.Folder("brand.thar"), [AssetsApprove, WorkflowTasksDecide]);
+    private static readonly RuleGrant TharoadsterFolder = Rule(ScopeSpec.Folder("brand.roadster"), [AssetsApprove, WorkflowTasksDecide]);
 
     public static IEnumerable<object[]> ApproverFolderCases() =>
     [
-        ["the assigned folder itself", "brand.thar", true],
-        ["a sub-folder", "brand.thar.hero", true],
-        ["a deep sub-folder", "brand.thar.hero.stills.2026", true],
-        ["a sibling folder", "brand.xuv", false],
+        ["the assigned folder itself", "brand.roadster", true],
+        ["a sub-folder", "brand.roadster.hero", true],
+        ["a deep sub-folder", "brand.roadster.hero.stills.2026", true],
+        ["a sibling folder", "brand.trail", false],
         ["the parent folder", "brand", false],
-        ["a folder that merely shares the prefix", "brand.tharx", false],
-        ["a folder that merely shares the prefix, deeper", "brand.tharx.hero", false],
-        ["case differences in the path", "Brand.Thar.Hero", true],
+        ["a folder that merely shares the prefix", "brand.roadsterx", false],
+        ["a folder that merely shares the prefix, deeper", "brand.roadsterx.hero", false],
+        ["case differences in the path", "Brand.Roadster.Hero", true],
         ["no folder at all", null!, false],
     ];
 
@@ -185,7 +185,7 @@ public sealed class PolicyMatrixTests
     [MemberData(nameof(ApproverFolderCases))]
     public void Approver_can_approve_only_in_assigned_folders(string _, string? folder, bool expected)
     {
-        var approver = Profile([BuiltInRoles.Approver], rules: [ThatharFolder]);
+        var approver = Profile([BuiltInRoles.Approver], rules: [TharoadsterFolder]);
         var asset = ResourceContext.Asset(AssetStatuses.InReview, folderPath: folder);
         Assert.Equal(expected, PolicyEngine.Can(approver, AssetsApprove, asset));
         Assert.Equal(expected, PolicyEngine.Can(approver, WorkflowTasksDecide, asset));
@@ -195,24 +195,24 @@ public sealed class PolicyMatrixTests
     public void Approver_role_alone_can_approve_nothing_and_a_permission_only_check_is_false()
     {
         var approver = Profile([BuiltInRoles.Approver]);
-        Assert.False(PolicyEngine.Can(approver, AssetsApprove, ResourceContext.Asset(AssetStatuses.InReview, "brand.thar")));
-        var withRule = Profile([BuiltInRoles.Approver], rules: [ThatharFolder]);
+        Assert.False(PolicyEngine.Can(approver, AssetsApprove, ResourceContext.Asset(AssetStatuses.InReview, "brand.roadster")));
+        var withRule = Profile([BuiltInRoles.Approver], rules: [TharoadsterFolder]);
         Assert.False(PolicyEngine.Can(withRule, AssetsApprove)); // scoped grants need a concrete target
     }
 
     [Fact]
     public void Approver_reads_unpublished_everywhere_but_approves_only_in_scope()
     {
-        var approver = Profile([BuiltInRoles.Approver], rules: [ThatharFolder]);
-        Assert.True(PolicyEngine.Can(approver, AssetsRead, ResourceContext.Asset(AssetStatuses.InReview, "brand.xuv")));
-        Assert.True(PolicyEngine.Can(approver, AssetsRead, ResourceContext.Asset(AssetStatuses.Draft, "brand.xuv")));
+        var approver = Profile([BuiltInRoles.Approver], rules: [TharoadsterFolder]);
+        Assert.True(PolicyEngine.Can(approver, AssetsRead, ResourceContext.Asset(AssetStatuses.InReview, "brand.trail")));
+        Assert.True(PolicyEngine.Can(approver, AssetsRead, ResourceContext.Asset(AssetStatuses.Draft, "brand.trail")));
     }
 
     [Fact]
     public void A_rule_grants_only_the_permissions_it_lists()
     {
-        var approver = Profile([BuiltInRoles.Approver], rules: [Rule(ScopeSpec.Folder("brand.thar"), [AssetsApprove])]);
-        var asset = ResourceContext.Asset(AssetStatuses.InReview, "brand.thar");
+        var approver = Profile([BuiltInRoles.Approver], rules: [Rule(ScopeSpec.Folder("brand.roadster"), [AssetsApprove])]);
+        var asset = ResourceContext.Asset(AssetStatuses.InReview, "brand.roadster");
         Assert.True(PolicyEngine.Can(approver, AssetsApprove, asset));
         Assert.False(PolicyEngine.Can(approver, WorkflowTasksDecide, asset));
         Assert.False(PolicyEngine.Can(approver, AssetsPublish, asset));
@@ -222,10 +222,10 @@ public sealed class PolicyMatrixTests
     public void Several_assigned_folders_combine()
     {
         var approver = Profile([BuiltInRoles.Approver], rules:
-            [Rule(ScopeSpec.Folder("brand.thar"), [AssetsApprove]), Rule(ScopeSpec.Folder("brand.xuv"), [AssetsApprove])]);
-        Assert.True(PolicyEngine.Can(approver, AssetsApprove, ResourceContext.Asset(AssetStatuses.InReview, "brand.xuv.x")));
-        Assert.True(PolicyEngine.Can(approver, AssetsApprove, ResourceContext.Asset(AssetStatuses.InReview, "brand.thar")));
-        Assert.False(PolicyEngine.Can(approver, AssetsApprove, ResourceContext.Asset(AssetStatuses.InReview, "brand.scorpio")));
+            [Rule(ScopeSpec.Folder("brand.roadster"), [AssetsApprove]), Rule(ScopeSpec.Folder("brand.trail"), [AssetsApprove])]);
+        Assert.True(PolicyEngine.Can(approver, AssetsApprove, ResourceContext.Asset(AssetStatuses.InReview, "brand.trail.x")));
+        Assert.True(PolicyEngine.Can(approver, AssetsApprove, ResourceContext.Asset(AssetStatuses.InReview, "brand.roadster")));
+        Assert.False(PolicyEngine.Can(approver, AssetsApprove, ResourceContext.Asset(AssetStatuses.InReview, "brand.sedan")));
     }
 
     // ---- 4. Ownership (.own) ---------------------------------------------------------------------------------
@@ -251,13 +251,13 @@ public sealed class PolicyMatrixTests
         Assert.False(PolicyEngine.Can(c, AssetsPublish, mine));
     }
 
-    // ---- 5. Custom role: "Ask Assist" sees Ready-for-Review + Reviewed (BRD Appendix A) ------------------------
+    // ---- 5. Custom review-stage role: sees "ready for review" and "reviewed" assets, never drafts ------------------------
 
     [Fact]
-    public void Ask_assist_sees_in_review_and_published_but_not_drafts()
+    public void A_review_stage_role_sees_in_review_and_published_but_not_drafts()
     {
-        var askAssist = new RoleGrant("AskAssist", [AssetsRead, AssetsReadInReview]);
-        var p = Profile([], custom: [askAssist]);
+        var reviewer = new RoleGrant("Reviewer", [AssetsRead, AssetsReadInReview]);
+        var p = Profile([], custom: [reviewer]);
         Assert.True(PolicyEngine.Can(p, AssetsRead, ResourceContext.Asset(AssetStatuses.Published)));
         Assert.True(PolicyEngine.Can(p, AssetsRead, ResourceContext.Asset(AssetStatuses.InReview)));
         Assert.False(PolicyEngine.Can(p, AssetsRead, ResourceContext.Asset(AssetStatuses.Draft)));
@@ -292,12 +292,12 @@ public sealed class PolicyMatrixTests
     {
         var editor = Profile([], rules:
         [
-            Rule(ScopeSpec.Everything, [AssetsUpdate], new() { [Dimensions.Region] = ["North"], [Dimensions.Brand] = ["Mahindra"] }),
+            Rule(ScopeSpec.Everything, [AssetsUpdate], new() { [Dimensions.Region] = ["North"], [Dimensions.Brand] = ["Acme"] }),
         ]);
-        Assert.True(PolicyEngine.Can(editor, AssetsUpdate, ResourceContext.Asset(AssetStatuses.Draft, region: ["North"], brand: ["Mahindra"])));
-        Assert.False(PolicyEngine.Can(editor, AssetsUpdate, ResourceContext.Asset(AssetStatuses.Draft, region: ["South"], brand: ["Mahindra"])));
+        Assert.True(PolicyEngine.Can(editor, AssetsUpdate, ResourceContext.Asset(AssetStatuses.Draft, region: ["North"], brand: ["Acme"])));
+        Assert.False(PolicyEngine.Can(editor, AssetsUpdate, ResourceContext.Asset(AssetStatuses.Draft, region: ["South"], brand: ["Acme"])));
         Assert.False(PolicyEngine.Can(editor, AssetsUpdate, ResourceContext.Asset(AssetStatuses.Draft, region: ["North"], brand: ["Other"])));
-        Assert.True(PolicyEngine.Can(editor, AssetsUpdate, ResourceContext.Asset(AssetStatuses.Draft, region: ["Global"], brand: ["Mahindra"])));
+        Assert.True(PolicyEngine.Can(editor, AssetsUpdate, ResourceContext.Asset(AssetStatuses.Draft, region: ["Global"], brand: ["Acme"])));
     }
 
     [Fact]

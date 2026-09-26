@@ -21,7 +21,7 @@ A user's access is a set of **grants**. Each role and each access rule is one gr
 - Attributes and groups come from the identity provider on every login and are not editable in DAM (admin-editable IdP attributes only), otherwise the next login would overwrite them.
 
 ### Status visibility
-`assets.read` sees published assets only. Other statuses need `assets.read.unpublished`, or `assets.read.in_review` for review-stage assets (the BRD's "Ask Assist" role), or `assets.read.unpublished.own` for the owner's own drafts. Status is checked inside the same grant.
+`assets.read` sees published assets only. Other statuses need `assets.read.unpublished`, or `assets.read.in_review` for review-stage assets (a review-stage role such as a "Reviewer"), or `assets.read.unpublished.own` for the owner's own drafts. Status is checked inside the same grant.
 
 ### Scoped-only powers
 `assets.approve` and `workflow.tasks.decide` are in **no** built-in role except Admin. They are granted only through access rules, so an Approver approves only in the folders assigned to them. A permission-only check (no resource) is satisfied by role grants only.

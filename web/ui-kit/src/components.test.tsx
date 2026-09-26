@@ -23,10 +23,10 @@ import {
 const tree: TreeNode[] = [
   {
     id: 'brand',
-    label: 'Mahindra',
+    label: 'Acme',
     children: [
-      { id: 'thar', label: 'Thar', children: [{ id: 'thar-roxx', label: 'Thar ROXX' }] },
-      { id: 'xuv', label: 'XUV700' },
+      { id: 'roadster', label: 'Roadster', children: [{ id: 'roadster-gt', label: 'Roadster GT' }] },
+      { id: 'trail', label: 'Trail X' },
     ],
   },
   { id: 'region', label: 'Regions' },
@@ -190,17 +190,17 @@ describe('Tree', () => {
     const onSelect = vi.fn();
     render(<Tree nodes={tree} label="Taxonomy" onSelect={onSelect} />);
     expect(screen.getByRole('tree', { name: 'Taxonomy' })).toBeInTheDocument();
-    const brand = screen.getByRole('treeitem', { name: /Mahindra/ });
+    const brand = screen.getByRole('treeitem', { name: /Acme/ });
     expect(brand).toHaveAttribute('aria-expanded', 'false');
     brand.focus();
     await userEvent.keyboard('{ArrowRight}');
     expect(brand).toHaveAttribute('aria-expanded', 'true');
     await userEvent.keyboard('{ArrowRight}'); // into first child
-    expect(screen.getByRole('treeitem', { name: 'Thar' })).toHaveFocus();
+    expect(screen.getByRole('treeitem', { name: 'Roadster' })).toHaveFocus();
     await userEvent.keyboard('{ArrowDown}');
-    expect(screen.getByRole('treeitem', { name: 'XUV700' })).toHaveFocus();
+    expect(screen.getByRole('treeitem', { name: 'Trail X' })).toHaveFocus();
     await userEvent.keyboard('{Enter}');
-    expect(onSelect).toHaveBeenCalledWith('xuv');
+    expect(onSelect).toHaveBeenCalledWith('trail');
     await userEvent.keyboard('{ArrowLeft}'); // leaf: go to parent
     expect(brand).toHaveFocus();
     await userEvent.keyboard('{ArrowLeft}');
@@ -235,14 +235,14 @@ describe('ThumbnailGrid', () => {
     render(
       <ThumbnailGrid
         label="Assets"
-        items={[{ id: '1', title: 'Thar hero', subtitle: 'JPEG', badge: 'Published' }]}
+        items={[{ id: '1', title: 'Roadster hero', subtitle: 'JPEG', badge: 'Published' }]}
         onOpen={onOpen}
         onToggleSelect={onToggle}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: /Thar hero/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Roadster hero/ }));
     expect(onOpen).toHaveBeenCalledWith('1');
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Thar hero' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Roadster hero' }));
     expect(onToggle).toHaveBeenCalledWith('1', true);
   });
 });

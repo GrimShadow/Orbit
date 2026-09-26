@@ -20,14 +20,14 @@ public sealed record UpdateAccessRuleRequest(string ScopeType, string? ScopeValu
 public static class IdentityEndpoints
 {
     /// <summary>Run a request; on success hand its value to <paramref name="ok"/>, otherwise return problem+json.</summary>
-    private static async Task<IResult> Run<T>(IDispatcher d, IRequest<T> request, Func<T, Task<IResult>> ok, CancellationToken ct)
+    internal static async Task<IResult> Run<T>(IDispatcher d, IRequest<T> request, Func<T, Task<IResult>> ok, CancellationToken ct)
     {
         var r = await d.Send(request, ct);
         return r.IsSuccess ? await ok(r.Value) : r.Error.ToProblem();
     }
 
     /// <summary>Run a command that returns an id, then answer with the freshly committed state of that entity.</summary>
-    private static Task<IResult> Then<TDto>(IDispatcher d, IRequest<Guid> command, Func<Guid, IRequest<TDto>> read, CancellationToken ct,
+    internal static Task<IResult> Then<TDto>(IDispatcher d, IRequest<Guid> command, Func<Guid, IRequest<TDto>> read, CancellationToken ct,
         string? createdAt = null) =>
         Run(d, command, async id =>
         {

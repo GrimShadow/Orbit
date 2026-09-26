@@ -1,7 +1,8 @@
 {
   "openapi": "3.0.4",
   "info": {
-    "title": "Dam.Api | v1",
+    "title": "Orbit API",
+    "description": "Digital asset management: assets, metadata, taxonomy, access control and delivery.",
     "version": "1.0.0"
   },
   "servers": [
@@ -823,6 +824,797 @@
           }
         }
       }
+    },
+    "/api/v1/folders": {
+      "get": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "All folders, flat (path order) or nested with ?tree=true",
+        "operationId": "ListFolders",
+        "parameters": [
+          {
+            "name": "tree",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FolderDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Folders"
+        ],
+        "operationId": "CreateFolder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFolderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderDetailDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/folders/{id}": {
+      "get": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "A folder with its ancestors and the metadata it inherits",
+        "operationId": "GetFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderDetailDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Folders"
+        ],
+        "operationId": "UpdateFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFolderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderDetailDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Folders"
+        ],
+        "operationId": "DeleteFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/folders/{id}/move": {
+      "post": {
+        "tags": [
+          "Folders"
+        ],
+        "summary": "Re-parent a folder; the paths of everything beneath it are rewritten",
+        "operationId": "MoveFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderDetailDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vocabularies": {
+      "get": {
+        "tags": [
+          "Vocabularies"
+        ],
+        "operationId": "ListVocabularies",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VocabularyDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Vocabularies"
+        ],
+        "operationId": "CreateVocabulary",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVocabularyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VocabularyDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vocabularies/{id}": {
+      "get": {
+        "tags": [
+          "Vocabularies"
+        ],
+        "operationId": "GetVocabulary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VocabularyDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Vocabularies"
+        ],
+        "operationId": "UpdateVocabulary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVocabularyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VocabularyDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Vocabularies"
+        ],
+        "operationId": "DeleteVocabulary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/vocabularies/{id}/terms": {
+      "get": {
+        "tags": [
+          "Vocabularies"
+        ],
+        "summary": "Terms of a vocabulary, flat or nested with ?tree=true",
+        "operationId": "ListTerms",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tree",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "includeDeprecated",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TermNodeDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Vocabularies"
+        ],
+        "operationId": "CreateTerm",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTermRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/terms/{id}": {
+      "get": {
+        "tags": [
+          "Vocabularies"
+        ],
+        "operationId": "GetTerm",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Vocabularies"
+        ],
+        "operationId": "UpdateTerm",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTermRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Vocabularies"
+        ],
+        "operationId": "DeleteTerm",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/terms/{id}/move": {
+      "post": {
+        "tags": [
+          "Vocabularies"
+        ],
+        "operationId": "MoveTerm",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schemas": {
+      "get": {
+        "tags": [
+          "Metadata schemas"
+        ],
+        "summary": "Current schema version per asset type",
+        "operationId": "ListSchemas",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SchemaSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schemas/{assetType}": {
+      "get": {
+        "tags": [
+          "Metadata schemas"
+        ],
+        "summary": "The current schema, or a specific version with ?version=",
+        "operationId": "GetSchema",
+        "parameters": [
+          {
+            "name": "assetType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Metadata schemas"
+        ],
+        "summary": "Save the fields; a change creates the next version and old assets stay valid",
+        "operationId": "UpdateSchema",
+        "parameters": [
+          {
+            "name": "assetType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSchemaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaUpdateResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schemas/{assetType}/versions": {
+      "get": {
+        "tags": [
+          "Metadata schemas"
+        ],
+        "operationId": "ListSchemaVersions",
+        "parameters": [
+          {
+            "name": "assetType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SchemaDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schemas/{assetType}/validate": {
+      "post": {
+        "tags": [
+          "Metadata schemas"
+        ],
+        "summary": "Check metadata against a schema; invalid metadata is a 422 with field-level errors",
+        "operationId": "ValidateMetadata",
+        "parameters": [
+          {
+            "name": "assetType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateMetadataRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/templates": {
+      "get": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Starter packs: vocabularies, metadata schemas and folders",
+        "operationId": "ListTemplates",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/templates/{id}/apply": {
+      "post": {
+        "tags": [
+          "Templates"
+        ],
+        "summary": "Add a pack\u0027s content. Additive and repeatable: nothing existing is changed or removed",
+        "operationId": "ApplyTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateApplyResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -922,6 +1714,32 @@
           }
         }
       },
+      "CreateFolderRequest": {
+        "required": [
+          "parentId",
+          "name",
+          "label",
+          "inheritedMetadata"
+        ],
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string",
+            "nullable": true
+          },
+          "inheritedMetadata": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          }
+        }
+      },
       "CreateRoleRequest": {
         "required": [
           "name",
@@ -954,6 +1772,235 @@
               "type": "string"
             },
             "nullable": true
+          }
+        }
+      },
+      "CreateTermRequest": {
+        "required": [
+          "parentId",
+          "code",
+          "labels",
+          "sortOrder",
+          "attributes"
+        ],
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "code": {
+            "type": "string"
+          },
+          "labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          }
+        }
+      },
+      "CreateVocabularyRequest": {
+        "required": [
+          "key",
+          "name",
+          "description",
+          "hierarchical",
+          "levels"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "hierarchical": {
+            "type": "boolean"
+          },
+          "levels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        }
+      },
+      "FieldDto": {
+        "required": [
+          "name",
+          "label",
+          "type",
+          "required",
+          "multi",
+          "vocabulary",
+          "options",
+          "min",
+          "max",
+          "wholeNumbers",
+          "maxLength",
+          "searchable",
+          "facet"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "multi": {
+            "type": "boolean"
+          },
+          "vocabulary": {
+            "type": "string",
+            "nullable": true
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "min": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "max": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "wholeNumbers": {
+            "type": "boolean"
+          },
+          "maxLength": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "searchable": {
+            "type": "boolean"
+          },
+          "facet": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FolderDetailDto": {
+        "required": [
+          "folder",
+          "ancestors",
+          "effectiveMetadata",
+          "childCount"
+        ],
+        "type": "object",
+        "properties": {
+          "folder": {
+            "$ref": "#/components/schemas/FolderDto"
+          },
+          "ancestors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FolderRefDto"
+            }
+          },
+          "effectiveMetadata": {
+            "type": "object"
+          },
+          "childCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "FolderDto": {
+        "required": [
+          "id",
+          "parentId",
+          "path",
+          "label",
+          "name",
+          "inheritedMetadata",
+          "defaultWorkflowId",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "path": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "inheritedMetadata": {
+            "type": "object"
+          },
+          "defaultWorkflowId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FolderRefDto": {
+        "required": [
+          "id",
+          "path",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
           }
         }
       },
@@ -1099,6 +2146,19 @@
           }
         }
       },
+      "MoveRequest": {
+        "required": [
+          "newParentId"
+        ],
+        "type": "object",
+        "properties": {
+          "newParentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        }
+      },
       "NameRequest": {
         "required": [
           "name"
@@ -1196,6 +2256,99 @@
           }
         }
       },
+      "SchemaDto": {
+        "required": [
+          "assetType",
+          "version",
+          "isCurrent",
+          "fields",
+          "changeNote",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "assetType": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isCurrent": {
+            "type": "boolean"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldDto"
+            }
+          },
+          "changeNote": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SchemaSummaryDto": {
+        "required": [
+          "assetType",
+          "currentVersion",
+          "fieldCount"
+        ],
+        "type": "object",
+        "properties": {
+          "assetType": {
+            "type": "string"
+          },
+          "currentVersion": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "fieldCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "SchemaUpdateResultDto": {
+        "required": [
+          "schema",
+          "newVersion",
+          "added",
+          "removed",
+          "changed"
+        ],
+        "type": "object",
+        "properties": {
+          "schema": {
+            "$ref": "#/components/schemas/SchemaDto"
+          },
+          "newVersion": {
+            "type": "boolean"
+          },
+          "added": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "changed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "SetStatusRequest": {
         "required": [
           "status"
@@ -1204,6 +2357,91 @@
         "properties": {
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "TemplateApplyResultDto": {
+        "required": [
+          "applied",
+          "vocabulariesCreated",
+          "termsCreated",
+          "schemasCreated",
+          "schemasExtended",
+          "foldersCreated"
+        ],
+        "type": "object",
+        "properties": {
+          "applied": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vocabulariesCreated": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "termsCreated": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "schemasCreated": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "schemasExtended": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "foldersCreated": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "TemplateDto": {
+        "required": [
+          "id",
+          "name",
+          "description",
+          "requires",
+          "vocabularies",
+          "terms",
+          "schemas",
+          "folders"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "requires": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vocabularies": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "terms": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "schemas": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "folders": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -1237,6 +2475,73 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "TermDto": {
+        "required": [
+          "id",
+          "vocabularyId",
+          "parentId",
+          "code",
+          "path",
+          "labels",
+          "sortOrder",
+          "status",
+          "attributes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vocabularyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "code": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
+          },
+          "attributes": {
+            "type": "object"
+          }
+        }
+      },
+      "TermNodeDto": {
+        "required": [
+          "term",
+          "children"
+        ],
+        "type": "object",
+        "properties": {
+          "term": {
+            "$ref": "#/components/schemas/TermDto"
+          },
+          "children": {
+            "type": "array",
+            "items": {}
           }
         }
       },
@@ -1274,6 +2579,32 @@
           }
         }
       },
+      "UpdateFolderRequest": {
+        "required": [
+          "name",
+          "inheritedMetadata",
+          "defaultWorkflowId"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "inheritedMetadata": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          },
+          "defaultWorkflowId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "clearDefaultWorkflow": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "UpdateRoleRequest": {
         "required": [
           "description",
@@ -1307,6 +2638,25 @@
           }
         }
       },
+      "UpdateSchemaRequest": {
+        "required": [
+          "fields",
+          "changeNote"
+        ],
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldDto"
+            }
+          },
+          "changeNote": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "UpdateTenantRequest": {
         "required": [
           "name",
@@ -1320,6 +2670,61 @@
           },
           "settings": {
             "$ref": "#/components/schemas/NullableOfJsonElement"
+          }
+        }
+      },
+      "UpdateTermRequest": {
+        "required": [
+          "labels",
+          "sortOrder",
+          "status",
+          "attributes"
+        ],
+        "type": "object",
+        "properties": {
+          "labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          }
+        }
+      },
+      "UpdateVocabularyRequest": {
+        "required": [
+          "name",
+          "description",
+          "levels"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "levels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
           }
         }
       },
@@ -1404,6 +2809,79 @@
             "type": "string"
           }
         }
+      },
+      "ValidateMetadataRequest": {
+        "required": [
+          "metadata",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "ValidationResultDto": {
+        "required": [
+          "valid",
+          "schemaVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "VocabularyDto": {
+        "required": [
+          "id",
+          "key",
+          "name",
+          "description",
+          "hierarchical",
+          "levels",
+          "termCount"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "hierarchical": {
+            "type": "boolean"
+          },
+          "levels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "termCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
       }
     }
   },
@@ -1425,6 +2903,18 @@
     },
     {
       "name": "Access rules"
+    },
+    {
+      "name": "Folders"
+    },
+    {
+      "name": "Vocabularies"
+    },
+    {
+      "name": "Metadata schemas"
+    },
+    {
+      "name": "Templates"
     }
   ]
 }

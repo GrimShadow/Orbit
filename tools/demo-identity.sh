@@ -40,16 +40,16 @@ for u in editor@dam.local approver@dam.local dealer.north@dam.local; do
   printf "  %-26s GET /users -> " "$u"; api GET "$(tok $u dam)" /api/v1/users | tail -1
 done
 
-echo; echo "== admin assigns the approver the folder brand.thar"
+echo; echo "== admin assigns the approver the folder brand.roadster"
 APPROVER_ID=$(api GET "$ADMIN" "/api/v1/users?filter[q]=approver" | first)
 # re-runnable: clear any rules a previous run left for this approver
 for rid in $(api GET "$ADMIN" "/api/v1/access-rules?filter[principalId]=$APPROVER_ID" | python3 -c 'import sys,json
 [print(r["id"]) for r in json.loads(sys.stdin.read().rsplit("\n",1)[0])]'); do api DELETE "$ADMIN" "/api/v1/access-rules/$rid" >/dev/null; done
-api POST "$ADMIN" /api/v1/access-rules -d "{\"principalType\":\"user\",\"principalId\":\"$APPROVER_ID\",\"scopeType\":\"folder\",\"scopeValue\":\"brand.thar\",\"permissions\":[\"assets.approve\",\"workflow.tasks.decide\"]}" | tail -1
+api POST "$ADMIN" /api/v1/access-rules -d "{\"principalType\":\"user\",\"principalId\":\"$APPROVER_ID\",\"scopeType\":\"folder\",\"scopeValue\":\"brand.roadster\",\"permissions\":[\"assets.approve\",\"workflow.tasks.decide\"]}" | tail -1
 api GET "$(tok approver@dam.local dam)" /api/v1/me | show
 
 echo; echo "== bad rule is refused with field errors"
-api POST "$ADMIN" /api/v1/access-rules -d "{\"principalType\":\"user\",\"principalId\":\"$APPROVER_ID\",\"scopeType\":\"folder\",\"scopeValue\":\"brand/thar\",\"permissions\":[\"assets.fly\"]}" \
+api POST "$ADMIN" /api/v1/access-rules -d "{\"principalType\":\"user\",\"principalId\":\"$APPROVER_ID\",\"scopeType\":\"folder\",\"scopeValue\":\"brand/roadster\",\"permissions\":[\"assets.fly\"]}" \
   | python3 -c 'import sys,json
 r=sys.stdin.read().rsplit("\n",1)
 print("  HTTP",r[1],json.dumps(json.loads(r[0]).get("errors")))'

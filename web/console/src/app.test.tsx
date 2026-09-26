@@ -61,7 +61,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe('routing and auth', () => {
   it('sends anonymous users to the sign-in page and offers sign in', async () => {
     renderAt('/me', signedOut);
-    expect(await screen.findByRole('heading', { name: 'Sign in to PADS4 DAM' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Sign in to Orbit' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(signedOut.signIn).toHaveBeenCalledWith('/me'); // returns the user to where they were headed
   });

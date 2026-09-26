@@ -1,0 +1,613 @@
+{
+  "id": "core",
+  "name": "Core",
+  "description": "Languages, channels, a Global region and generic metadata for every asset type. A sensible base for any organisation.",
+  "vocabularies": [
+    {
+      "key": "language",
+      "name": "Language",
+      "description": "Content languages.",
+      "hierarchical": false,
+      "terms": [
+        {
+          "code": "en",
+          "labels": {
+            "en": "English",
+            "hi": "अंग्रेज़ी"
+          }
+        },
+        {
+          "code": "hi",
+          "labels": {
+            "en": "Hindi",
+            "hi": "हिन्दी"
+          }
+        },
+        {
+          "code": "mr",
+          "labels": {
+            "en": "Marathi",
+            "hi": "मराठी"
+          }
+        },
+        {
+          "code": "ta",
+          "labels": {
+            "en": "Tamil",
+            "hi": "तमिल"
+          }
+        },
+        {
+          "code": "te",
+          "labels": {
+            "en": "Telugu",
+            "hi": "तेलुगु"
+          }
+        },
+        {
+          "code": "bn",
+          "labels": {
+            "en": "Bengali",
+            "hi": "बांग्ला"
+          }
+        },
+        {
+          "code": "gu",
+          "labels": {
+            "en": "Gujarati",
+            "hi": "गुजराती"
+          }
+        },
+        {
+          "code": "kn",
+          "labels": {
+            "en": "Kannada",
+            "hi": "कन्नड़"
+          }
+        },
+        {
+          "code": "ml",
+          "labels": {
+            "en": "Malayalam",
+            "hi": "मलयालम"
+          }
+        },
+        {
+          "code": "pa",
+          "labels": {
+            "en": "Punjabi",
+            "hi": "पंजाबी"
+          }
+        },
+        {
+          "code": "fr",
+          "labels": {
+            "en": "French"
+          }
+        },
+        {
+          "code": "de",
+          "labels": {
+            "en": "German"
+          }
+        },
+        {
+          "code": "es",
+          "labels": {
+            "en": "Spanish"
+          }
+        },
+        {
+          "code": "ar",
+          "labels": {
+            "en": "Arabic"
+          }
+        }
+      ]
+    },
+    {
+      "key": "channel",
+      "name": "Channel",
+      "description": "Where content is delivered.",
+      "hierarchical": false,
+      "terms": [
+        {
+          "code": "signage",
+          "labels": {
+            "en": "Digital signage"
+          }
+        },
+        {
+          "code": "mobile",
+          "labels": {
+            "en": "Mobile app"
+          }
+        },
+        {
+          "code": "web",
+          "labels": {
+            "en": "Website"
+          }
+        },
+        {
+          "code": "qr",
+          "labels": {
+            "en": "QR / print link"
+          }
+        },
+        {
+          "code": "gpt",
+          "labels": {
+            "en": "AI assistant"
+          }
+        },
+        {
+          "code": "print",
+          "labels": {
+            "en": "Print"
+          }
+        },
+        {
+          "code": "social",
+          "labels": {
+            "en": "Social media"
+          }
+        }
+      ]
+    },
+    {
+      "key": "region",
+      "name": "Region",
+      "description": "Geographic scope. 'Global' means everywhere.",
+      "hierarchical": true,
+      "levels": [
+        "Region",
+        "Area"
+      ],
+      "terms": [
+        {
+          "code": "global",
+          "labels": {
+            "en": "Global"
+          }
+        }
+      ]
+    },
+    {
+      "key": "status_tag",
+      "name": "Status tag",
+      "description": "Editorial labels.",
+      "hierarchical": false,
+      "terms": [
+        {
+          "code": "new",
+          "labels": {
+            "en": "New"
+          }
+        },
+        {
+          "code": "featured",
+          "labels": {
+            "en": "Featured"
+          }
+        },
+        {
+          "code": "seasonal",
+          "labels": {
+            "en": "Seasonal"
+          }
+        },
+        {
+          "code": "evergreen",
+          "labels": {
+            "en": "Evergreen"
+          }
+        },
+        {
+          "code": "limited_time",
+          "labels": {
+            "en": "Limited time"
+          }
+        }
+      ]
+    }
+  ],
+  "schemas": [
+    {
+      "assetType": "image",
+      "fields": [
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "ml_text",
+          "searchable": true
+        },
+        {
+          "name": "credit",
+          "label": "Credit",
+          "type": "text",
+          "maxLength": 200
+        },
+        {
+          "name": "language",
+          "label": "Language",
+          "type": "vocabulary",
+          "vocabulary": "language",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "channels",
+          "label": "Channels",
+          "type": "vocabulary",
+          "vocabulary": "channel",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "regions",
+          "label": "Regions",
+          "type": "term_tree",
+          "vocabulary": "region",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "type": "text",
+          "multi": true,
+          "maxLength": 100
+        }
+      ]
+    },
+    {
+      "assetType": "video",
+      "fields": [
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "ml_text",
+          "searchable": true
+        },
+        {
+          "name": "credit",
+          "label": "Credit",
+          "type": "text",
+          "maxLength": 200
+        },
+        {
+          "name": "language",
+          "label": "Language",
+          "type": "vocabulary",
+          "vocabulary": "language",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "channels",
+          "label": "Channels",
+          "type": "vocabulary",
+          "vocabulary": "channel",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "regions",
+          "label": "Regions",
+          "type": "term_tree",
+          "vocabulary": "region",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "type": "text",
+          "multi": true,
+          "maxLength": 100
+        }
+      ]
+    },
+    {
+      "assetType": "audio",
+      "fields": [
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "ml_text",
+          "searchable": true
+        },
+        {
+          "name": "credit",
+          "label": "Credit",
+          "type": "text",
+          "maxLength": 200
+        },
+        {
+          "name": "language",
+          "label": "Language",
+          "type": "vocabulary",
+          "vocabulary": "language",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "channels",
+          "label": "Channels",
+          "type": "vocabulary",
+          "vocabulary": "channel",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "regions",
+          "label": "Regions",
+          "type": "term_tree",
+          "vocabulary": "region",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "type": "text",
+          "multi": true,
+          "maxLength": 100
+        }
+      ]
+    },
+    {
+      "assetType": "document",
+      "fields": [
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "ml_text",
+          "searchable": true
+        },
+        {
+          "name": "credit",
+          "label": "Credit",
+          "type": "text",
+          "maxLength": 200
+        },
+        {
+          "name": "language",
+          "label": "Language",
+          "type": "vocabulary",
+          "vocabulary": "language",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "channels",
+          "label": "Channels",
+          "type": "vocabulary",
+          "vocabulary": "channel",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "regions",
+          "label": "Regions",
+          "type": "term_tree",
+          "vocabulary": "region",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "type": "text",
+          "multi": true,
+          "maxLength": 100
+        }
+      ]
+    },
+    {
+      "assetType": "manual",
+      "fields": [
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "ml_text",
+          "searchable": true
+        },
+        {
+          "name": "credit",
+          "label": "Credit",
+          "type": "text",
+          "maxLength": 200
+        },
+        {
+          "name": "language",
+          "label": "Language",
+          "type": "vocabulary",
+          "vocabulary": "language",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "channels",
+          "label": "Channels",
+          "type": "vocabulary",
+          "vocabulary": "channel",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "regions",
+          "label": "Regions",
+          "type": "term_tree",
+          "vocabulary": "region",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "type": "text",
+          "multi": true,
+          "maxLength": 100
+        },
+        {
+          "name": "edition",
+          "label": "Edition",
+          "type": "text",
+          "maxLength": 100
+        },
+        {
+          "name": "revision_date",
+          "label": "Revision date",
+          "type": "date"
+        }
+      ]
+    },
+    {
+      "assetType": "3d",
+      "fields": [
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "ml_text",
+          "searchable": true
+        },
+        {
+          "name": "credit",
+          "label": "Credit",
+          "type": "text",
+          "maxLength": 200
+        },
+        {
+          "name": "language",
+          "label": "Language",
+          "type": "vocabulary",
+          "vocabulary": "language",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "channels",
+          "label": "Channels",
+          "type": "vocabulary",
+          "vocabulary": "channel",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "regions",
+          "label": "Regions",
+          "type": "term_tree",
+          "vocabulary": "region",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "type": "text",
+          "multi": true,
+          "maxLength": 100
+        }
+      ]
+    },
+    {
+      "assetType": "html5",
+      "fields": [
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "ml_text",
+          "searchable": true
+        },
+        {
+          "name": "credit",
+          "label": "Credit",
+          "type": "text",
+          "maxLength": 200
+        },
+        {
+          "name": "language",
+          "label": "Language",
+          "type": "vocabulary",
+          "vocabulary": "language",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "channels",
+          "label": "Channels",
+          "type": "vocabulary",
+          "vocabulary": "channel",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "regions",
+          "label": "Regions",
+          "type": "term_tree",
+          "vocabulary": "region",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "type": "text",
+          "multi": true,
+          "maxLength": 100
+        }
+      ]
+    },
+    {
+      "assetType": "other",
+      "fields": [
+        {
+          "name": "description",
+          "label": "Description",
+          "type": "ml_text",
+          "searchable": true
+        },
+        {
+          "name": "credit",
+          "label": "Credit",
+          "type": "text",
+          "maxLength": 200
+        },
+        {
+          "name": "language",
+          "label": "Language",
+          "type": "vocabulary",
+          "vocabulary": "language",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "channels",
+          "label": "Channels",
+          "type": "vocabulary",
+          "vocabulary": "channel",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "regions",
+          "label": "Regions",
+          "type": "term_tree",
+          "vocabulary": "region",
+          "multi": true,
+          "facet": true
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "type": "text",
+          "multi": true,
+          "maxLength": 100
+        }
+      ]
+    }
+  ],
+  "folders": []
+}

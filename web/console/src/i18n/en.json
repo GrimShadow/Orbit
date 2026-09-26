@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "PADS4 DAM",
+    "name": "Orbit",
     "skip": "Skip to main content"
   },
   "nav": {
@@ -16,7 +16,7 @@
     "defaultTenant": "Tenant {{id}}"
   },
   "login": {
-    "title": "Sign in to PADS4 DAM",
+    "title": "Sign in to Orbit",
     "body": "Use your organisation account to manage and publish digital assets.",
     "action": "Sign in",
     "redirecting": "Redirecting to sign-in…"

@@ -23,7 +23,7 @@ public sealed class BuiltInRoleSeeder(IRepository<Role> roles, IQueryExecutor q,
 }
 
 /// <summary>Idempotent: creates the tenant if absent and seeds its built-in roles. Used at startup, not exposed over HTTP.</summary>
-public sealed record EnsureTenantCommand(Guid Id, string Name, string Slug) : ICommand<Guid>;
+public sealed record EnsureTenantCommand(Guid Id, string Name, string Slug, IReadOnlyList<string>? Templates = null) : ICommand<Guid>;
 
 public sealed class EnsureTenantValidator : AbstractValidator<EnsureTenantCommand>
 {
@@ -36,7 +36,7 @@ public sealed class EnsureTenantValidator : AbstractValidator<EnsureTenantComman
 }
 
 public sealed class EnsureTenantHandler(
-    IRepository<Tenant> tenants, IQueryExecutor q, BuiltInRoleSeeder seeder, IClock clock, IEventCollector events)
+    IRepository<Tenant> tenants, IQueryExecutor q, BuiltInRoleSeeder seeder, Content.TemplateApplier templates, IClock clock, IEventCollector events)
     : IRequestHandler<EnsureTenantCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(EnsureTenantCommand c, CancellationToken ct)
@@ -47,6 +47,9 @@ public sealed class EnsureTenantHandler(
             events.Raise(Events.Changed("tenant.created", "tenant", c.Id));
         }
         await seeder.EnsureAsync(ct);
+        var unknown = (c.Templates ?? []).Where(id => !Content.TemplateCatalog.All.ContainsKey(id)).ToList();
+        if (unknown.Count > 0) return Error.Validation(new Dictionary<string, string[]> { ["templates"] = [$"Unknown template: {string.Join(", ", unknown)}."] });
+        if (c.Templates is { Count: > 0 }) await templates.ApplyAsync(c.Templates, ct);
         return c.Id;
     }
 }

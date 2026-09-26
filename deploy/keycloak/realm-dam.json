@@ -428,5 +428,7 @@
     {
       "name": "dealers"
     }
-  ]
+  ],
+  "displayName": "Orbit",
+  "displayNameHtml": "<strong>Orbit</strong>"
 }

@@ -54,8 +54,8 @@ export const Fields: Story = {
 };
 
 const rows = [
-  { id: '1', name: 'Thar ROXX hero', type: 'image' },
-  { id: '2', name: 'XUV700 walkaround', type: 'video' },
+  { id: '1', name: 'Roadster GT hero', type: 'image' },
+  { id: '2', name: 'Trail X walkaround', type: 'video' },
 ];
 export const DataTable: Story = {
   render: function Render() {
@@ -148,10 +148,10 @@ export const TaxonomyTree: Story = {
       nodes={[
         {
           id: 'm',
-          label: 'Mahindra',
+          label: 'Acme',
           children: [
-            { id: 't', label: 'Thar', children: [{ id: 'tr', label: 'Thar ROXX' }] },
-            { id: 'x', label: 'XUV700' },
+            { id: 't', label: 'Roadster', children: [{ id: 'tr', label: 'Roadster GT' }] },
+            { id: 'x', label: 'Trail X' },
           ],
         },
         {
@@ -201,9 +201,9 @@ export const Thumbnails: Story = {
         selectedIds={sel}
         onToggleSelect={(id, on) => setSel((s) => (on ? [...s, id] : s.filter((x) => x !== id)))}
         items={[
-          { id: '1', title: 'Thar ROXX hero', subtitle: 'JPEG · 4000×2667', badge: 'Published' },
-          { id: '2', title: 'XUV700 walkaround', subtitle: 'MP4 · 0:42', badge: 'In review' },
-          { id: '3', title: 'Scorpio-N brochure', subtitle: 'PDF · 12 pages' },
+          { id: '1', title: 'Roadster GT hero', subtitle: 'JPEG · 4000×2667', badge: 'Published' },
+          { id: '2', title: 'Trail X walkaround', subtitle: 'MP4 · 0:42', badge: 'In review' },
+          { id: '3', title: 'Sedan S brochure', subtitle: 'PDF · 12 pages' },
         ]}
       />
     );

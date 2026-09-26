@@ -1,4 +1,4 @@
-/* PADS4 DAM design tokens + component styles. Light by default; dark via OS preference or [data-theme]. */
+/* Orbit design tokens + component styles. Light by default; dark via OS preference or [data-theme]. */
 :root {
   --dam-bg: #f6f7fb;
   --dam-surface: #ffffff;
