@@ -16,6 +16,7 @@ run-api:
 	cd src/Dam.Api && dotnet run
 openapi:
 	UPDATE_OPENAPI=1 dotnet test tests/Dam.IntegrationTests --filter openapi
+	pnpm --filter @dam/sdk-js generate
 run-worker:
 	cd src/Dam.Worker && dotnet run
 run-scheduler:

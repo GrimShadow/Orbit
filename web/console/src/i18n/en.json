@@ -7,6 +7,7 @@
     "primary": "Primary",
     "home": "Home",
     "library": "Library",
+    "upload": "Upload",
     "account": "My account"
   },
   "shell": {
@@ -78,6 +79,27 @@
     "columnStatus": "Status",
     "columnUpdated": "Updated",
     "next": "Next page"
+  },
+  "upload": {
+    "title": "Upload",
+    "dropLabel": "Drag files here or choose files",
+    "dropHint": "Upload several files at once; folder and tags below apply to all of them.",
+    "remove": "Remove",
+    "folder": "Folder",
+    "noFolder": "No folder",
+    "tags": "Tags",
+    "tagsHint": "Comma-separated, applied to every file in this batch.",
+    "start": "Start upload",
+    "uploadMore": "Upload more",
+    "goToLibrary": "Go to the library",
+    "progressLabel": "Uploading {{name}}",
+    "status.uploading": "Uploading",
+    "status.finalizing": "Finalizing",
+    "status.ingested": "Ready",
+    "status.duplicate": "Already in the library",
+    "status.blocked": "Blocked",
+    "status.failed": "Failed",
+    "status.rejected": "Rejected"
   },
   "notFound": {
     "title": "Page not found",
