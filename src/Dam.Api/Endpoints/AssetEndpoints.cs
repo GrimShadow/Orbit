@@ -10,6 +10,7 @@ namespace Dam.Api.Endpoints;
 public sealed record CreateAssetRequest(Guid? FolderId, string Type, string Title, JsonElement? Metadata, IReadOnlyList<string>? Tags, bool AllowIncomplete = false);
 public sealed record UpdateAssetRequest(string? Title, JsonElement? Metadata, IReadOnlyList<string>? Tags);
 public sealed record MoveAssetRequest(Guid? FolderId);
+public sealed record TransitionAssetRequest(string? Reason);
 public sealed record InitiateUploadRequest(string FileName, long Size, string? ContentType, bool AllowDuplicate = false, string? Sha256 = null);
 public sealed record PartNumbersRequest(IReadOnlyList<int> PartNumbers);
 public sealed record CompleteUploadRequest(IReadOnlyList<PartEtag>? Parts = null, string? Sha256 = null);
@@ -45,6 +46,15 @@ public static class AssetEndpoints
         assets.MapGet("/{id:guid}/versions/{versionNo:int}", (Guid id, int versionNo, IDispatcher d, CancellationToken ct) =>
                 Run(d, new GetVersionQuery(id, versionNo), v => Task.FromResult(Results.Ok(v)), ct))
             .WithName("GetAssetVersion").Produces<AssetVersionDto>();
+        assets.MapPost("/{id:guid}/versions/{versionNo:int}/restore", (Guid id, int versionNo, IDispatcher d, CancellationToken ct) =>
+                Run(d, new RestoreVersionCommand(id, versionNo), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("RestoreAssetVersion").WithSummary("Makes an old version current again by copying it into a new version; history is never rewritten").Produces<AssetVersionDto>();
+        assets.MapGet("/{id:guid}/versions/{versionNo:int}/compare/{otherVersionNo:int}", (Guid id, int versionNo, int otherVersionNo, IDispatcher d, CancellationToken ct) =>
+                Run(d, new CompareVersionsQuery(id, versionNo, otherVersionNo), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("CompareAssetVersions").WithSummary("What differs between two versions: size, mime, checksum and technical metadata").Produces<VersionDiffDto>();
+        assets.MapPost("/{id:guid}/transitions/{action}", (Guid id, string action, TransitionAssetRequest r, IDispatcher d, CancellationToken ct) =>
+                Run(d, new TransitionAssetCommand(id, action, r.Reason), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("TransitionAsset").WithSummary("Moves an asset along its lifecycle: submit, approve, reject, publish, withdraw, expire, archive").Produces<AssetDto>();
         assets.MapGet("/{id:guid}/renditions", (Guid id, IDispatcher d, CancellationToken ct) => Run(d, new ListRenditionsQuery(id), v => Task.FromResult(Results.Ok(v)), ct))
             .WithName("ListAssetRenditions").WithSummary("Renditions already made for the current version").Produces<IReadOnlyList<RenditionDto>>();
         assets.MapPost("/{id:guid}/links", (Guid id, CreateLinkRequest r, IDispatcher d, CancellationToken ct) =>

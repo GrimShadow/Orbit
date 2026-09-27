@@ -35,6 +35,14 @@ public sealed record AssetVersionDto(
 /// <param name="Distance">How many of the 64 perceptual-hash bits differ: 0 is visually identical, small numbers are near-duplicates.</param>
 public sealed record SimilarAssetDto(Guid AssetId, string Title, string Type, string Status, Guid? FolderId, int Distance);
 
+/// <param name="Before">Missing when the field only exists on <see cref="VersionDiffDto.OtherVersionNo"/>'s side.</param>
+/// <param name="After">Missing when the field only exists on <see cref="VersionDiffDto.VersionNo"/>'s side.</param>
+public sealed record FieldDiffDto(JsonElement? Before, JsonElement? After);
+
+/// <param name="Fields">Every field (size, mime, sha256, and each top-level technical-metadata key) that differs between the
+/// two versions, keyed by name; fields that are the same on both are left out.</param>
+public sealed record VersionDiffDto(int VersionNo, int OtherVersionNo, IReadOnlyDictionary<string, FieldDiffDto> Fields);
+
 /// <param name="Fit">cover (fill the box and crop), contain (fit inside), or fill (stretch).</param>
 /// <param name="Focal">Where to keep in frame when cropping, as "x,y" between 0 and 1 (default "0.5,0.5", the centre).</param>
 public sealed record TransformRequest(int? W, int? H, string? Fit, string? Fmt, int? Q, string? Focal);

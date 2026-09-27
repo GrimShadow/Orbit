@@ -1921,6 +1921,147 @@
         }
       }
     },
+    "/api/v1/assets/{id}/versions/{versionNo}/restore": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Makes an old version current again by copying it into a new version; history is never rewritten",
+        "operationId": "RestoreAssetVersion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "versionNo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetVersionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/versions/{versionNo}/compare/{otherVersionNo}": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "What differs between two versions: size, mime, checksum and technical metadata",
+        "operationId": "CompareAssetVersions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "versionNo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "otherVersionNo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDiffDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/transitions/{action}": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Moves an asset along its lifecycle: submit, approve, reject, publish, withdraw, expire, archive",
+        "operationId": "TransitionAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionAssetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assets/{id}/renditions": {
       "get": {
         "tags": [
@@ -2865,6 +3006,21 @@
             "additionalProperties": {
               "type": "string"
             }
+          }
+        }
+      },
+      "FieldDiffDto": {
+        "required": [
+          "before",
+          "after"
+        ],
+        "type": "object",
+        "properties": {
+          "before": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          },
+          "after": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
           }
         }
       },
@@ -3838,6 +3994,18 @@
         },
         "nullable": true
       },
+      "TransitionAssetRequest": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "UpdateAccessRuleRequest": {
         "required": [
           "scopeType",
@@ -4283,6 +4451,30 @@
           "schemaVersion": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "VersionDiffDto": {
+        "required": [
+          "versionNo",
+          "otherVersionNo",
+          "fields"
+        ],
+        "type": "object",
+        "properties": {
+          "versionNo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "otherVersionNo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FieldDiffDto"
+            }
           }
         }
       },
