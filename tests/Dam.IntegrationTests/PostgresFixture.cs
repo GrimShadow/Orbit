@@ -23,9 +23,13 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     private readonly PostgreSqlContainer _pg = new PostgreSqlBuilder("postgres:16-alpine").Build();
 
-    // The same S3-compatible store the dev stack uses (SeaweedFS), so upload tests exercise real multipart uploads.
+    // The same S3-compatible store the dev stack uses (SeaweedFS), so upload tests exercise real multipart uploads. One instance is
+    // shared by the whole "pg" collection (all integration test classes). SeaweedFS caps how many volumes it will ever create
+    // (default a handful); once that cap is hit it refuses new writes with a generic "internal error" even though the volume size
+    // limit itself has headroom. -volume.max raises that cap (matches the dev compose stack's own fix for the same symptom); the
+    // size limit stays modest since it is the volume *count*, not size, that was the real constraint.
     private readonly IContainer _s3 = new ContainerBuilder("chrislusf/seaweedfs:latest")
-        .WithCommand("server", "-dir=/data", "-s3", "-s3.port=9000", "-s3.config=/etc/s3.json", "-master.volumeSizeLimitMB=256")
+        .WithCommand("server", "-dir=/data", "-s3", "-s3.port=9000", "-s3.config=/etc/s3.json", "-master.volumeSizeLimitMB=256", "-volume.max=100")
         .WithPortBinding(9000, true)
         .WithResourceMapping(Encoding.UTF8.GetBytes(
             "{\"identities\":[{\"name\":\"test\",\"credentials\":[{\"accessKey\":\"" + S3Key + "\",\"secretKey\":\"" + S3Secret +

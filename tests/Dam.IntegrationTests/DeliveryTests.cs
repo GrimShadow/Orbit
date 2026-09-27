@@ -16,34 +16,6 @@ namespace Dam.IntegrationTests;
 public sealed class DeliveryTests(PostgresFixture pg, RabbitFixture mq) : PipelineTestBase(pg, mq), IClassFixture<RabbitFixture>
 {
     private static readonly Dictionary<string, string?> NoScan = new() { ["DAM_SCAN_MODE"] = "off" };   // scanning has its own tests
-    private HttpClient? _delivery;
-    private WebApplication? _app;
-
-    private async Task<HttpClient> Delivery()
-    {
-        if (_delivery is not null) return _delivery;
-        _app = DeliveryHost.Build([], b =>
-        {
-            b.WebHost.UseUrls("http://127.0.0.1:0");
-            b.Logging.SetMinimumLevel(LogLevel.Warning);
-            b.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["DAM_DB_CONNECTION"] = Pg.AppConnection, ["DAM_S3_ENDPOINT"] = Pg.S3Endpoint, ["DAM_S3_ACCESS_KEY"] = Pg.S3AccessKey,
-                ["DAM_S3_SECRET_KEY"] = Pg.S3SecretKey, ["DAM_DELIVERY_SIGNING_KEY"] = ApiTestHost.SigningKey,
-            });
-        });
-        await _app.StartAsync();
-        return _delivery = new HttpClient { BaseAddress = new Uri(_app.Urls.First()), Timeout = TimeSpan.FromSeconds(60) };
-    }
-
-    public override async Task DisposeAsync()
-    {
-        _delivery?.Dispose();
-        if (_app is not null) await _app.DisposeAsync();
-        await base.DisposeAsync();
-    }
-
-    private static string PathOf(string url) => new Uri(url).PathAndQuery;
 
     private static int _picture;
     /// <summary>A picture nobody has uploaded yet (identical bytes would be caught as a duplicate).</summary>
@@ -364,12 +336,12 @@ public sealed class DeliveryTests(PostgresFixture pg, RabbitFixture mq) : Pipeli
     }
 
     [Fact]
-    public async Task Files_that_are_not_images_have_no_image_renditions_yet_and_a_blocked_or_deleted_asset_is_not_served()
+    public async Task Files_of_a_kind_with_no_renditions_have_none_and_a_blocked_or_deleted_asset_is_not_served()
     {
         var (t, admin, folder) = await TenantWithPacks();
         using var worker = StartWorker(NoScan); await worker.StartAsync();
         var doc = await NewAsset(admin, folder, type: "document");
-        var u = await Ingest(admin, doc, TestImages.Pdf("Guide"), "guide.pdf", "application/pdf");
+        var u = await Ingest(admin, doc, "a,b\n1,2\n"u8.ToArray(), "data.csv", "text/csv");
         Assert.Equal("ingested", u.GetProperty("status").GetString());
         Sql($"UPDATE assets SET status = 'published' WHERE id = '{doc}'");
         var http = await Delivery();

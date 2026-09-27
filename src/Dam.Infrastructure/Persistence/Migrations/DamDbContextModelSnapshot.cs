@@ -261,6 +261,10 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<double?>("Duration")
+                        .HasColumnType("double precision")
+                        .HasColumnName("duration");
+
                     b.Property<int>("Height")
                         .HasColumnType("integer")
                         .HasColumnName("height");
@@ -270,6 +274,10 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("mime");
+
+                    b.Property<int>("PageNo")
+                        .HasColumnType("integer")
+                        .HasColumnName("page_no");
 
                     b.Property<string>("Profile")
                         .IsRequired()
@@ -314,9 +322,9 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "AssetId")
                         .HasDatabaseName("ix_renditions_tenant_id_asset_id");
 
-                    b.HasIndex("TenantId", "VersionId", "Profile")
+                    b.HasIndex("TenantId", "VersionId", "Profile", "PageNo")
                         .IsUnique()
-                        .HasDatabaseName("ix_renditions_tenant_id_version_id_profile");
+                        .HasDatabaseName("ix_renditions_tenant_id_version_id_profile_page_no");
 
                     b.ToTable("renditions", (string)null);
                 });

@@ -7,6 +7,8 @@ using Dam.Infrastructure.Delivery;
 using Dam.Infrastructure.Ingest;
 using Dam.Infrastructure.Messaging;
 using Dam.Infrastructure.Storage;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,9 +17,39 @@ using Microsoft.Extensions.Logging;
 namespace Dam.IntegrationTests;
 
 /// <summary>Helpers for tests that run the worker: start it, push a file through the whole ingest pipeline, wait for the result.</summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001", Justification = "Disposed in DisposeAsync (xUnit IAsyncLifetime).")]
 public abstract class PipelineTestBase(PostgresFixture pg, RabbitFixture mq) : AssetTestBase(pg)
 {
     private static readonly HttpClient S3Http = new();
+    private HttpClient? _delivery;
+    private WebApplication? _app;
+
+    /// <summary>An in-process delivery origin backed by the same fixture database and storage, started lazily on first use.</summary>
+    protected async Task<HttpClient> Delivery()
+    {
+        if (_delivery is not null) return _delivery;
+        _app = DeliveryHost.Build([], b =>
+        {
+            b.WebHost.UseUrls("http://127.0.0.1:0");
+            b.Logging.SetMinimumLevel(LogLevel.Warning);
+            b.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["DAM_DB_CONNECTION"] = Pg.AppConnection, ["DAM_S3_ENDPOINT"] = Pg.S3Endpoint, ["DAM_S3_ACCESS_KEY"] = Pg.S3AccessKey,
+                ["DAM_S3_SECRET_KEY"] = Pg.S3SecretKey, ["DAM_DELIVERY_SIGNING_KEY"] = ApiTestHost.SigningKey, ["DAM_VIDEO_PRESET"] = "ultrafast",
+            });
+        });
+        await _app.StartAsync();
+        return _delivery = new HttpClient { BaseAddress = new Uri(_app.Urls.First()), Timeout = TimeSpan.FromSeconds(60) };
+    }
+
+    public override async Task DisposeAsync()
+    {
+        _delivery?.Dispose();
+        if (_app is not null) await _app.DisposeAsync();
+        await base.DisposeAsync();
+    }
+
+    protected static string PathOf(string url) => new Uri(url).PathAndQuery;
 
     /// <param name="settings">Extra or overriding configuration (for example the ClamAV address).</param>
     /// <param name="renditions">Register the rendition consumer. Leave it out to exercise on-demand rendering.</param>
@@ -33,6 +65,7 @@ public abstract class PipelineTestBase(PostgresFixture pg, RabbitFixture mq) : A
             ["DAM_FFPROBE_PATH"] = "ffprobe-not-installed-in-tests",
             ["DAM_COPY_MULTIPART_THRESHOLD_MB"] = "5",
             ["DAM_COPY_PART_MB"] = "5",     // exercise the multipart-copy path with small files
+            ["DAM_VIDEO_PRESET"] = "ultrafast",
         };
         foreach (var (k, v) in settings ?? []) values[k] = v;
         var cfg = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
@@ -69,7 +102,10 @@ public abstract class PipelineTestBase(PostgresFixture pg, RabbitFixture mq) : A
         var id = start.GetProperty("upload").GetProperty("id").GetGuid();
         var done = await Call(HttpMethod.Post, $"/api/v1/uploads/{id}/complete", token, new { parts = etags });
         Assert.Equal(HttpStatusCode.Accepted, done.Status);
-        return await WaitForEnd(token, id);
+        var result = await WaitForEnd(token, id);
+        if (result.GetProperty("status").GetString() is "failed" or "blocked")
+            Console.WriteLine($"Ingest ended as {result.GetProperty("status").GetString()}: {result.GetProperty("error").GetString()}");
+        return result;
     }
 
     protected async Task<JsonElement> WaitForEnd(string token, Guid upload, int seconds = 60)

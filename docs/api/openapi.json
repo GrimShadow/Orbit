@@ -3388,6 +3388,8 @@
           "height",
           "sizeBytes",
           "status",
+          "duration",
+          "pageNo",
           "createdAt"
         ],
         "type": "object",
@@ -3412,6 +3414,16 @@
           },
           "status": {
             "type": "string"
+          },
+          "duration": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "pageNo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           },
           "createdAt": {
             "type": "string",

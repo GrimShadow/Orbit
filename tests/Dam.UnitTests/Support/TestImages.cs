@@ -82,23 +82,52 @@ public static class TestImages
     }
 
     /// <summary>A one-page PDF with a title, with a correct cross-reference table.</summary>
-    public static byte[] Pdf(string title)
+    public static byte[] Pdf(string title) => Pdf(title, pages: 1);
+
+    /// <summary>A PDF with a title and <paramref name="pages"/> blank pages, with a correct cross-reference table.</summary>
+    public static byte[] Pdf(string title, int pages)
     {
-        var objects = new[]
-        {
-            "<< /Type /Catalog /Pages 2 0 R >>",
-            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>",
-            $"<< /Title ({title}) /Author (Acme Docs) /Producer (Orbit tests) >>",
-        };
+        var objects = new List<string> { $"<< /Type /Catalog /Pages 2 0 R >>", $"<< /Type /Pages /Kids [{string.Join(' ', Enumerable.Range(3, pages).Select(n => $"{n} 0 R"))}] /Count {pages} >>" };
+        for (var p = 0; p < pages; p++) objects.Add($"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> >>");
+        objects.Add($"<< /Title ({title}) /Author (Acme Docs) /Producer (Orbit tests) >>");
+
         var sb = new StringBuilder("%PDF-1.4\n");
         var offsets = new List<int>();
-        for (var i = 0; i < objects.Length; i++) { offsets.Add(sb.Length); sb.Append($"{i + 1} 0 obj\n{objects[i]}\nendobj\n"); }
+        for (var i = 0; i < objects.Count; i++) { offsets.Add(sb.Length); sb.Append($"{i + 1} 0 obj\n{objects[i]}\nendobj\n"); }
         var xref = sb.Length;
-        sb.Append($"xref\n0 {objects.Length + 1}\n0000000000 65535 f \n");
+        sb.Append($"xref\n0 {objects.Count + 1}\n0000000000 65535 f \n");
         foreach (var o in offsets) sb.Append($"{o:D10} 00000 n \n");
-        sb.Append($"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R /Info 4 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+        sb.Append($"trailer\n<< /Size {objects.Count + 1} /Root 1 0 R /Info {objects.Count} 0 R >>\nstartxref\n{xref}\n%%EOF\n");
         return Encoding.ASCII.GetBytes(sb.ToString());
+    }
+
+    /// <summary>A scratch folder marked so desktop search (Spotlight and equivalents) never indexes the short-lived fixture files
+    /// this class and the media renderers under test churn through.</summary>
+    private static string ScratchDir()
+    {
+        var dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dam-media-scratch");
+        Directory.CreateDirectory(dir);
+        var marker = System.IO.Path.Combine(dir, ".metadata_never_index");
+        if (!File.Exists(marker)) { try { File.WriteAllBytes(marker, []); } catch (IOException) { } }
+        return dir;
+    }
+
+    /// <summary>A short synthetic video (a colour test pattern), built at test time with the system's own ffmpeg.</summary>
+    public static byte[] Video(int seconds = 3, int width = 320, int height = 240)
+    {
+        var input = System.IO.Path.Combine(ScratchDir(), $"dam-fixture-{Guid.NewGuid():N}.mp4");
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("ffmpeg") { RedirectStandardError = true, UseShellExecute = false };
+            foreach (var a in new[] { "-y", "-f", "lavfi", "-i", $"testsrc=size={width}x{height}:rate=15:duration={seconds}", "-pix_fmt", "yuv420p", "-c:v", "libx264", "-preset", "ultrafast", input })
+                psi.ArgumentList.Add(a);
+            using var p = System.Diagnostics.Process.Start(psi) ?? throw new InvalidOperationException("ffmpeg did not start");
+            var err = p.StandardError.ReadToEnd();
+            if (!p.WaitForExit(30_000)) { p.Kill(true); throw new TimeoutException("ffmpeg took too long to build the test fixture."); }
+            if (p.ExitCode != 0) throw new InvalidOperationException($"ffmpeg fixture build failed: {err}");
+            return File.ReadAllBytes(input);
+        }
+        finally { try { File.Delete(input); } catch (IOException) { } }
     }
 
     /// <summary>A minimal .docx: a zip with document properties.</summary>

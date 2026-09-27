@@ -12,9 +12,10 @@ RUN dotnet publish src/${PROJECT}/${PROJECT}.csproj -c Release -a ${TARGETARCH/a
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 ARG PROJECT
 ENV PROJECT_DLL=${PROJECT}.dll ASPNETCORE_URLS=http://+:8080 DOTNET_EnableDiagnostics=0
-# Only the worker inspects media (ffprobe reads video/audio properties); the other hosts stay lean.
-RUN if [ "$PROJECT" = "Dam.Worker" ]; then \
-      apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*; \
+# Only the worker and the delivery origin touch media: ffmpeg (probe, poster frames, video renditions) and
+# poppler-utils (pdfinfo, pdftoppm for PDF page renditions). The other hosts stay lean.
+RUN if [ "$PROJECT" = "Dam.Worker" ] || [ "$PROJECT" = "Dam.Delivery" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends ffmpeg poppler-utils && rm -rf /var/lib/apt/lists/*; \
     fi
 WORKDIR /app
 COPY --from=build /out .

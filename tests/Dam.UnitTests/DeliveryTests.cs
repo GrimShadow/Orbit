@@ -130,7 +130,7 @@ public sealed class ImageRendererTests
         var wide = TestImages.Resize(TestImages.Disc(600), 600);
         using var src = Image.NewFromBuffer(wide);
         var wideSource = src.Embed(0, 100, 600, 400, extend: Enums.Extend.White).WriteToBuffer(".png");    // 600x400
-        var r = ImageRenderer.Render(wideSource, RenderRequest.ForProfile(RenditionProfiles.Find("thumb")!));
+        var r = ImageRenderer.Render(wideSource, RenderRequest.ForProfile(RenditionProfiles.Images.First(p => p.Name == "thumb")!));
         Assert.Equal("image/webp", r.Mime);
         Assert.Equal((240, 160), (r.Width, r.Height));
         using var back = Load(r.Bytes);
@@ -140,7 +140,7 @@ public sealed class ImageRendererTests
     [Fact]
     public void A_profile_never_enlarges_a_small_image()
     {
-        var r = ImageRenderer.Render(TestImages.Disc(100), RenderRequest.ForProfile(RenditionProfiles.Find("web")!));
+        var r = ImageRenderer.Render(TestImages.Disc(100), RenderRequest.ForProfile(RenditionProfiles.Images.First(p => p.Name == "web")!));
         Assert.Equal((100, 100), (r.Width, r.Height));
     }
 

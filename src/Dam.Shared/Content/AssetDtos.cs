@@ -48,4 +48,6 @@ public sealed record CreateLinkRequest(IReadOnlyList<string>? Renditions, int? T
 /// <param name="Links">Rendition name (or "transform") to a signed URL on the delivery origin or CDN.</param>
 public sealed record DeliveryLinkDto(DateTimeOffset ExpiresAt, bool Watermarked, IReadOnlyDictionary<string, string> Links);
 
-public sealed record RenditionDto(string Profile, string Mime, int Width, int Height, long SizeBytes, string Status, DateTimeOffset CreatedAt);
+/// <param name="Duration">Seconds, for a video rendition; null for stills.</param>
+/// <param name="PageNo">1-based page number for a PDF page rendition; null for everything else.</param>
+public sealed record RenditionDto(string Profile, string Mime, int Width, int Height, long SizeBytes, string Status, double? Duration, int? PageNo, DateTimeOffset CreatedAt);

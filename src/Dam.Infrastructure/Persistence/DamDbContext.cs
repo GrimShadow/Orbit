@@ -252,7 +252,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.Property(x => x.Mime).HasMaxLength(100);
             e.Property(x => x.Status).HasMaxLength(16);
             e.HasOne<AssetVersion>().WithMany().HasForeignKey(x => x.VersionId).OnDelete(DeleteBehavior.Cascade);
-            e.HasIndex(x => new { x.TenantId, x.VersionId, x.Profile }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.VersionId, x.Profile, x.PageNo }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.AssetId });
         });
 

@@ -170,6 +170,8 @@ public sealed class DeliverySettings
     public int MaxAgeSeconds { get; set; } = 300;
     /// <summary>Images larger than this are not transformed on the fly.</summary>
     public long MaxSourceBytes { get; set; } = 200L * 1024 * 1024;
+    /// <summary>A PDF with more pages than this only has its first pages rendered as "pdf_pages".</summary>
+    public int MaxPdfPages { get; set; } = 200;
 
     public string LinkBase => (CdnBaseUrl is { Length: > 0 } cdn ? cdn : PublicBaseUrl).TrimEnd('/');
 }

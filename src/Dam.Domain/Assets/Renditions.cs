@@ -23,24 +23,30 @@ public sealed class Rendition : TenantEntity
     public int Width { get; private set; }
     public int Height { get; private set; }
     public long SizeBytes { get; private set; }
+    /// <summary>Seconds, for video. Null for stills.</summary>
+    public double? Duration { get; private set; }
+    /// <summary>1-based page number for a PDF page rendition ("pdf_pages"); 0 for everything else.</summary>
+    public int PageNo { get; private set; }
     public string Status { get; private set; } = RenditionStatus.Ready;
     public DateTimeOffset CreatedAt { get; private set; }
 
-    public static string KeyFor(Guid tenantId, Guid assetId, Guid versionId, string profile, string extension) =>
-        $"{tenantId:N}/{assetId:N}/{versionId:N}/{profile}.{extension}";
+    public static string KeyFor(Guid tenantId, Guid assetId, Guid versionId, string profile, int pageNo, string extension) =>
+        pageNo > 0
+            ? $"{tenantId:N}/{assetId:N}/{versionId:N}/{profile}_{pageNo}.{extension}"
+            : $"{tenantId:N}/{assetId:N}/{versionId:N}/{profile}.{extension}";
 
-    /// <summary>The id is derived from the version and profile, so generating the same rendition twice finds the same row.</summary>
-    public static Guid IdFor(Guid versionId, string profile)
+    /// <summary>The id is derived from the version, profile and page, so generating the same rendition twice finds the same row.</summary>
+    public static Guid IdFor(Guid versionId, string profile, int pageNo = 0)
     {
-        var bytes = System.Security.Cryptography.SHA256.HashData(versionId.ToByteArray().Concat(System.Text.Encoding.UTF8.GetBytes("rendition:" + profile)).ToArray());
+        var bytes = System.Security.Cryptography.SHA256.HashData(versionId.ToByteArray().Concat(System.Text.Encoding.UTF8.GetBytes($"rendition:{profile}:{pageNo}")).ToArray());
         return new Guid(bytes.AsSpan(0, 16));
     }
 
     public static Rendition Create(Guid tenantId, Guid assetId, Guid versionId, string profile, string bucket, string key, string mime,
-        int width, int height, long size, DateTimeOffset now) => new()
+        int width, int height, long size, DateTimeOffset now, double? duration = null, int pageNo = 0) => new()
     {
-        Id = IdFor(versionId, profile), TenantId = tenantId, AssetId = assetId, VersionId = versionId, Profile = profile, Bucket = bucket,
-        StorageKey = key, Mime = mime, Width = width, Height = height, SizeBytes = size, CreatedAt = now,
+        Id = IdFor(versionId, profile, pageNo), TenantId = tenantId, AssetId = assetId, VersionId = versionId, Profile = profile, Bucket = bucket,
+        StorageKey = key, Mime = mime, Width = width, Height = height, SizeBytes = size, Duration = duration, PageNo = pageNo, CreatedAt = now,
     };
 }
 
@@ -51,15 +57,30 @@ public sealed record RenditionReady(Guid AssetId, Guid VersionId, string Profile
     public Guid EntityId => AssetId;
 }
 
-/// <summary>What a named profile produces. Image profiles resize to a longest edge and never enlarge.</summary>
+/// <summary>What a named still-image profile produces. Resizes to a longest edge and never enlarges.</summary>
 public sealed record RenditionProfile(string Name, int LongestEdge, string Format, int Quality);
+
+/// <summary>What a named video transcode produces (spec A6). <see cref="Letterbox"/> exact-fits to <see cref="Width"/>x<see cref="Height"/>
+/// with padding (signage); otherwise the output keeps the source's aspect ratio and only <see cref="Height"/> is a target.</summary>
+public sealed record VideoProfile(string Name, int Width, int Height, long BitrateBps, int? MaxDurationSeconds, bool Letterbox);
+
+public enum SourceKind { Image, Video, Pdf }
 
 public static class RenditionProfiles
 {
     /// <summary>The untouched file. Not generated: served straight from the originals bucket, only to roles cleared for it.</summary>
     public const string Original = "original";
 
-    /// <summary>Image profiles made when a version arrives (spec A6). Video, PDF and signage profiles are added in Step 1.5b.</summary>
+    public static SourceKind? KindOf(string mime) => mime switch
+    {
+        "image/svg+xml" => null,   // can reference external files and already scales; never rasterised
+        _ when mime.StartsWith("image/", StringComparison.Ordinal) => SourceKind.Image,
+        _ when mime.StartsWith("video/", StringComparison.Ordinal) => SourceKind.Video,
+        "application/pdf" => SourceKind.Pdf,
+        _ => null,
+    };
+
+    /// <summary>Image profiles made when a version arrives (spec A6).</summary>
     public static readonly IReadOnlyList<RenditionProfile> Images =
     [
         new("thumb", 240, "webp", 75),
@@ -69,13 +90,51 @@ public static class RenditionProfiles
         new("mobile", 1080, "webp", 80),
     ];
 
-    public static RenditionProfile? Find(string name) => Images.FirstOrDefault(p => p.Name == name);
-    public static bool IsKnown(string name) => name == Original || Find(name) is not null;
+    /// <summary>The still images made from a PDF's first page: the same shapes as the image "thumb" and "preview".</summary>
+    public static readonly IReadOnlyList<RenditionProfile> PdfStills = [.. Images.Where(p => p.Name is "thumb" or "preview")];
+
+    /// <summary>Every page, at manual-viewer size (spec A6 "pdf_pages"). One rendition row per page, named by <see cref="PdfPageName"/>.</summary>
+    public const string PdfPagesProfile = "pdf_pages";
+    public static readonly RenditionProfile PdfPage = new(PdfPagesProfile, 1600, "webp", 80);
+    public static string PdfPageName(int page) => $"{PdfPagesProfile}-{page}";
+    public static bool TryParsePdfPage(string name, out int page)
+    {
+        page = 0;
+        return name.StartsWith(PdfPagesProfile + "-", StringComparison.Ordinal)
+            && int.TryParse(name.AsSpan(PdfPagesProfile.Length + 1), out page) && page > 0;
+    }
+
+    /// <summary>The still frame made from a video: a 240px poster for lists and a larger one for a detail view.</summary>
+    public static readonly IReadOnlyList<RenditionProfile> VideoStills = [new("thumb", 240, "webp", 75), new("poster", 1024, "webp", 80)];
+
+    /// <summary>Video transcodes made when a version arrives (spec A6). H.264 throughout: simpler and more portable than mixing in H.265.</summary>
+    public static readonly IReadOnlyList<VideoProfile> Videos =
+    [
+        new("preview", 0, 720, 2_000_000, MaxDurationSeconds: 8, Letterbox: false),
+        new("mobile", 0, 720, 2_500_000, MaxDurationSeconds: null, Letterbox: false),
+        new("signage_1080", 1920, 1080, 12_000_000, MaxDurationSeconds: null, Letterbox: true),
+        new("signage_4k", 3840, 2160, 20_000_000, MaxDurationSeconds: null, Letterbox: true),
+    ];
+
+    public static RenditionProfile? FindImage(SourceKind kind, string name) => kind switch
+    {
+        SourceKind.Image => Images.FirstOrDefault(p => p.Name == name),
+        SourceKind.Pdf when TryParsePdfPage(name, out _) => PdfPage,
+        SourceKind.Pdf => PdfStills.FirstOrDefault(p => p.Name == name),
+        SourceKind.Video => VideoStills.FirstOrDefault(p => p.Name == name),
+        _ => null,
+    };
+
+    public static VideoProfile? FindVideo(string name) => Videos.FirstOrDefault(p => p.Name == name);
+
+    public static bool IsKnown(string name) =>
+        name == Original || Images.Any(p => p.Name == name) || VideoStills.Any(p => p.Name == name) ||
+        Videos.Any(p => p.Name == name) || TryParsePdfPage(name, out _);
 
     public static string Extension(string format) => format switch { "jpg" or "jpeg" => "jpg", var f => f };
     public static string MimeOf(string format) => format switch
     {
-        "webp" => "image/webp", "avif" => "image/avif", "png" => "image/png", _ => "image/jpeg",
+        "webp" => "image/webp", "avif" => "image/avif", "png" => "image/png", "mp4" => "video/mp4", _ => "image/jpeg",
     };
 }
 
