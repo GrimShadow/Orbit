@@ -68,6 +68,29 @@ public sealed class ContentSnifferTests
         Assert.NotEqual(ContentKind.Pdf, ContentSniffer.Sniff(tooLate).Kind);
     }
 
+    [Theory]
+    [InlineData("word/document.xml", OfficeMime.Docx, "docx")]
+    [InlineData("ppt/presentation.xml", OfficeMime.Pptx, "pptx")]
+    [InlineData("xl/workbook.xml", OfficeMime.Xlsx, "xlsx")]
+    public void A_real_office_documents_zip_entries_reveal_which_kind_it_is_not_just_that_it_is_a_zip(string mainPart, string mime, string format)
+    {
+        var withEntry = B(0x50, 0x4B, 0x03, 0x04).Concat(new byte[20]).Concat(Encoding.ASCII.GetBytes(mainPart)).Concat(new byte[40]).ToArray();
+        var r = ContentSniffer.Sniff(withEntry);
+        Assert.Equal(ContentKind.Office, r.Kind);
+        Assert.Equal(mime, r.Mime);
+        Assert.Equal(format, r.Format);
+        Assert.Equal([format], r.Extensions);
+    }
+
+    [Fact]
+    public void A_zip_with_no_office_marker_is_just_a_generic_zip()
+    {
+        var r = ContentSniffer.Sniff(Pad(B(0x50, 0x4B, 0x03, 0x04)));
+        Assert.Equal(ContentKind.Archive, r.Kind);
+        Assert.Equal("application/zip", r.Mime);
+        Assert.Contains("docx", r.Extensions);   // still allowed to hold one, just not detected as one from its bytes
+    }
+
     public static IEnumerable<object[]> Executables() =>
     [
         [Pad(B(0x4D, 0x5A, 0x90, 0x00)), "pe"],

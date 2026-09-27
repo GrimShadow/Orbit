@@ -131,18 +131,94 @@ public static class TestImages
     }
 
     /// <summary>A minimal .docx: a zip with document properties.</summary>
-    public static byte[] Docx(string title, string author)
+    /// <summary>A real, minimal .docx: LibreOffice can open and convert it, not just read its properties. The main part lives at the
+    /// fixed OOXML path "word/document.xml", which is how the content sniffer tells a Word document from any other zip.</summary>
+    public static byte[] Docx(string title, string author) => Zip(new()
+    {
+        ["[Content_Types].xml"] = Types(
+            ("/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml")),
+        ["_rels/.rels"] = Rels("word/document.xml"),
+        ["word/document.xml"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Service plan for Acme test fixtures.</w:t></w:r></w:p></w:body></w:document>""",
+        ["docProps/core.xml"] = CoreProps(title, author),
+        ["docProps/app.xml"] = AppProps("Acme Writer", ("Pages", "3")),
+    });
+
+    /// <summary>A real, minimal .pptx: one slide with a title, openable by LibreOffice. Main part at "ppt/presentation.xml".</summary>
+    public static byte[] Pptx(string title, string author) => Zip(new()
+    {
+        ["[Content_Types].xml"] = Types(
+            ("/ppt/presentation.xml", "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"),
+            ("/ppt/slides/slide1.xml", "application/vnd.openxmlformats-officedocument.presentationml.slide+xml"),
+            ("/ppt/slideLayouts/slideLayout1.xml", "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"),
+            ("/ppt/slideMasters/slideMaster1.xml", "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml")),
+        ["_rels/.rels"] = Rels("ppt/presentation.xml"),
+        ["ppt/presentation.xml"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rIdM1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000"/></p:presentation>""",
+        ["ppt/_rels/presentation.xml.rels"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/><Relationship Id="rIdM1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/></Relationships>""",
+        ["ppt/slides/slide1.xml"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/><p:sp><p:nvSpPr><p:cNvPr id="2" name="Title"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:t>Acme campaign overview</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>""",
+        ["ppt/slides/_rels/slide1.xml.rels"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>""",
+        ["ppt/slideLayouts/slideLayout1.xml"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" type="blank" preserve="1"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld></p:sldLayout>""",
+        ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/></Relationships>""",
+        ["ppt/slideMasters/slideMaster1.xml"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/></p:sldLayoutIdLst></p:sldMaster>""",
+        ["ppt/slideMasters/_rels/slideMaster1.xml.rels"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>""",
+        ["docProps/core.xml"] = CoreProps(title, author),
+        ["docProps/app.xml"] = AppProps("Acme Slides", ("Slides", "1")),
+    });
+
+    /// <summary>A real, minimal .xlsx: one sheet with one cell, openable by LibreOffice. Main part at "xl/workbook.xml".</summary>
+    public static byte[] Xlsx(string title, string author) => Zip(new()
+    {
+        ["[Content_Types].xml"] = Types(
+            ("/xl/workbook.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"),
+            ("/xl/worksheets/sheet1.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml")),
+        ["_rels/.rels"] = Rels("xl/workbook.xml"),
+        ["xl/workbook.xml"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>""",
+        ["xl/_rels/workbook.xml.rels"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>""",
+        ["xl/worksheets/sheet1.xml"] =
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Acme quarterly totals</t></is></c></row></sheetData></worksheet>""",
+        ["docProps/core.xml"] = CoreProps(title, author),
+        ["docProps/app.xml"] = AppProps("Acme Sheets"),
+    });
+
+    private static string Types(params (string PartName, string ContentType)[] overrides) =>
+        """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">""" +
+        """<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>""" +
+        string.Concat(overrides.Select(o => $"""<Override PartName="{o.PartName}" ContentType="{o.ContentType}"/>""")) + "</Types>";
+
+    /// <summary>The package's top-level relationships: the main part, plus the core/app properties every real Office file carries.</summary>
+    private static string Rels(string mainTarget) =>
+        """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">""" +
+        $"""<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="{mainTarget}"/>""" +
+        """<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>""" +
+        """<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>""";
+
+    private static string CoreProps(string title, string author) =>
+        """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">""" +
+        $"""<dc:title>{title}</dc:title><dc:creator>{author}</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">2026-01-02T03:04:05Z</dcterms:created></cp:coreProperties>""";
+
+    private static string AppProps(string application, params (string Name, string Value)[] extra) =>
+        """<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">""" +
+        $"<Application>{application}</Application>" + string.Concat(extra.Select(e => $"<{e.Name}>{e.Value}</{e.Name}>")) + "</Properties>";
+
+    private static byte[] Zip(Dictionary<string, string> files)
     {
         using var ms = new MemoryStream();
         using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
-        {
-            void Add(string name, string body) { using var w = new StreamWriter(zip.CreateEntry(name).Open()); w.Write(body); }
-            Add("[Content_Types].xml", "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>");
-            Add("docProps/core.xml", "<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" " +
-                "xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\">" +
-                $"<dc:title>{title}</dc:title><dc:creator>{author}</dc:creator><dcterms:created>2026-01-02T03:04:05Z</dcterms:created></cp:coreProperties>");
-            Add("docProps/app.xml", "<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\"><Application>Acme Writer</Application><Pages>3</Pages></Properties>");
-        }
+            foreach (var (name, body) in files)
+            {
+                using var w = new StreamWriter(zip.CreateEntry(name).Open());
+                w.Write(body);
+            }
         return ms.ToArray();
     }
 

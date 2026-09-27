@@ -122,6 +122,7 @@ public sealed class TechnicalMetadataExtractor(IObjectStore store, IMediaProbe p
                 case ContentKind.Pdf:
                     result["pdf"] = await PdfAsync(bucket, key, size, notes, ct);
                     break;
+                case ContentKind.Office when format is "docx" or "xlsx" or "pptx":
                 case ContentKind.Archive when ext is "docx" or "xlsx" or "pptx":
                     result["document"] = await OfficeAsync(bucket, key, size, notes, ct);
                     break;

@@ -64,7 +64,9 @@ public sealed record RenditionProfile(string Name, int LongestEdge, string Forma
 /// with padding (signage); otherwise the output keeps the source's aspect ratio and only <see cref="Height"/> is a target.</summary>
 public sealed record VideoProfile(string Name, int Width, int Height, long BitrateBps, int? MaxDurationSeconds, bool Letterbox);
 
-public enum SourceKind { Image, Video, Pdf }
+/// <summary>Pdf and Office are rendered identically (Office is converted to PDF first, spec D8's LibreOffice headless, then rasterised
+/// exactly like a PDF), so they share every still-image and page profile below.</summary>
+public enum SourceKind { Image, Video, Pdf, Office }
 
 public static class RenditionProfiles
 {
@@ -77,7 +79,15 @@ public static class RenditionProfiles
         _ when mime.StartsWith("image/", StringComparison.Ordinal) => SourceKind.Image,
         _ when mime.StartsWith("video/", StringComparison.Ordinal) => SourceKind.Video,
         "application/pdf" => SourceKind.Pdf,
+        OfficeMime.Docx or OfficeMime.Pptx or OfficeMime.Xlsx => SourceKind.Office,
         _ => null,
+    };
+
+    /// <summary>The file extension LibreOffice needs to pick the right import filter when converting an Office document to PDF.</summary>
+    public static string OfficeExtension(string mime) => mime switch
+    {
+        OfficeMime.Docx => "docx", OfficeMime.Pptx => "pptx", OfficeMime.Xlsx => "xlsx",
+        _ => throw new ArgumentOutOfRangeException(nameof(mime), mime, "Not an Office mime."),
     };
 
     /// <summary>Image profiles made when a version arrives (spec A6).</summary>
@@ -119,8 +129,8 @@ public static class RenditionProfiles
     public static RenditionProfile? FindImage(SourceKind kind, string name) => kind switch
     {
         SourceKind.Image => Images.FirstOrDefault(p => p.Name == name),
-        SourceKind.Pdf when TryParsePdfPage(name, out _) => PdfPage,
-        SourceKind.Pdf => PdfStills.FirstOrDefault(p => p.Name == name),
+        SourceKind.Pdf or SourceKind.Office when TryParsePdfPage(name, out _) => PdfPage,
+        SourceKind.Pdf or SourceKind.Office => PdfStills.FirstOrDefault(p => p.Name == name),
         SourceKind.Video => VideoStills.FirstOrDefault(p => p.Name == name),
         _ => null,
     };

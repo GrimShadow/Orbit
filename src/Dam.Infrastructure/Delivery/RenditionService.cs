@@ -21,7 +21,7 @@ public sealed class SourceTooLargeException(long size, long limit) : Exception($
 /// rendered once (spec A3.3 / Step 1.5). Used by the worker (eager profiles) and by the delivery origin (on demand). Dispatches on
 /// the version's kind: still images resize directly; video makes a poster frame plus transcodes; a PDF rasterises its pages.
 /// </summary>
-public sealed class RenditionService(DamDbContext db, IObjectStore store, IOutbox outbox, IClock clock, DeliverySettings settings, VideoRenderer video, PdfRenderer pdf)
+public sealed class RenditionService(DamDbContext db, IObjectStore store, IOutbox outbox, IClock clock, DeliverySettings settings, VideoRenderer video, PdfRenderer pdf, OfficeConverter office)
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Locks = new();
 
@@ -48,15 +48,31 @@ public sealed class RenditionService(DamDbContext db, IObjectStore store, IOutbo
                 break;
 
             case SourceKind.Pdf:
-                var pdfBytes = await ReadSourceAsync(version, ct);
-                var page1 = await pdf.RasterizePageAsync(pdfBytes, 1, ct);
-                foreach (var still in RenditionProfiles.PdfStills) await StillAsync(version, still, 0, page1, ct);
-                await StillAsync(version, RenditionProfiles.PdfPage, 1, page1, ct);
-                var pages = Math.Min(await pdf.PageCountAsync(pdfBytes, ct), settings.MaxPdfPages);
-                for (var n = 2; n <= pages; n++) await StillAsync(version, RenditionProfiles.PdfPage, n, await pdf.RasterizePageAsync(pdfBytes, n, ct), ct);
+                await GeneratePdfDerivedAsync(version, await ReadSourceAsync(version, ct), ct);
+                break;
+
+            case SourceKind.Office:
+                await GeneratePdfDerivedAsync(version, await AsPdfAsync(version, SourceKind.Office, ct), ct);
                 break;
         }
     }
+
+    /// <summary>Everything a PDF's bytes produce: page-1 stills and every page up to the configured limit. Office documents reach
+    /// here already converted, so a PDF and a converted Office document are indistinguishable from this point on.</summary>
+    private async Task GeneratePdfDerivedAsync(AssetVersion version, byte[] pdfBytes, CancellationToken ct)
+    {
+        var page1 = await pdf.RasterizePageAsync(pdfBytes, 1, ct);
+        foreach (var still in RenditionProfiles.PdfStills) await StillAsync(version, still, 0, page1, ct);
+        await StillAsync(version, RenditionProfiles.PdfPage, 1, page1, ct);
+        var pages = Math.Min(await pdf.PageCountAsync(pdfBytes, ct), settings.MaxPdfPages);
+        for (var n = 2; n <= pages; n++) await StillAsync(version, RenditionProfiles.PdfPage, n, await pdf.RasterizePageAsync(pdfBytes, n, ct), ct);
+    }
+
+    /// <summary>The bytes to rasterise as a PDF: the version itself (PDF) or its LibreOffice-converted form (Office).</summary>
+    private async Task<byte[]> AsPdfAsync(AssetVersion version, SourceKind kind, CancellationToken ct) =>
+        kind == SourceKind.Office
+            ? await office.ConvertToPdfAsync(await ReadSourceAsync(version, ct), RenditionProfiles.OfficeExtension(version.Mime), ct)
+            : await ReadSourceAsync(version, ct);
 
     /// <summary>The named still-image profile, video transcode or PDF page for a version: reuses the stored copy, otherwise renders one.</summary>
     public async Task<ServedObject?> GetProfileAsync(AssetVersion version, string name, bool watermark, CancellationToken ct)
@@ -64,8 +80,8 @@ public sealed class RenditionService(DamDbContext db, IObjectStore store, IOutbo
         var kind = KindOf(version);
         if (kind is null) return null;
 
-        if (kind == SourceKind.Pdf && RenditionProfiles.TryParsePdfPage(name, out var page))
-            return watermark ? null : await GetOrRenderAsync(version, RenditionProfiles.PdfPagesProfile, page, () => RasterizeThenRenderAsync(version, page, RenditionProfiles.PdfPage, ct), ct);
+        if (kind is SourceKind.Pdf or SourceKind.Office && RenditionProfiles.TryParsePdfPage(name, out var page))
+            return watermark ? null : await GetOrRenderAsync(version, RenditionProfiles.PdfPagesProfile, page, () => RasterizeThenRenderAsync(version, kind.Value, page, RenditionProfiles.PdfPage, ct), ct);
 
         if (RenditionProfiles.FindImage(kind.Value, name) is { } still)
         {
@@ -100,7 +116,7 @@ public sealed class RenditionService(DamDbContext db, IObjectStore store, IOutbo
     {
         SourceKind.Image => await ReadSourceAsync(version, ct),
         SourceKind.Video => await video.ExtractFrameAsync(await ReadSourceAsync(version, ct), ct),
-        SourceKind.Pdf => await pdf.RasterizePageAsync(await ReadSourceAsync(version, ct), 1, ct),
+        SourceKind.Pdf or SourceKind.Office => await pdf.RasterizePageAsync(await AsPdfAsync(version, kind, ct), 1, ct),
         _ => null,
     };
 
@@ -110,9 +126,9 @@ public sealed class RenditionService(DamDbContext db, IObjectStore store, IOutbo
         return (ImageRenderer.Render(frame, RenderRequest.ForProfile(profile)), null);
     }
 
-    private async Task<(RenderedImage, double?)> RasterizeThenRenderAsync(AssetVersion version, int page, RenditionProfile profile, CancellationToken ct)
+    private async Task<(RenderedImage, double?)> RasterizeThenRenderAsync(AssetVersion version, SourceKind kind, int page, RenditionProfile profile, CancellationToken ct)
     {
-        var bytes = await ReadSourceAsync(version, ct);
+        var bytes = await AsPdfAsync(version, kind, ct);
         var count = await pdf.PageCountAsync(bytes, ct);
         if (page > count) throw new PageNotFoundException(page, count);
         return (ImageRenderer.Render(await pdf.RasterizePageAsync(bytes, page, ct), RenderRequest.ForProfile(profile)), null);
@@ -235,10 +251,13 @@ public static class DeliveryRegistration
         if (cfg["DAM_FFPROBE_PATH"] is { Length: > 0 } ffprobe) tools.FfprobePath = ffprobe;
         if (cfg["DAM_PDFTOPPM_PATH"] is { Length: > 0 } toppm) tools.PdftoppmPath = toppm;
         if (cfg["DAM_PDFINFO_PATH"] is { Length: > 0 } info) tools.PdfinfoPath = info;
+        if (cfg["DAM_SOFFICE_PATH"] is { Length: > 0 } soffice) tools.SofficePath = soffice;
         if (cfg["DAM_VIDEO_PRESET"] is { Length: > 0 } preset) tools.Preset = preset;
+        if (int.TryParse(cfg["DAM_OFFICE_MAX_CONCURRENCY"], out var officeConcurrency) && officeConcurrency > 0) tools.OfficeMaxConcurrency = officeConcurrency;
         services.AddSingleton(tools);
         services.AddSingleton<VideoRenderer>();
         services.AddSingleton<PdfRenderer>();
+        services.AddSingleton<OfficeConverter>();
         services.AddScoped<RenditionService>();
         return services;
     }
