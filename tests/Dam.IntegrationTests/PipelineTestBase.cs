@@ -6,6 +6,7 @@ using Dam.Infrastructure.Consumers;
 using Dam.Infrastructure.Delivery;
 using Dam.Infrastructure.Ingest;
 using Dam.Infrastructure.Messaging;
+using Dam.Infrastructure.Search;
 using Dam.Infrastructure.Storage;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -34,8 +35,12 @@ public abstract class PipelineTestBase(PostgresFixture pg, RabbitFixture mq) : A
             b.Logging.SetMinimumLevel(LogLevel.Warning);
             b.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["DAM_DB_CONNECTION"] = Pg.AppConnection, ["DAM_S3_ENDPOINT"] = Pg.S3Endpoint, ["DAM_S3_ACCESS_KEY"] = Pg.S3AccessKey,
-                ["DAM_S3_SECRET_KEY"] = Pg.S3SecretKey, ["DAM_DELIVERY_SIGNING_KEY"] = ApiTestHost.SigningKey, ["DAM_VIDEO_PRESET"] = "ultrafast",
+                ["DAM_DB_CONNECTION"] = Pg.AppConnection,
+                ["DAM_S3_ENDPOINT"] = Pg.S3Endpoint,
+                ["DAM_S3_ACCESS_KEY"] = Pg.S3AccessKey,
+                ["DAM_S3_SECRET_KEY"] = Pg.S3SecretKey,
+                ["DAM_DELIVERY_SIGNING_KEY"] = ApiTestHost.SigningKey,
+                ["DAM_VIDEO_PRESET"] = "ultrafast",
             });
         });
         await _app.StartAsync();
@@ -51,9 +56,12 @@ public abstract class PipelineTestBase(PostgresFixture pg, RabbitFixture mq) : A
 
     protected static string PathOf(string url) => new Uri(url).PathAndQuery;
 
-    /// <param name="settings">Extra or overriding configuration (for example the ClamAV address).</param>
+    /// <param name="settings">Extra or overriding configuration (for example the ClamAV address, or DAM_OPENSEARCH_URL
+    /// when <paramref name="indexing"/> is set).</param>
     /// <param name="renditions">Register the rendition consumer. Leave it out to exercise on-demand rendering.</param>
-    protected IHost StartWorker(Dictionary<string, string?>? settings = null, bool renditions = true)
+    /// <param name="indexing">Register the search index consumer (spec Step 1.7). Off by default: most pipeline tests
+    /// have nothing to do with search and would otherwise need an OpenSearch URL they never use.</param>
+    protected IHost StartWorker(Dictionary<string, string?>? settings = null, bool renditions = true, bool indexing = false)
     {
         var b = Host.CreateApplicationBuilder();
         b.Logging.SetMinimumLevel(LogLevel.Warning);
@@ -74,6 +82,7 @@ public abstract class PipelineTestBase(PostgresFixture pg, RabbitFixture mq) : A
         b.Services.AddDamStorage(cfg);
         b.Services.AddDamIngest(cfg);
         b.Services.AddDamRendering(cfg);
+        if (indexing) b.Services.AddDamSearch(cfg);
         b.Services.AddDamMessaging(new MessagingOptions { RabbitUrl = mq.Url, MaxAttempts = 2, RetryBaseDelayMs = 100, OutboxPollMs = 100 });
         b.Services.AddEventConsumer<HashUploadConsumer>();
         b.Services.AddEventConsumer<ScanUploadConsumer>();
@@ -82,6 +91,7 @@ public abstract class PipelineTestBase(PostgresFixture pg, RabbitFixture mq) : A
         b.Services.AddEventConsumer<PromoteUploadConsumer>();
         b.Services.AddEventConsumer<PerceptualHashConsumer>();
         if (renditions) b.Services.AddEventConsumer<RenditionConsumer>();
+        if (indexing) b.Services.AddEventConsumer<IndexConsumer>();
         b.Services.AddOutboxRelay(Pg.SystemConnection);
         return b.Build();
     }
