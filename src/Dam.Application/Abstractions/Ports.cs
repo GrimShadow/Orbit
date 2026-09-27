@@ -49,6 +49,11 @@ public interface IOutbox { Task EnqueueAsync(IEnumerable<DomainEvent> events, Ca
 /// <summary>Lets handlers raise events that are not tied to a tracked aggregate. Drained by the outbox behaviour.</summary>
 public interface IEventCollector { void Raise(DomainEvent e); }
 
+/// <summary>Whether an asset has completed whatever approval workflow applies to it (spec Phase 2.3 "Workflow engine": Create →
+/// Review → Approve → Publish). No workflow engine exists yet, so this is a seam: publishing's guard reads it today and will
+/// need no change once a real workflow lands. The default implementation always answers yes.</summary>
+public interface IWorkflowGate { Task<bool> IsApprovedAsync(Guid assetId, CancellationToken ct); }
+
 /// <summary>Work that runs on a schedule, resolved by <see cref="Key"/> when its trigger fires (host: Dam.Scheduler).</summary>
 public interface IScheduledJob
 {

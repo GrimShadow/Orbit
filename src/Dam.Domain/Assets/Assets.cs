@@ -273,6 +273,14 @@ public sealed class AssetVersion : TenantEntity
             CreatedAt = now,
         };
     }
+
+    /// <summary>A new version whose bytes are a copy of an earlier one (spec A4.1: "rollback creates a new version pointing at
+    /// old storage"). Versions are immutable, so restoring never rewrites history; it just makes an old file current again.
+    /// There is no upload behind it, so <see cref="UploadId"/> is a fresh id with no other meaning than satisfying the
+    /// one-version-per-upload uniqueness rule.</summary>
+    public static AssetVersion Restore(Guid tenantId, Guid assetId, int versionNo, string bucket, AssetVersion source, Guid? createdBy, DateTimeOffset now) =>
+        Create(tenantId, assetId, versionNo, bucket, Uuid7.NewGuid(), source.SizeBytes, source.Mime, source.Sha256,
+            new Dictionary<string, JsonElement>(source.TechnicalMetadata), $"Restored from version {source.VersionNo}", createdBy, now);
 }
 
 public sealed record AssetVersionAdded(Guid AssetId, Guid VersionId, int VersionNo) : DomainEvent, IEntityEvent

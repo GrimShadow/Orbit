@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Dam.Application.Abstractions;
 using Dam.Application.Content;
 using Dam.Application.Messaging;
@@ -28,6 +29,72 @@ public sealed class ListVersionsHandler(
         if (asset is null || !await authz.CanAsync(Permissions.AssetsRead, asset.ToResource(path), ct)) return Error.NotFound("Asset not found.");
         var list = await q.ToListAsync(versions.Query().Where(v => v.AssetId == asset.Id).OrderByDescending(v => v.VersionNo), ct);
         return list.Select(v => VersionMapping.ToDto(v, asset.CurrentVersionId)).ToList();
+    }
+}
+
+/// <summary>
+/// Makes an old version current again by copying its bytes into a brand new version (spec A4.1: versions are immutable, so
+/// a rollback never rewrites history). Blocked while the asset is deleted or blocked, same as starting a new upload.
+/// </summary>
+public sealed record RestoreVersionCommand(Guid AssetId, int VersionNo) : ICommand<AssetVersionDto>;
+
+public sealed class RestoreVersionHandler(
+    IRepository<Asset> assets, IRepository<AssetVersion> versions, IRepository<Folder> folders, IQueryExecutor q,
+    IAuthorizationService authz, IObjectStore store, IEventCollector events, ITenantContext tenant, ICurrentUser me, IClock clock)
+    : IRequestHandler<RestoreVersionCommand, AssetVersionDto>
+{
+    public async Task<Result<AssetVersionDto>> Handle(RestoreVersionCommand c, CancellationToken ct)
+    {
+        var (asset, path) = await AssetAccess.LoadAsync(assets, folders, q, c.AssetId, ct);
+        if (asset is null || !await authz.CanAsync(Permissions.AssetsRead, asset.ToResource(path), ct)) return Error.NotFound("Asset not found.");
+        if (!await authz.CanAsync(Permissions.AssetsUpdate, asset.ToResource(path), ct)) return Error.Forbidden();
+        if (asset.Status is AssetStatuses.Deleted or AssetStatuses.Blocked) return Error.Conflict($"The asset is {asset.Status}.");
+
+        var source = await q.FirstOrDefaultAsync(versions.Query().Where(v => v.AssetId == asset.Id && v.VersionNo == c.VersionNo), ct);
+        if (source is null) return Error.NotFound("Version not found.");
+        if (source.Id == asset.CurrentVersionId) return Error.Conflict("This is already the current version.");
+
+        var nextNo = (await q.ToListAsync(versions.Query().Where(v => v.AssetId == asset.Id).Select(v => v.VersionNo), ct)).Max() + 1;
+        var restored = AssetVersion.Restore(tenant.TenantId, asset.Id, nextNo, store.OriginalsBucket, source, me.UserId, clock.UtcNow);
+        await store.CopyAsync(source.Bucket, source.StorageKey, restored.Bucket, restored.StorageKey, source.SizeBytes, ct);
+        versions.Add(restored);
+        asset.SetCurrentVersion(restored.Id, clock.UtcNow);
+        events.Raise(new AssetVersionAdded(asset.Id, restored.Id, restored.VersionNo));
+        return VersionMapping.ToDto(restored, restored.Id);
+    }
+}
+
+/// <summary>What differs between two versions of the same asset: size, mime, checksum, and technical metadata (spec Step 1.6
+/// "compare metadata diff"). Only the top level of technical metadata is compared; a field's own internal shape (e.g. the
+/// individual EXIF tags) is not diffed further.</summary>
+public sealed record CompareVersionsQuery(Guid AssetId, int VersionNo, int OtherVersionNo) : IQuery<VersionDiffDto>;
+
+public sealed class CompareVersionsHandler(
+    IRepository<Asset> assets, IRepository<AssetVersion> versions, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz)
+    : IRequestHandler<CompareVersionsQuery, VersionDiffDto>
+{
+    public async Task<Result<VersionDiffDto>> Handle(CompareVersionsQuery r, CancellationToken ct)
+    {
+        var (asset, path) = await AssetAccess.LoadAsync(assets, folders, q, r.AssetId, ct);
+        if (asset is null || !await authz.CanAsync(Permissions.AssetsRead, asset.ToResource(path), ct)) return Error.NotFound("Asset not found.");
+        var a = await q.FirstOrDefaultAsync(versions.Query().Where(v => v.AssetId == asset.Id && v.VersionNo == r.VersionNo), ct);
+        var b = await q.FirstOrDefaultAsync(versions.Query().Where(v => v.AssetId == asset.Id && v.VersionNo == r.OtherVersionNo), ct);
+        if (a is null || b is null) return Error.NotFound("Version not found.");
+
+        var fields = new Dictionary<string, FieldDiffDto>();
+        void Compare(string name, JsonElement? before, JsonElement? after)
+        {
+            var same = before is { } bv && after is { } av && bv.GetRawText() == av.GetRawText();
+            if (!same) fields[name] = new FieldDiffDto(before, after);
+        }
+        JsonElement J(object v) => JsonSerializer.SerializeToElement(v);
+        Compare("sizeBytes", J(a.SizeBytes), J(b.SizeBytes));
+        Compare("mime", J(a.Mime), J(b.Mime));
+        Compare("sha256", J(a.Sha256), J(b.Sha256));
+        foreach (var key in a.TechnicalMetadata.Keys.Union(b.TechnicalMetadata.Keys))
+            Compare(key, a.TechnicalMetadata.GetValueOrDefault(key), b.TechnicalMetadata.GetValueOrDefault(key));
+
+        return new VersionDiffDto(r.VersionNo, r.OtherVersionNo, fields);
     }
 }
 
