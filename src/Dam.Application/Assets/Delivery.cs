@@ -16,7 +16,7 @@ namespace Dam.Application.Assets;
 public sealed record CreateDeliveryLinkCommand(Guid AssetId, CreateLinkRequest Request) : ICommand<DeliveryLinkDto>;
 
 public sealed class CreateDeliveryLinkHandler(
-    IRepository<Asset> assets, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz,
+    IRepository<Asset> assets, IRepository<AssetVersion> versions, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz,
     DeliveryTokenSigner signer, DeliverySettings settings, ITenantContext tenant, IClock clock)
     : IRequestHandler<CreateDeliveryLinkCommand, DeliveryLinkDto>
 {
@@ -29,6 +29,8 @@ public sealed class CreateDeliveryLinkHandler(
         if (asset is null || !await authz.CanAsync(Permissions.AssetsRead, resource, ct)) return Error.NotFound("Asset not found.");
         if (asset.Status is AssetStatuses.Deleted or AssetStatuses.Blocked) return Error.NotFound("Asset not found.");
         if (asset.CurrentVersionId is null) return Error.Conflict("The asset has no file yet.");
+        var version = await q.FirstOrDefaultAsync(versions.Query().Where(v => v.Id == asset.CurrentVersionId), ct);
+        var kind = version is null ? null : RenditionProfiles.KindOf(version.Mime);
 
         var r = c.Request;
         var problems = new Dictionary<string, string[]>();
@@ -60,6 +62,8 @@ public sealed class CreateDeliveryLinkHandler(
         var watermark = asset.Status != AssetStatuses.Published;
         if (watermark && names.Contains(RenditionProfiles.Original))
             return Error.Conflict("The original file of an unpublished asset cannot be shared by link; other renditions carry a watermark.");
+        if (watermark && kind == SourceKind.Video && names.Any(n => RenditionProfiles.Videos.Any(v => v.Name == n)))
+            return Error.Conflict("Video renditions of an unpublished asset are not available yet; only its still images (thumb, poster) carry a watermark.");
         var expires = clock.UtcNow.Add(ttl);
         var token = signer.Sign(new DeliveryClaims(tenant.TenantId, asset.Id, scope, expires, r.Ip, watermark));
         var baseUrl = $"{settings.LinkBase}/d/{token}/{asset.Id}";
@@ -83,6 +87,6 @@ public sealed class ListRenditionsHandler(
         if (asset is null || !await authz.CanAsync(Permissions.AssetsRead, asset.ToResource(path), ct)) return Error.NotFound("Asset not found.");
         var versionId = asset.CurrentVersionId;
         var list = await q.ToListAsync(renditions.Query().Where(x => x.VersionId == versionId).OrderBy(x => x.Profile), ct);
-        return list.Select(x => new RenditionDto(x.Profile, x.Mime, x.Width, x.Height, x.SizeBytes, x.Status, x.CreatedAt)).ToList();
+        return list.Select(x => new RenditionDto(x.Profile, x.Mime, x.Width, x.Height, x.SizeBytes, x.Status, x.Duration, x.PageNo > 0 ? x.PageNo : null, x.CreatedAt)).ToList();
     }
 }

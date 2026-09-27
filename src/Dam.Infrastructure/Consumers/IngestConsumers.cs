@@ -243,19 +243,22 @@ public sealed class RenditionConsumer(DamDbContext db, IObjectStore store, IOutb
         var version = await Db.AssetVersions.FirstOrDefaultAsync(v => v.Id == versionId, ct);
         if (version is null || !Delivery.RenditionService.CanRender(version)) return;
 
-        foreach (var profile in RenditionProfiles.Images)
+        try { await renditions.GenerateEagerAsync(version, ct); }
+        catch (Delivery.UnsupportedImageException ex)
         {
-            try { await renditions.GenerateProfileAsync(version, profile, ct); }
-            catch (Delivery.UnsupportedImageException ex)
-            {
-                log.LogInformation("Version {Version} cannot be rendered as {Profile}: {Reason}", version.Id, profile.Name, ex.Message);
-                return;     // an image we cannot decode fails every profile alike
-            }
-            catch (Delivery.SourceTooLargeException ex)
-            {
-                log.LogInformation("Version {Version} is too large to render eagerly: {Reason}", version.Id, ex.Message);
-                return;
-            }
+            log.LogInformation("Version {Version} cannot be rendered: {Reason}", version.Id, ex.Message);
+        }
+        catch (Delivery.SourceTooLargeException ex)
+        {
+            log.LogInformation("Version {Version} is too large to render eagerly: {Reason}", version.Id, ex.Message);
+        }
+        catch (Delivery.MediaToolMissingException ex)
+        {
+            log.LogWarning("Renditions for {Version} were skipped: {Reason}", version.Id, ex.Message);
+        }
+        catch (Delivery.MediaToolFailedException ex)
+        {
+            log.LogInformation("Version {Version} could not be fully rendered: {Reason}", version.Id, ex.Message);
         }
     }
 }

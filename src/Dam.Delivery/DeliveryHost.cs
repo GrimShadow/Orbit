@@ -94,10 +94,12 @@ public static class DeliveryHost
                 if (watermark) return Problem(403, "invalid_link", "The original file of an unpublished asset cannot be downloaded through a link.");
                 served = new ServedObject(version.Bucket, version.StorageKey, version.Mime, version.SizeBytes, CacheHit: true);
             }
-            else served = RenditionProfiles.Find(rendition!) is { } profile ? await service.GetProfileAsync(version, profile, watermark, ct) : null;
+            else served = await service.GetProfileAsync(version, rendition!, watermark, ct);
         }
         catch (UnsupportedImageException ex) { return Problem(422, "unsupported_image", ex.Message); }
         catch (SourceTooLargeException ex) { return Problem(422, "source_too_large", ex.Message); }
+        catch (MediaToolMissingException) { return Problem(503, "renderer_unavailable", "This kind of file cannot be rendered right now."); }
+        catch (MediaToolFailedException ex) { return Problem(422, "render_failed", ex.Message); }
         if (served is null) return Problem(404, "rendition_not_available", "This kind of file has no such rendition.");
 
         // 5. Send it, with what a CDN needs to cache it correctly.
@@ -111,18 +113,59 @@ public static class DeliveryHost
         headers["X-Dam-Version"] = version.Id.ToString("N");
         headers["X-Content-Type-Options"] = "nosniff";
         headers["Content-Security-Policy"] = "default-src 'none'; sandbox";
+        headers["Accept-Ranges"] = "bytes";      // a video player seeks by asking for a byte range; scrubbing needs this
         if (!served.Mime.StartsWith("image/", StringComparison.Ordinal) && served.Mime is not ("application/pdf" or "video/mp4" or "audio/mpeg"))
             headers.ContentDisposition = "attachment";            // never let an uploaded HTML file run on this origin
 
         if (http.Request.Headers.IfNoneMatch.Any(v => v == etag)) return Results.StatusCode(304);
         http.Response.ContentType = served.Mime;
-        http.Response.ContentLength = served.Size;
-        if (HttpMethods.IsHead(http.Request.Method)) return Results.Empty;
 
         var store = sp.GetRequiredService<IObjectStore>();
-        await using var body = await store.OpenReadAsync(served.Bucket, served.Key, ct);
-        await body.CopyToAsync(http.Response.Body, ct);
+        var range = ParseRange(http.Request.Headers.Range, served.Size);
+        if (range is null)
+        {
+            http.Response.ContentLength = served.Size;
+            if (HttpMethods.IsHead(http.Request.Method)) return Results.Empty;
+            await using var whole = await store.OpenReadAsync(served.Bucket, served.Key, ct);
+            await whole.CopyToAsync(http.Response.Body, ct);
+            return Results.Empty;
+        }
+
+        if (range.Value.Start > range.Value.End)
+        {
+            headers["Content-Range"] = $"bytes */{served.Size}";
+            return Results.StatusCode(416);
+        }
+        var length = range.Value.End - range.Value.Start + 1;
+        http.Response.StatusCode = 206;
+        headers["Content-Range"] = $"bytes {range.Value.Start}-{range.Value.End}/{served.Size}";
+        http.Response.ContentLength = length;
+        if (HttpMethods.IsHead(http.Request.Method)) return Results.Empty;
+        var chunk = await store.ReadRangeAsync(served.Bucket, served.Key, range.Value.Start, length, ct);
+        await http.Response.Body.WriteAsync(chunk, ct);
         return Results.Empty;
+    }
+
+    /// <summary>A single "bytes=start-end" range (the only form browsers and video players send). Anything else is ignored, which
+    /// falls back to a full 200 response — a valid response to a Range request a server chooses not to honour.</summary>
+    private static (long Start, long End)? ParseRange(StringValues header, long size)
+    {
+        var value = header.ToString();
+        if (string.IsNullOrEmpty(value) || !value.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase) || value.Contains(',')) return null;
+        var spec = value["bytes=".Length..];
+        var dash = spec.IndexOf('-');
+        if (dash < 0) return null;
+        var startText = spec[..dash];
+        var endText = spec[(dash + 1)..];
+        if (startText.Length == 0)
+        {
+            // "bytes=-500": the last 500 bytes.
+            if (!long.TryParse(endText, out var suffix) || suffix <= 0) return null;
+            return (Math.Max(0, size - suffix), size - 1);
+        }
+        if (!long.TryParse(startText, out var start) || start < 0) return null;
+        var end = endText.Length == 0 || !long.TryParse(endText, out var e) ? size - 1 : Math.Min(e, size - 1);
+        return (start, end);
     }
 
     private static string? ClientIp(HttpContext http, DeliveryOptions options)
