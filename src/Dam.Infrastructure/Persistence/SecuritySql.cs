@@ -132,4 +132,20 @@ public static class SecuritySql
     public const string RenditionGrants = """
         GRANT SELECT, INSERT, UPDATE, DELETE ON renditions TO dam_app;   -- a cache: rows may be replaced or dropped and regenerated
         """;
+
+    public const string RetentionGrants = """
+        GRANT SELECT, INSERT, UPDATE, DELETE ON retention_policies TO dam_app;
+        """;
+
+    /// <summary>
+    /// The publish/expire and retention scheduled jobs (Step 1.6b) find candidates across every tenant, so they read
+    /// through the system connection like the outbox relay does — never bypassing RLS outright (dam_system stays
+    /// NOBYPASSRLS), just adding a read-only policy for it alongside the ordinary tenant_isolation policy every
+    /// tenant-scoped table already has. The jobs still apply each change through the ordinary tenant-scoped connection.
+    /// </summary>
+    public const string SchedulerSystemGrants = """
+        GRANT SELECT ON assets, retention_policies TO dam_system;
+        CREATE POLICY system_read_assets ON assets FOR SELECT TO dam_system USING (true);
+        CREATE POLICY system_read_retention_policies ON retention_policies FOR SELECT TO dam_system USING (true);
+        """;
 }

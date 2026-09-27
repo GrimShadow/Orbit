@@ -11,6 +11,9 @@ public sealed record CreateAssetRequest(Guid? FolderId, string Type, string Titl
 public sealed record UpdateAssetRequest(string? Title, JsonElement? Metadata, IReadOnlyList<string>? Tags);
 public sealed record MoveAssetRequest(Guid? FolderId);
 public sealed record TransitionAssetRequest(string? Reason);
+public sealed record ScheduleAssetRequest(DateTimeOffset? PublishAt, DateTimeOffset? ExpireAt);
+public sealed record SetRetentionPolicyRequest(Guid? RetentionPolicyId);
+public sealed record SetLegalHoldRequest(bool Hold);
 public sealed record InitiateUploadRequest(string FileName, long Size, string? ContentType, bool AllowDuplicate = false, string? Sha256 = null);
 public sealed record PartNumbersRequest(IReadOnlyList<int> PartNumbers);
 public sealed record CompleteUploadRequest(IReadOnlyList<PartEtag>? Parts = null, string? Sha256 = null);
@@ -54,7 +57,16 @@ public static class AssetEndpoints
             .WithName("CompareAssetVersions").WithSummary("What differs between two versions: size, mime, checksum and technical metadata").Produces<VersionDiffDto>();
         assets.MapPost("/{id:guid}/transitions/{action}", (Guid id, string action, TransitionAssetRequest r, IDispatcher d, CancellationToken ct) =>
                 Run(d, new TransitionAssetCommand(id, action, r.Reason), v => Task.FromResult(Results.Ok(v)), ct))
-            .WithName("TransitionAsset").WithSummary("Moves an asset along its lifecycle: submit, approve, reject, publish, withdraw, expire, archive").Produces<AssetDto>();
+            .WithName("TransitionAsset").WithSummary("Moves an asset along its lifecycle: submit, approve, reject, publish, withdraw, expire, archive, purge").Produces<AssetDto>();
+        assets.MapPost("/{id:guid}/schedule", (Guid id, ScheduleAssetRequest r, IDispatcher d, CancellationToken ct) =>
+                Run(d, new ScheduleAssetCommand(id, r.PublishAt, r.ExpireAt), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("ScheduleAsset").WithSummary("Sets or clears when the asset should publish or expire itself; the scheduler acts once it reaches the matching status").Produces<AssetDto>();
+        assets.MapPost("/{id:guid}/retention-policy", (Guid id, SetRetentionPolicyRequest r, IDispatcher d, CancellationToken ct) =>
+                Run(d, new SetAssetRetentionPolicyCommand(id, r.RetentionPolicyId), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("SetAssetRetentionPolicy").Produces<AssetDto>();
+        assets.MapPost("/{id:guid}/legal-hold", (Guid id, SetLegalHoldRequest r, IDispatcher d, CancellationToken ct) =>
+                Run(d, new SetLegalHoldCommand(id, r.Hold), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("SetAssetLegalHold").WithSummary("Blocks (or unblocks) retention purge for this asset, regardless of its policy's schedule").Produces<AssetDto>();
         assets.MapGet("/{id:guid}/renditions", (Guid id, IDispatcher d, CancellationToken ct) => Run(d, new ListRenditionsQuery(id), v => Task.FromResult(Results.Ok(v)), ct))
             .WithName("ListAssetRenditions").WithSummary("Renditions already made for the current version").Produces<IReadOnlyList<RenditionDto>>();
         assets.MapPost("/{id:guid}/links", (Guid id, CreateLinkRequest r, IDispatcher d, CancellationToken ct) =>

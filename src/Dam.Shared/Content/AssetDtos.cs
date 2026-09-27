@@ -6,7 +6,14 @@ public sealed record AssetDto(
     Guid Id, Guid? FolderId, string Type, string Status, string Title, IReadOnlyDictionary<string, JsonElement> Metadata,
     int MetadataSchemaVersion, IReadOnlyList<string> TaxonomyTerms, IReadOnlyList<string> Tags,
     IReadOnlyDictionary<string, string[]> Attributes, Guid? OwnerId, Guid? CurrentVersionId, string? ChecksumSha256,
-    string StatusReason, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+    string StatusReason, DateTimeOffset? PublishAt, DateTimeOffset? ExpireAt, Guid? RetentionPolicyId, bool LegalHold,
+    DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+
+/// <param name="ArchiveAfterDays">Days after an asset expires before the retention job archives it. Null: never auto-archived.</param>
+/// <param name="DeleteAfterDays">Days after an asset is archived before the retention job purges it (deletes its file bytes).
+/// Null: never auto-purged.</param>
+/// <param name="LegalHoldExempt">When true, this policy purges on schedule even through a legal hold.</param>
+public sealed record RetentionPolicyDto(Guid Id, string Name, int? ArchiveAfterDays, int? DeleteAfterDays, bool LegalHoldExempt, DateTimeOffset CreatedAt);
 
 public sealed record PartUrlDto(int PartNumber, string Url, DateTimeOffset ExpiresAt);
 

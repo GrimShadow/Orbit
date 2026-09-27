@@ -13,6 +13,7 @@ public sealed class AssetLifecycleTests
         [AssetStatuses.Approved, AssetLifecycle.Publish, AssetStatuses.Published],
         [AssetStatuses.Published, AssetLifecycle.Expire, AssetStatuses.Expired],
         [AssetStatuses.Expired, AssetLifecycle.Archive, AssetStatuses.Archived],
+        [AssetStatuses.Archived, AssetLifecycle.Purge, AssetStatuses.Deleted],
     ];
 
     [Theory]
@@ -51,7 +52,9 @@ public sealed class AssetLifecycleTests
         [AssetStatuses.Published, AssetLifecycle.Submit],    // already published
         [AssetStatuses.Published, AssetLifecycle.Archive],   // must expire first
         [AssetStatuses.Archived, AssetLifecycle.Expire],     // already past that point
+        [AssetStatuses.Expired, AssetLifecycle.Purge],       // must be archived first
         [AssetStatuses.Deleted, AssetLifecycle.Submit],
+        [AssetStatuses.Deleted, AssetLifecycle.Purge],        // already deleted
         [AssetStatuses.Blocked, AssetLifecycle.Submit],
     ];
 
@@ -68,7 +71,7 @@ public sealed class AssetLifecycleTests
     }
 
     [Fact]
-    public void The_full_round_trip_returns_to_where_it_started()
+    public void The_full_lifecycle_ends_in_deletion_and_withdraw_still_works_one_step_short_of_that()
     {
         var status = AssetStatuses.Draft;
         foreach (var action in new[] { AssetLifecycle.Submit, AssetLifecycle.Approve, AssetLifecycle.Publish, AssetLifecycle.Expire, AssetLifecycle.Archive })
@@ -79,5 +82,97 @@ public sealed class AssetLifecycleTests
         Assert.Equal(AssetStatuses.Archived, status);
         Assert.True(AssetLifecycle.TryGetTarget(status, AssetLifecycle.Withdraw, out var backToDraft));
         Assert.Equal(AssetStatuses.Draft, backToDraft);
+
+        Assert.True(AssetLifecycle.TryGetTarget(status, AssetLifecycle.Purge, out var deleted));
+        Assert.Equal(AssetStatuses.Deleted, deleted);
+        Assert.False(AssetLifecycle.TryGetTarget(deleted, AssetLifecycle.Withdraw, out _));   // deleted is truly terminal
+    }
+}
+
+public sealed class AssetRetentionFieldsTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    private static Asset NewDraft() => Asset.CreateShell(Guid.NewGuid(), null, "image", "Hero", null, Now);
+
+    [Fact]
+    public void Setting_legal_hold_raises_an_event_only_when_it_actually_changes()
+    {
+        var asset = NewDraft();
+        asset.PullEvents();   // drop AssetCreated
+        Assert.False(asset.LegalHold);
+
+        asset.SetLegalHold(false, Now);   // no-op: already off
+        Assert.Empty(asset.PullEvents());
+
+        asset.SetLegalHold(true, Now.AddMinutes(1));
+        Assert.True(asset.LegalHold);
+        var e = Assert.Single(asset.PullEvents());
+        var changed = Assert.IsType<AssetLegalHoldChanged>(e);
+        Assert.True(changed.Hold);
+
+        asset.SetLegalHold(true, Now.AddMinutes(2));   // no-op: already on
+        Assert.Empty(asset.PullEvents());
+
+        asset.SetLegalHold(false, Now.AddMinutes(3));
+        Assert.False(asset.LegalHold);
+        Assert.False(Assert.IsType<AssetLegalHoldChanged>(Assert.Single(asset.PullEvents())).Hold);
+    }
+
+    [Fact]
+    public void Scheduling_sets_both_timers_independently_and_either_can_be_cleared()
+    {
+        var asset = NewDraft();
+        var publishAt = Now.AddDays(1);
+        var expireAt = Now.AddDays(30);
+        asset.SetSchedule(publishAt, expireAt, Now);
+        Assert.Equal(publishAt, asset.PublishAt);
+        Assert.Equal(expireAt, asset.ExpireAt);
+
+        asset.SetSchedule(null, expireAt, Now);   // cancel just the publish timer
+        Assert.Null(asset.PublishAt);
+        Assert.Equal(expireAt, asset.ExpireAt);
+
+        asset.SetSchedule(null, null, Now);
+        Assert.Null(asset.PublishAt);
+        Assert.Null(asset.ExpireAt);
+    }
+
+    [Fact]
+    public void A_retention_policy_can_be_assigned_and_cleared()
+    {
+        var asset = NewDraft();
+        var policyId = Guid.NewGuid();
+        asset.SetRetentionPolicy(policyId, Now);
+        Assert.Equal(policyId, asset.RetentionPolicyId);
+        asset.SetRetentionPolicy(null, Now);
+        Assert.Null(asset.RetentionPolicyId);
+    }
+}
+
+public sealed class RetentionPolicyTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void A_policy_can_leave_either_day_count_unset_so_that_step_never_fires()
+    {
+        var tenant = Guid.NewGuid();
+        var policy = RetentionPolicy.Create(tenant, "  Standard  ", archiveAfterDays: 30, deleteAfterDays: null, legalHoldExempt: false, null, Now);
+        Assert.Equal("Standard", policy.Name);   // trimmed
+        Assert.Equal(30, policy.ArchiveAfterDays);
+        Assert.Null(policy.DeleteAfterDays);
+        Assert.False(policy.LegalHoldExempt);
+    }
+
+    [Fact]
+    public void Updating_a_policy_replaces_every_field()
+    {
+        var policy = RetentionPolicy.Create(Guid.NewGuid(), "Draft policy", 10, 20, false, null, Now);
+        policy.Update("Final policy", 90, 365, true);
+        Assert.Equal("Final policy", policy.Name);
+        Assert.Equal(90, policy.ArchiveAfterDays);
+        Assert.Equal(365, policy.DeleteAfterDays);
+        Assert.True(policy.LegalHoldExempt);
     }
 }
