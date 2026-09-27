@@ -75,7 +75,8 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
         var folder = asset.FolderId is { } fid ? await db.Folders.AsNoTracking().FirstOrDefaultAsync(f => f.Id == fid, ct) : null;
         var schemas = await TenantSchemaIndex.LoadAsync(db, ct);
         var taxonomy = await TenantTaxonomyIndex.LoadAsync(db, ct);
-        var doc = SearchDocumentBuilder.Build(asset, folder, schemas, taxonomy);
+        var collections = await TenantCollectionIndex.LoadAsync(db, ct);
+        var doc = SearchDocumentBuilder.Build(asset, folder, schemas, taxonomy, collections);
 
         var response = await client.DoRequestAsync<StringResponse>(HttpMethod.PUT, $"/{alias}/_doc/{assetId}", ct, Body(doc));
         if (!response.Success) throw new InvalidOperationException($"Could not index asset {assetId}: {response.Body}");
@@ -95,12 +96,13 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
     {
         var schemas = await TenantSchemaIndex.LoadAsync(db, ct);
         var taxonomy = await TenantTaxonomyIndex.LoadAsync(db, ct);
+        var collections = await TenantCollectionIndex.LoadAsync(db, ct);
         var newIndex = IndexNaming.BackingIndex(slug, clock.UtcNow);
 
         var create = await client.DoRequestAsync<StringResponse>(HttpMethod.PUT, $"/{newIndex}", ct, Body(IndexMappingBuilder.BuildIndexBody(schemas.MergedFields(log))));
         if (!create.Success) throw new InvalidOperationException($"Could not create index {newIndex}: {create.Body}");
 
-        var count = await BulkLoadAsync(newIndex, schemas, taxonomy, ct);
+        var count = await BulkLoadAsync(newIndex, schemas, taxonomy, collections, ct);
 
         var actions = new List<object?>();
         foreach (var old in replacing) actions.Add(new Dictionary<string, object?> { ["remove"] = new Dictionary<string, object?> { ["index"] = old, ["alias"] = alias } });
@@ -116,7 +118,7 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
         return count;
     }
 
-    private async Task<int> BulkLoadAsync(string index, TenantSchemaIndex schemas, TenantTaxonomyIndex taxonomy, CancellationToken ct)
+    private async Task<int> BulkLoadAsync(string index, TenantSchemaIndex schemas, TenantTaxonomyIndex taxonomy, TenantCollectionIndex collections, CancellationToken ct)
     {
         var total = 0;
         Guid? after = null;
@@ -134,7 +136,7 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
             foreach (var asset in page)
             {
                 var folder = asset.FolderId is { } fid && folders.TryGetValue(fid, out var f) ? f : null;
-                var doc = SearchDocumentBuilder.Build(asset, folder, schemas, taxonomy);
+                var doc = SearchDocumentBuilder.Build(asset, folder, schemas, taxonomy, collections);
                 sb.Append(JsonSerializer.Serialize(new Dictionary<string, object?> { ["index"] = new Dictionary<string, object?> { ["_index"] = index, ["_id"] = asset.Id } })).Append('\n');
                 sb.Append(JsonSerializer.Serialize(doc)).Append('\n');
             }

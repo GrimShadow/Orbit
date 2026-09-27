@@ -12,7 +12,7 @@ namespace Dam.Infrastructure.Search;
 /// </summary>
 public static class SearchDocumentBuilder
 {
-    public static Dictionary<string, object?> Build(Asset asset, Folder? folder, TenantSchemaIndex schemas, TenantTaxonomyIndex taxonomy)
+    public static Dictionary<string, object?> Build(Asset asset, Folder? folder, TenantSchemaIndex schemas, TenantTaxonomyIndex taxonomy, TenantCollectionIndex collections)
     {
         var fields = schemas.FieldsFor(asset.Type);
         return new Dictionary<string, object?>
@@ -25,7 +25,8 @@ public static class SearchDocumentBuilder
             ["folder_id"] = asset.FolderId,
             ["folder_path"] = folder?.Path,
             ["owner_id"] = asset.OwnerId,
-            ["collection_ids"] = Array.Empty<Guid>(), // Collections land in a later step (spec A4.1); every asset is in none today.
+            // Only static collections (spec Step 1.7c / ADR-0013): a smart collection's membership is never stored.
+            ["collection_ids"] = collections.For(asset.Id),
             ["tags"] = asset.Tags,
             ["taxonomy_terms"] = asset.TaxonomyTerms,
             ["attributes"] = Dimensions.All.ToDictionary(d => d, d => (object?)asset.Attributes.GetValueOrDefault(d, [])),
