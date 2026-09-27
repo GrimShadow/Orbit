@@ -41,8 +41,8 @@ function renderAt(route: string, auth: AuthState) {
   );
 }
 
-function mockFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>) {
-  const f = vi.fn((url: string, init?: RequestInit) => Promise.resolve(handler(url, init)));
+function mockFetch(handler: (request: Request) => Response | Promise<Response>) {
+  const f = vi.fn((request: Request) => Promise.resolve(handler(request)));
   vi.stubGlobal('fetch', f);
   return f;
 }
@@ -81,9 +81,9 @@ describe('routing and auth', () => {
     expect(screen.getByText('2 permissions')).toBeInTheDocument();
     expect(screen.getByText('region: North')).toBeInTheDocument();
     expect(screen.queryByText(/switched off/)).not.toBeInTheDocument();
-    const [url, init] = f.mock.calls[0]!;
-    expect(url).toBe('/api/v1/me');
-    expect((init!.headers as Record<string, string>).Authorization).toBe('Bearer tok');
+    const [request] = f.mock.calls[0]!;
+    expect(new URL(request.url).pathname).toBe('/api/v1/me');
+    expect(request.headers.get('Authorization')).toBe('Bearer tok');
   });
 
   it('warns when a role is switched off because an attribute is missing', async () => {

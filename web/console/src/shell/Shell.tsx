@@ -105,6 +105,7 @@ export function Shell() {
             <NavLink to="/" end>
               {t('nav.home')}
             </NavLink>
+            <NavLink to="/library">{t('nav.library')}</NavLink>
             <NavLink to="/me">{t('nav.account')}</NavLink>
           </nav>
         )}

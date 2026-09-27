@@ -1,0 +1,48 @@
+.dam-library__layout {
+  display: flex;
+  gap: var(--dam-space-6);
+  align-items: flex-start;
+}
+
+.dam-library__sidebar {
+  flex: 0 0 220px;
+  min-width: 0;
+}
+
+.dam-library__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+}
+
+.dam-library__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-4);
+  align-items: flex-end;
+}
+
+.dam-library__viewToggle {
+  display: flex;
+  gap: var(--dam-space-1);
+}
+
+.dam-library__viewToggle button[aria-pressed='true'],
+.dam-library__sidebar button[aria-pressed='true'] {
+  background: var(--dam-surface-2);
+  font-weight: 600;
+}
+
+/* Full-width single column below ~390px (spec Step 1.8: "mobile-responsive at 390px width"). */
+@media (max-width: 640px) {
+  .dam-library__layout {
+    flex-direction: column;
+  }
+
+  .dam-library__sidebar {
+    flex-basis: auto;
+    width: 100%;
+  }
+}
