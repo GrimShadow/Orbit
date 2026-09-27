@@ -2,6 +2,7 @@ using Dam.Application.Abstractions;
 using Dam.Infrastructure;
 using Dam.Infrastructure.Messaging;
 using Dam.Infrastructure.Scheduling;
+using Dam.Infrastructure.Search;
 using Dam.Infrastructure.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +17,10 @@ builder.Services.AddScheduledJob<HeartbeatJob>();
 builder.Services.AddDamWorkerIdentity();
 builder.Services.AddDamInfrastructure(Required("DAM_DB_CONNECTION"));
 builder.Services.AddDamStorage(cfg);
+builder.Services.AddDamSearch(cfg);
 builder.Services.AddDamRetentionScheduling(Required("DAM_DB_SYSTEM_CONNECTION"));
+// Shares the retention scheduling's system connection (registered above) - one read-only cross-tenant connection per host.
+builder.Services.AddScheduledJob<SearchReindexJob>();
 
 var app = builder.Build();
 app.MapGet("/healthz", () => Results.Ok("ok"));

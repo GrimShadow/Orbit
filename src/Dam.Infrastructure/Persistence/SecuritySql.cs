@@ -148,4 +148,11 @@ public static class SecuritySql
         CREATE POLICY system_read_assets ON assets FOR SELECT TO dam_system USING (true);
         CREATE POLICY system_read_retention_policies ON retention_policies FOR SELECT TO dam_system USING (true);
         """;
+
+    /// <summary>The search reindex job (Step 1.7) lists every tenant to rebuild each one's index in turn, the same way the
+    /// publish/expire and retention jobs already read across tenants through the system connection.</summary>
+    public const string SearchSystemGrants = """
+        GRANT SELECT ON tenants TO dam_system;
+        CREATE POLICY system_read_tenants ON tenants FOR SELECT TO dam_system USING (true);
+        """;
 }
