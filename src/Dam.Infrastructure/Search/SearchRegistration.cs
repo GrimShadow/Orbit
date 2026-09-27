@@ -1,3 +1,4 @@
+using Dam.Application.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenSearch.Net;
@@ -18,6 +19,7 @@ public static class SearchRegistration
         services.AddScoped<OpenSearchIndexService>();
         services.AddScoped<ISearchIndexAdmin>(sp => sp.GetRequiredService<OpenSearchIndexService>());
         services.AddScoped<ISearchIndexWriter>(sp => sp.GetRequiredService<OpenSearchIndexService>());
+        services.AddScoped<ISearchQueryService, OpenSearchQueryService>();
         return services;
     }
 }

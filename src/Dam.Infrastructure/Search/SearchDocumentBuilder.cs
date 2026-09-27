@@ -22,6 +22,7 @@ public static class SearchDocumentBuilder
             ["type"] = asset.Type,
             ["status"] = asset.Status,
             ["title"] = asset.Title,
+            ["folder_id"] = asset.FolderId,
             ["folder_path"] = folder?.Path,
             ["owner_id"] = asset.OwnerId,
             ["collection_ids"] = Array.Empty<Guid>(), // Collections land in a later step (spec A4.1); every asset is in none today.

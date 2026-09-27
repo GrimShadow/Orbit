@@ -74,6 +74,7 @@ public static class IndexMappingBuilder
             ["type"] = Keyword(),
             ["status"] = Keyword(),
             ["title"] = TextWithKeyword(),
+            ["folder_id"] = Keyword(),
             ["folder_path"] = Keyword(),
             ["owner_id"] = Keyword(),
             ["collection_ids"] = Keyword(),

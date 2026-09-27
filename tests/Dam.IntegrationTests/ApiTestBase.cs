@@ -18,9 +18,12 @@ public abstract class ApiTestBase(PostgresFixture pg) : IAsyncLifetime
     protected WebApplicationFactory<Program> Api { get; private set; } = null!;
     private HttpClient _http = null!;
 
+    /// <summary>Override to point the API host at a real OpenSearch for tests that exercise `/search` and friends.</summary>
+    protected virtual string? OpenSearchUrl => null;
+
     public Task InitializeAsync()
     {
-        Api = new ApiTestHost(Pg).Factory();
+        Api = new ApiTestHost(Pg).Factory(openSearchUrl: OpenSearchUrl);
         _http = Api.CreateClient();
         return Task.CompletedTask;
     }

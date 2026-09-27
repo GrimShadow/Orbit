@@ -1,5 +1,6 @@
 using Dam.Domain.Authorization;
 using Dam.Domain.Common;
+using Dam.Shared.Content;
 
 namespace Dam.Application.Abstractions;
 
@@ -179,4 +180,33 @@ public sealed class DeliverySettings
     public int MaxPdfPages { get; set; } = 200;
 
     public string LinkBase => (CdnBaseUrl is { Length: > 0 } cdn ? cdn : PublicBaseUrl).TrimEnd('/');
+}
+
+/// <param name="Text">Free-text query; null or empty means "browse" (filters/sort only, no relevance scoring).</param>
+/// <param name="Filters">Exact-match filters, field to allowed values (OR within a field, AND across fields) - e.g.
+/// <c>{"type": ["image"], "metadata.category.keyword": ["hero"]}</c>.</param>
+/// <param name="Facets">Index fields to return value counts for alongside the hits (e.g. "status", "tags",
+/// "metadata.category.keyword", "terms.path"). Nested (<c>terms.*</c>) fields are aggregated correctly automatically.</param>
+/// <param name="Sort">"field" (ascending) or "-field" (descending); null or "_score" sorts by relevance. Unrecognised
+/// fields fall back to relevance.</param>
+/// <param name="SimilarTo">When set, finds assets like this one (title/metadata text) instead of using <paramref name="Text"/>.</param>
+public sealed record SearchQuery(
+    string? Text, IReadOnlyDictionary<string, string[]>? Filters, IReadOnlyList<string>? Facets, string? Sort,
+    bool Highlight, Guid? SimilarTo, string? Cursor, int? Limit);
+
+/// <summary>The search query surface (spec Step 1.7b), implemented against OpenSearch (decision D4). Every method takes
+/// the caller's own <see cref="ScopeClause"/>s (from <see cref="IAuthorizationService.GetScopeAsync"/>) and pushes them
+/// into the query as a filter, exactly like <c>ListAssetsHandler</c>'s in-memory clause check does today - a caller
+/// with no matching clause sees nothing, never an error.</summary>
+public interface ISearchQueryService
+{
+    Task<SearchResultDto> SearchAsync(SearchQuery query, IReadOnlyList<ScopeClause> scope, Guid userId, CancellationToken ct);
+
+    /// <summary>Title matches for a partial query, for typeahead. Same scope enforcement as a full search.</summary>
+    Task<IReadOnlyList<SuggestionDto>> SuggestAsync(string prefix, int limit, IReadOnlyList<ScopeClause> scope, Guid userId, CancellationToken ct);
+
+    /// <summary>Value counts for <paramref name="fields"/> across every asset the caller may read, ignoring any query
+    /// or filter (the whole visible corpus) - the standalone <c>GET /facets</c>, as opposed to <c>POST /search</c>'s
+    /// own facets computed alongside a query's hits.</summary>
+    Task<IReadOnlyList<FacetResultDto>> FacetsAsync(IReadOnlyList<string> fields, IReadOnlyList<ScopeClause> scope, Guid userId, CancellationToken ct);
 }
