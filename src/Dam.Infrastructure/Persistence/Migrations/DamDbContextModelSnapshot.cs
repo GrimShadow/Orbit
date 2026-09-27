@@ -536,6 +536,65 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.ToTable("uploads", (string)null);
                 });
 
+            modelBuilder.Entity("Dam.Domain.Content.Collection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
+                    b.Property<string>("Query")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("query");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("visibility");
+
+                    b.PrimitiveCollection<List<Guid>>("_assetIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("asset_ids");
+
+                    b.HasKey("Id")
+                        .HasName("pk_collections");
+
+                    b.HasIndex("TenantId", "Name")
+                        .HasDatabaseName("ix_collections_tenant_id_name");
+
+                    b.ToTable("collections", (string)null);
+                });
+
             modelBuilder.Entity("Dam.Domain.Content.Folder", b =>
                 {
                     b.Property<Guid>("Id")

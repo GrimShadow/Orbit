@@ -155,4 +155,8 @@ public static class SecuritySql
         GRANT SELECT ON tenants TO dam_system;
         CREATE POLICY system_read_tenants ON tenants FOR SELECT TO dam_system USING (true);
         """;
+
+    public const string CollectionGrants = """
+        GRANT SELECT, INSERT, UPDATE, DELETE ON collections TO dam_app;
+        """;
 }

@@ -27,6 +27,7 @@ public static class ApiEndpoints
         v1.MapAssetEndpoints();
         v1.MapRetentionEndpoints();
         v1.MapSearchEndpoints();
+        v1.MapCollectionEndpoints();
     }
 
     /// <summary>Maps a failed application Result to RFC 9457 problem+json.</summary>

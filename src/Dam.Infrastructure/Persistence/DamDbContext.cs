@@ -34,6 +34,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<AssetVersion> AssetVersions => Set<AssetVersion>();
     public DbSet<RetentionPolicy> RetentionPolicies => Set<RetentionPolicy>();
     public DbSet<Rendition> Renditions => Set<Rendition>();
+    public DbSet<Collection> Collections => Set<Collection>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -71,6 +72,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureVersions(b);
         ConfigureRenditions(b);
         ConfigureRetention(b);
+        ConfigureCollections(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -272,6 +274,22 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).HasMaxLength(200);
             e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+        });
+
+    private static void ConfigureCollections(ModelBuilder b) =>
+        b.Entity<Collection>(e =>
+        {
+            e.ToTable("collections");
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.Visibility).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.Query!).AsJson(); // Query is nullable (Static collections have none); AsJson<T>'s "class" constraint just needs the ! to compile
+            // AssetIds itself has no setter (only Collection.ChangeAssets may change membership); EF reads and writes
+            // the private backing field directly instead of going through the property.
+            e.Property<List<Guid>>("_assetIds").HasColumnName("asset_ids").HasColumnType("uuid[]").UsePropertyAccessMode(PropertyAccessMode.Field);
+            e.HasIndex(x => new { x.TenantId, x.Name });
         });
 
     private LambdaExpression TenantFilter(Type entityType)
