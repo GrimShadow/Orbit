@@ -7,6 +7,7 @@
     "primary": "मुख्य",
     "home": "होम",
     "library": "लाइब्रेरी",
+    "upload": "अपलोड",
     "account": "मेरा खाता"
   },
   "shell": {
@@ -78,6 +79,27 @@
     "columnStatus": "स्थिति",
     "columnUpdated": "अद्यतन",
     "next": "अगला पृष्ठ"
+  },
+  "upload": {
+    "title": "अपलोड",
+    "dropLabel": "फ़ाइलें यहाँ खींचें या चुनें",
+    "dropHint": "एक साथ कई फ़ाइलें अपलोड करें; नीचे दिया गया फ़ोल्डर और टैग सभी पर लागू होंगे।",
+    "remove": "हटाएँ",
+    "folder": "फ़ोल्डर",
+    "noFolder": "कोई फ़ोल्डर नहीं",
+    "tags": "टैग",
+    "tagsHint": "अल्पविराम से अलग, इस बैच की हर फ़ाइल पर लागू।",
+    "start": "अपलोड शुरू करें",
+    "uploadMore": "और अपलोड करें",
+    "goToLibrary": "लाइब्रेरी पर जाएँ",
+    "progressLabel": "{{name}} अपलोड हो रहा है",
+    "status.uploading": "अपलोड हो रहा है",
+    "status.finalizing": "अंतिम रूप दिया जा रहा है",
+    "status.ingested": "तैयार",
+    "status.duplicate": "पहले से लाइब्रेरी में है",
+    "status.blocked": "अवरुद्ध",
+    "status.failed": "विफल",
+    "status.rejected": "अस्वीकृत"
   },
   "notFound": {
     "title": "पृष्ठ नहीं मिला",

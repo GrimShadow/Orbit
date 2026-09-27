@@ -1,0 +1,86 @@
+.dam-dropzone {
+  position: relative;
+  border: 2px dashed var(--dam-border);
+  border-radius: var(--dam-radius);
+  padding: var(--dam-space-6);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-1);
+}
+
+.dam-dropzone--active {
+  border-color: var(--dam-brand);
+  background: var(--dam-surface-2);
+}
+
+.dam-dropzone__label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-1);
+  cursor: pointer;
+}
+
+/* Visually hidden but still focusable/clickable, so keyboard and screen-reader users get the native file picker. */
+.dam-dropzone__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.dam-upload__done {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-4);
+  align-items: center;
+}
+
+.dam-upload__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-4);
+  align-items: flex-end;
+}
+
+.dam-upload__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+}
+
+.dam-upload__item {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-2);
+  border: 1px solid var(--dam-border);
+  border-radius: var(--dam-radius-sm);
+}
+
+.dam-upload__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dam-upload__item progress {
+  flex: 0 0 120px;
+}
+
+@media (max-width: 640px) {
+  .dam-upload__item {
+    flex-wrap: wrap;
+  }
+
+  .dam-upload__item progress {
+    flex-basis: 100%;
+  }
+}

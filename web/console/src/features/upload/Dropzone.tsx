@@ -1,0 +1,53 @@
+import { useId, useRef, useState, type DragEvent } from 'react';
+
+interface DropzoneProps {
+  label: string;
+  hint: string;
+  onFiles: (files: File[]) => void;
+  disabled?: boolean;
+}
+
+/** A native drag-and-drop target plus an ordinary file input, so choosing files works identically with a mouse, a
+ * keyboard (Enter/Space activates the hidden input) or a screen reader - drag-and-drop is a bonus, never the only way in. */
+export function Dropzone({ label, hint, onFiles, disabled }: DropzoneProps) {
+  const [dragging, setDragging] = useState(false);
+  const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const take = (list: FileList | null) => {
+    if (list && list.length > 0) onFiles(Array.from(list));
+  };
+
+  return (
+    <div
+      className={`dam-dropzone${dragging ? ' dam-dropzone--active' : ''}`}
+      onDragOver={(e: DragEvent) => {
+        e.preventDefault();
+        if (!disabled) setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e: DragEvent) => {
+        e.preventDefault();
+        setDragging(false);
+        if (!disabled) take(e.dataTransfer.files);
+      }}
+    >
+      <label htmlFor={inputId} className="dam-dropzone__label">
+        <strong>{label}</strong>
+        <span className="dam-hint">{hint}</span>
+      </label>
+      <input
+        ref={inputRef}
+        id={inputId}
+        type="file"
+        multiple
+        disabled={disabled}
+        className="dam-dropzone__input"
+        onChange={(e) => {
+          take(e.target.files);
+          e.target.value = ''; // lets the same file be picked again after being removed from the queue
+        }}
+      />
+    </div>
+  );
+}
