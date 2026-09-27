@@ -41,7 +41,7 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
 
     public async Task EnsureIndexAsync(CancellationToken ct)
     {
-        var slug = await TenantSlugAsync(ct);
+        var slug = await TenantIndexResolver.SlugAsync(db, tenant, ct);
         var alias = IndexNaming.Alias(slug);
         var current = await CurrentBackingIndexAsync(alias, ct);
         if (current is null) { await BuildAndSwapAsync(slug, alias, [], ct); return; }
@@ -58,7 +58,7 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
 
     public async Task<int> ReindexAsync(CancellationToken ct)
     {
-        var slug = await TenantSlugAsync(ct);
+        var slug = await TenantIndexResolver.SlugAsync(db, tenant, ct);
         var alias = IndexNaming.Alias(slug);
         var oldIndex = await CurrentBackingIndexAsync(alias, ct);
         var count = await BuildAndSwapAsync(slug, alias, oldIndex is { } o ? [o] : [], ct);
@@ -71,8 +71,7 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
         if (asset is null || asset.Status == AssetStatuses.Deleted) { await DeleteAsync(assetId, ct); return; }
 
         await EnsureIndexAsync(ct);
-        var slug = await TenantSlugAsync(ct);
-        var alias = IndexNaming.Alias(slug);
+        var alias = await TenantIndexResolver.AliasAsync(db, tenant, ct);
         var folder = asset.FolderId is { } fid ? await db.Folders.AsNoTracking().FirstOrDefaultAsync(f => f.Id == fid, ct) : null;
         var schemas = await TenantSchemaIndex.LoadAsync(db, ct);
         var taxonomy = await TenantTaxonomyIndex.LoadAsync(db, ct);
@@ -84,8 +83,7 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
 
     public async Task DeleteAsync(Guid assetId, CancellationToken ct)
     {
-        var slug = await TenantSlugAsync(ct);
-        var alias = IndexNaming.Alias(slug);
+        var alias = await TenantIndexResolver.AliasAsync(db, tenant, ct);
         var response = await client.DoRequestAsync<StringResponse>(HttpMethod.DELETE, $"/{alias}/_doc/{assetId}", ct);
         if (!response.Success && response.HttpStatusCode != 404)
             throw new InvalidOperationException($"Could not remove asset {assetId} from the index: {response.Body}");
@@ -157,13 +155,6 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
         using var doc = JsonDocument.Parse(response.Body);
         var indices = doc.RootElement.EnumerateObject().Select(p => p.Name).ToList();
         return indices.Count > 0 ? indices[0] : null;
-    }
-
-    private async Task<string> TenantSlugAsync(CancellationToken ct)
-    {
-        var slug = await db.Tenants.AsNoTracking().Where(t => t.Id == tenant.TenantId).Select(t => t.Slug).FirstOrDefaultAsync(ct);
-        if (slug is not { Length: > 0 }) throw new InvalidOperationException($"Tenant {tenant.TenantId} was not found (or has no slug).");
-        return slug;
     }
 
     private static PostData Body(object value) => PostData.String(JsonSerializer.Serialize(value));

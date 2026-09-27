@@ -21,7 +21,10 @@ public sealed class ApiTestHost(PostgresFixture fx)
     private static readonly object EnvLock = new();
 
     /// <summary>Program reads config at startup, so set env vars and force the host to build inside the lock.</summary>
-    public WebApplicationFactory<Program> Factory(string? dbConnection = null, int? rateLimit = null)
+    /// <param name="openSearchUrl">Most tests never touch search, so this defaults to a placeholder nothing needs to be
+    /// listening on - the client is only ever constructed, never connected, until a request actually calls it. Pass a
+    /// real OpenSearch fixture's URL for tests that exercise `/search`, `/search/suggest` or `/facets`.</param>
+    public WebApplicationFactory<Program> Factory(string? dbConnection = null, int? rateLimit = null, string? openSearchUrl = null)
     {
         lock (EnvLock)
         {
@@ -35,6 +38,7 @@ public sealed class ApiTestHost(PostgresFixture fx)
             Environment.SetEnvironmentVariable("DAM_DELIVERY_PUBLIC_BASE_URL", "http://delivery.test");
             Environment.SetEnvironmentVariable("DAM_UPLOAD_PART_SIZE_MB", "5"); // the smallest S3 allows, so tests stay small
             Environment.SetEnvironmentVariable("DAM_RATE_LIMIT_PER_MINUTE", rateLimit?.ToString());
+            Environment.SetEnvironmentVariable("DAM_OPENSEARCH_URL", openSearchUrl ?? "http://localhost:19200");
             var f = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.ConfigureServices(s =>
                 s.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
                 {
