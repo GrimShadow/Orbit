@@ -12,10 +12,13 @@ public sealed class MediaToolSettings
     public string FfprobePath { get; set; } = "ffprobe";
     public string PdftoppmPath { get; set; } = "pdftoppm";
     public string PdfinfoPath { get; set; } = "pdfinfo";
+    public string SofficePath { get; set; } = "soffice";
     /// <summary>x264 speed/quality trade-off. "veryfast" in production; tests use "ultrafast" for speed.</summary>
     public string Preset { get; set; } = "veryfast";
     /// <summary>A PDF with more pages than this only has its first pages rendered as "pdf_pages".</summary>
     public int MaxPdfPages { get; set; } = 200;
+    /// <summary>LibreOffice conversions run one process each and are heavy on CPU and memory; this caps how many run at once.</summary>
+    public int OfficeMaxConcurrency { get; set; } = 2;
     public TimeSpan ToolTimeout { get; set; } = TimeSpan.FromMinutes(5);
 }
 
@@ -179,5 +182,44 @@ public sealed class PdfRenderer(MediaToolSettings settings)
             return await File.ReadAllBytesAsync(produced[0], ct);
         }
         finally { foreach (var f in Directory.GetFiles(TempSource.Dir, Path.GetFileName(prefix) + "*.png")) { try { File.Delete(f); } catch (IOException) { } } }
+    }
+}
+
+/// <summary>
+/// LibreOffice-headless-backed conversion of Office documents to PDF (spec D8), which the PDF pipeline then renders exactly like
+/// any other PDF (page rasters, thumb, preview). LibreOffice refuses a second instance sharing a profile, so every call gets its
+/// own throwaway profile directory; a semaphore also limits how many run at once, since each is a full LibreOffice process.
+/// </summary>
+public sealed class OfficeConverter(MediaToolSettings settings) : IDisposable
+{
+    private readonly SemaphoreSlim _gate = new(Math.Max(1, settings.OfficeMaxConcurrency), Math.Max(1, settings.OfficeMaxConcurrency));
+
+    public void Dispose() => _gate.Dispose();
+
+    public async Task<byte[]> ConvertToPdfAsync(byte[] source, string extension, CancellationToken ct)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            using var src = new TempSource(source, extension);
+            var profileDir = Path.Combine(TempSource.Dir, $"lo-profile-{Guid.NewGuid():N}");
+            var outDir = Path.Combine(TempSource.Dir, $"lo-out-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(outDir);
+            try
+            {
+                var (code, _, err) = await ExternalProcess.RunAsync(settings.SofficePath,
+                    ["--headless", "--norestore", $"-env:UserInstallation=file://{profileDir}", "--convert-to", "pdf", "--outdir", outDir, src.Path],
+                    settings.ToolTimeout, ct);
+                var produced = Directory.GetFiles(outDir, "*.pdf");
+                if (code != 0 || produced.Length == 0) throw new MediaToolFailedException("soffice", err.Length > 0 ? err : "the document could not be converted to PDF");
+                return await File.ReadAllBytesAsync(produced[0], ct);
+            }
+            finally
+            {
+                try { Directory.Delete(profileDir, recursive: true); } catch (Exception e) when (e is IOException or DirectoryNotFoundException) { }
+                try { Directory.Delete(outDir, recursive: true); } catch (IOException) { }
+            }
+        }
+        finally { _gate.Release(); }
     }
 }

@@ -98,3 +98,55 @@ public sealed class PdfRendererTests
         await Assert.ThrowsAsync<MediaToolFailedException>(() => _renderer.PageCountAsync("not a pdf"u8.ToArray(), CancellationToken.None));
     }
 }
+
+public sealed class OfficeConverterTests : IDisposable
+{
+    private static readonly MediaToolSettings Settings = new() { ToolTimeout = TimeSpan.FromSeconds(30) };
+    private readonly OfficeConverter _converter = new(Settings);
+    private readonly PdfRenderer _pdf = new(Settings);
+
+    public void Dispose() => _converter.Dispose();
+
+    [Theory]
+    [InlineData("docx")]
+    [InlineData("pptx")]
+    [InlineData("xlsx")]
+    public async Task Each_office_format_converts_to_a_readable_one_page_pdf(string extension)
+    {
+        byte[] source = extension switch
+        {
+            "docx" => TestImages.Docx("Service plan", "Ada"),
+            "pptx" => TestImages.Pptx("Campaign deck", "Ada"),
+            _ => TestImages.Xlsx("Quarterly totals", "Ada"),
+        };
+        var pdf = await _converter.ConvertToPdfAsync(source, extension, CancellationToken.None);
+        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(pdf, 0, 5));
+        Assert.Equal(1, await _pdf.PageCountAsync(pdf, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Concurrent_conversions_do_not_collide_over_a_shared_profile()
+    {
+        var concurrent = new OfficeConverter(new MediaToolSettings { ToolTimeout = TimeSpan.FromSeconds(30), OfficeMaxConcurrency = 3 });
+        var docs = Enumerable.Range(0, 3).Select(i => TestImages.Docx($"Doc {i}", "Ada")).ToArray();
+        var results = await Task.WhenAll(docs.Select(d => concurrent.ConvertToPdfAsync(d, "docx", CancellationToken.None)));
+        Assert.All(results, r => Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(r, 0, 5)));
+    }
+
+
+    [Fact]
+    public async Task A_missing_soffice_binary_is_reported_distinctly()
+    {
+        var broken = new OfficeConverter(new MediaToolSettings { SofficePath = "no-such-soffice", ToolTimeout = TimeSpan.FromSeconds(5) });
+        await Assert.ThrowsAsync<MediaToolMissingException>(() => broken.ConvertToPdfAsync(TestImages.Docx("X", "Y"), "docx", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task A_corrupt_docx_fails_with_a_reported_reason_rather_than_producing_a_bad_pdf()
+    {
+        // LibreOffice is lenient about content it can read as plain text, but a file that looks like a zip and is not
+        // (truncated, or the outer bytes only) is genuinely unreadable to it.
+        var corrupt = new byte[] { 0x50, 0x4B, 0x03, 0x04 }.Concat(Enumerable.Repeat((byte)0xFF, 50)).ToArray();
+        await Assert.ThrowsAsync<MediaToolFailedException>(() => _converter.ConvertToPdfAsync(corrupt, "docx", CancellationToken.None));
+    }
+}

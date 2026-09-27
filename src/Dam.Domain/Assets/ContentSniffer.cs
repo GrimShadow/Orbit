@@ -10,6 +10,14 @@ public sealed record SniffResult(ContentKind Kind, string Mime, string Format, I
 
 public sealed record SniffVerdict(bool Allowed, string? Reason, IReadOnlyList<string> Warnings);
 
+/// <summary>The OOXML mimes (spec Appendix B: DOCX/PPTX/XLSX). Shared with the rendition layer, which converts these to PDF.</summary>
+public static class OfficeMime
+{
+    public const string Docx = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    public const string Pptx = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    public const string Xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+}
+
 /// <summary>
 /// Decides what a file really is from its first bytes ("magic numbers"), never from its name or the type the browser claimed
 /// (spec A7.7). Pure and dependency-free, so it is exhaustively unit-tested. Covers the formats the allow-list accepts, plus
@@ -77,7 +85,14 @@ public static class ContentSniffer
         var pdfWindow = h.Length > 1024 ? h[..1024] : h;
         if (pdfWindow.IndexOf("%PDF-"u8) >= 0) return new(ContentKind.Pdf, "application/pdf", "pdf", ["pdf"]);
         if (Starts(h, 0x50, 0x4B, 0x03, 0x04) || Starts(h, 0x50, 0x4B, 0x05, 0x06))
+        {
+            // OOXML documents are ZIP archives, but their entry names (stored uncompressed in the ZIP directory regardless of the
+            // entry's own content compression) name the format unambiguously: the main part is always at a fixed path.
+            if (Contains(h, "word/document.xml"u8)) return new(ContentKind.Office, OfficeMime.Docx, "docx", ["docx"]);
+            if (Contains(h, "ppt/presentation.xml"u8)) return new(ContentKind.Office, OfficeMime.Pptx, "pptx", ["pptx"]);
+            if (Contains(h, "xl/workbook.xml"u8)) return new(ContentKind.Office, OfficeMime.Xlsx, "xlsx", ["xlsx"]);
             return new(ContentKind.Archive, "application/zip", "zip", ["zip", "docx", "xlsx", "pptx", "odt", "ods", "odp", "epub", "usdz"]);
+        }
         if (Starts(h, 0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1)) return new(ContentKind.Office, "application/x-ole-storage", "ole", ["doc", "xls", "ppt"]);
 
         // ---- text based: only if it really is text (no NUL bytes, valid UTF-8)
@@ -146,5 +161,6 @@ public static class ContentSniffer
     }
     private static bool Ascii(ReadOnlySpan<byte> h, int offset, string s) =>
         h.Length >= offset + s.Length && h.Slice(offset, s.Length).SequenceEqual(Encoding.ASCII.GetBytes(s));
+    private static bool Contains(ReadOnlySpan<byte> h, ReadOnlySpan<byte> needle) => h.IndexOf(needle) >= 0;
     private static bool IsBmpHeader(uint size) => size is 12 or 40 or 52 or 56 or 64 or 108 or 124;
 }
