@@ -1,26 +1,16 @@
+import { unwrap, type components } from '@dam/sdk-js';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
-import { apiFetch } from './client';
+import { useApiClient } from './apiClient';
 
-export interface Me {
-  userId: string | null;
-  email: string | null;
-  displayName: string | null;
-  tenantId: string;
-  roles: string[];
-  groups: string[];
-  permissions: string[];
-  attributes: Record<string, string[]>;
-  accessRuleCount: number;
-  inactiveRoles: string[];
-  status: string | null;
-}
+export type Me = components['schemas']['MeDto'];
 
 export function useMe() {
-  const { accessToken, status } = useAuth();
+  const { status } = useAuth();
+  const api = useApiClient();
   return useQuery({
     queryKey: ['me'],
-    queryFn: () => apiFetch<Me>('/me', accessToken),
+    queryFn: async () => unwrap(await api.GET('/api/v1/me')),
     enabled: status === 'authenticated',
   });
 }
