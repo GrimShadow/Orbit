@@ -20,6 +20,13 @@ public sealed record AssetMetadataUpdated(Guid AssetId) : DomainEvent, IEntityEv
     public Guid EntityId => AssetId;
 }
 
+public sealed record AssetLegalHoldChanged(Guid AssetId, bool Hold) : DomainEvent, IEntityEvent
+{
+    public override string Name => "asset.legal_hold.changed";
+    public string EntityType => "asset";
+    public Guid EntityId => AssetId;
+}
+
 public sealed record AssetStatusChanged(Guid AssetId, string From, string To) : DomainEvent, IEntityEvent
 {
     public override string Name => "asset.status.changed";
@@ -53,6 +60,9 @@ public sealed class Asset : AggregateRoot
     public DateTimeOffset? PublishAt { get; private set; }
     public DateTimeOffset? ExpireAt { get; private set; }
     public Guid? RetentionPolicyId { get; private set; }
+    /// <summary>Blocks retention purge regardless of policy (spec RetentionPolicy.legal_hold_exempt is the one override:
+    /// a policy marked exempt purges through a hold anyway, e.g. for content a legal hold was never meant to cover).</summary>
+    public bool LegalHold { get; private set; }
     /// <summary>SHA-256 (hex) of the content, set once the upload has been hashed.</summary>
     public string? ChecksumSha256 { get; private set; }
     public string? Phash { get; private set; }
@@ -83,6 +93,21 @@ public sealed class Asset : AggregateRoot
     public void SetChecksum(string sha256, DateTimeOffset now) { ChecksumSha256 = sha256; UpdatedAt = now; }
     public void SetCurrentVersion(Guid versionId, DateTimeOffset now) { CurrentVersionId = versionId; UpdatedAt = now; }
     public void SetPhash(string? phash, DateTimeOffset now) { Phash = phash; UpdatedAt = now; }
+
+    /// <summary>When to publish or expire this asset automatically (spec Step 1.6). Setting either does not itself change
+    /// status: the scheduler only acts once the asset is actually in the status the timer applies to (approved for
+    /// <paramref name="publishAt"/>, published for <paramref name="expireAt"/>), and clears the timer once it fires.</summary>
+    public void SetSchedule(DateTimeOffset? publishAt, DateTimeOffset? expireAt, DateTimeOffset now) { PublishAt = publishAt; ExpireAt = expireAt; UpdatedAt = now; }
+    public void SetRetentionPolicy(Guid? policyId, DateTimeOffset now) { RetentionPolicyId = policyId; UpdatedAt = now; }
+
+    /// <summary>Legal hold changes are compliance-relevant, so unlike most simple field edits this one is audited.</summary>
+    public void SetLegalHold(bool hold, DateTimeOffset now)
+    {
+        if (LegalHold == hold) return;
+        LegalHold = hold;
+        UpdatedAt = now;
+        Raise(new AssetLegalHoldChanged(Id, hold));
+    }
 
     public void ChangeStatus(string to, string reason, DateTimeOffset now)
     {

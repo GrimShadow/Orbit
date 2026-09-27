@@ -32,6 +32,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<Upload> Uploads => Set<Upload>();
     public DbSet<AssetVersion> AssetVersions => Set<AssetVersion>();
+    public DbSet<RetentionPolicy> RetentionPolicies => Set<RetentionPolicy>();
     public DbSet<Rendition> Renditions => Set<Rendition>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
@@ -69,6 +70,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureAssets(b);
         ConfigureVersions(b);
         ConfigureRenditions(b);
+        ConfigureRetention(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -198,9 +200,16 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.Property(x => x.Tags).HasColumnType("text[]");
             // A folder that still holds assets cannot be removed, even by a bug: the database refuses.
             e.HasOne<Folder>().WithMany().HasForeignKey(x => x.FolderId).OnDelete(DeleteBehavior.Restrict);
+            // A retention policy still assigned to assets cannot be removed either; unassign first.
+            e.HasOne<RetentionPolicy>().WithMany().HasForeignKey(x => x.RetentionPolicyId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.TenantId, x.FolderId });
             e.HasIndex(x => new { x.TenantId, x.Status });
             e.HasIndex(x => new { x.TenantId, x.ChecksumSha256 }).HasFilter("checksum_sha256 IS NOT NULL");
+            // The scheduled-publish/expire and retention jobs poll across every tenant (spec Step 1.6b), so these are plain
+            // (not tenant-prefixed) partial indexes on exactly what each poll filters by.
+            e.HasIndex(x => new { x.Status, x.PublishAt }).HasFilter("publish_at IS NOT NULL");
+            e.HasIndex(x => new { x.Status, x.ExpireAt }).HasFilter("expire_at IS NOT NULL");
+            e.HasIndex(x => new { x.Status, x.RetentionPolicyId }).HasFilter("retention_policy_id IS NOT NULL");
         });
         b.Entity<Upload>(e =>
         {
@@ -254,6 +263,15 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasOne<AssetVersion>().WithMany().HasForeignKey(x => x.VersionId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.TenantId, x.VersionId, x.Profile, x.PageNo }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.AssetId });
+        });
+
+    private static void ConfigureRetention(ModelBuilder b) =>
+        b.Entity<RetentionPolicy>(e =>
+        {
+            e.ToTable("retention_policies");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
         });
 
     private LambdaExpression TenantFilter(Type entityType)

@@ -2017,7 +2017,7 @@
         "tags": [
           "Assets"
         ],
-        "summary": "Moves an asset along its lifecycle: submit, approve, reject, publish, withdraw, expire, archive",
+        "summary": "Moves an asset along its lifecycle: submit, approve, reject, publish, withdraw, expire, archive, purge",
         "operationId": "TransitionAsset",
         "parameters": [
           {
@@ -2043,6 +2043,131 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TransitionAssetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/schedule": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Sets or clears when the asset should publish or expire itself; the scheduler acts once it reaches the matching status",
+        "operationId": "ScheduleAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleAssetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/retention-policy": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "operationId": "SetAssetRetentionPolicy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetRetentionPolicyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/legal-hold": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Blocks (or unblocks) retention purge for this asset, regardless of its policy\u0027s schedule",
+        "operationId": "SetAssetLegalHold",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetLegalHoldRequest"
               }
             }
           },
@@ -2419,6 +2544,150 @@
           }
         }
       }
+    },
+    "/api/v1/retention-policies": {
+      "get": {
+        "tags": [
+          "Retention"
+        ],
+        "operationId": "ListRetentionPolicies",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RetentionPolicyDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Retention"
+        ],
+        "operationId": "CreateRetentionPolicy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionPolicyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPolicyDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/retention-policies/{id}": {
+      "get": {
+        "tags": [
+          "Retention"
+        ],
+        "operationId": "GetRetentionPolicy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPolicyDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Retention"
+        ],
+        "operationId": "UpdateRetentionPolicy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionPolicyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPolicyDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Retention"
+        ],
+        "summary": "Refused while the policy is still assigned to any asset",
+        "operationId": "DeleteRetentionPolicy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2491,6 +2760,10 @@
           "currentVersionId",
           "checksumSha256",
           "statusReason",
+          "publishAt",
+          "expireAt",
+          "retentionPolicyId",
+          "legalHold",
           "createdAt",
           "updatedAt"
         ],
@@ -2558,6 +2831,24 @@
           },
           "statusReason": {
             "type": "string"
+          },
+          "publishAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "expireAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "retentionPolicyId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "legalHold": {
+            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
@@ -3587,6 +3878,70 @@
           }
         }
       },
+      "RetentionPolicyDto": {
+        "required": [
+          "id",
+          "name",
+          "archiveAfterDays",
+          "deleteAfterDays",
+          "legalHoldExempt",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "archiveAfterDays": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "deleteAfterDays": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "legalHoldExempt": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RetentionPolicyRequest": {
+        "required": [
+          "name",
+          "archiveAfterDays",
+          "deleteAfterDays"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "archiveAfterDays": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "deleteAfterDays": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "legalHoldExempt": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "RoleDto": {
         "required": [
           "id",
@@ -3626,6 +3981,25 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "ScheduleAssetRequest": {
+        "required": [
+          "publishAt",
+          "expireAt"
+        ],
+        "type": "object",
+        "properties": {
+          "publishAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "expireAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         }
       },
@@ -3719,6 +4093,30 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "SetLegalHoldRequest": {
+        "required": [
+          "hold"
+        ],
+        "type": "object",
+        "properties": {
+          "hold": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetRetentionPolicyRequest": {
+        "required": [
+          "retentionPolicyId"
+        ],
+        "type": "object",
+        "properties": {
+          "retentionPolicyId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         }
       },
@@ -4556,6 +4954,9 @@
     },
     {
       "name": "Uploads"
+    },
+    {
+      "name": "Retention"
     }
   ]
 }

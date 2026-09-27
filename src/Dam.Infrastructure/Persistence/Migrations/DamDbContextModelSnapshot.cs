@@ -55,6 +55,10 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("folder_id");
 
+                    b.Property<bool>("LegalHold")
+                        .HasColumnType("boolean")
+                        .HasColumnName("legal_hold");
+
                     b.Property<string>("Metadata")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -131,6 +135,21 @@ namespace Dam.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("FolderId")
                         .HasDatabaseName("ix_assets_folder_id");
+
+                    b.HasIndex("RetentionPolicyId")
+                        .HasDatabaseName("ix_assets_retention_policy_id");
+
+                    b.HasIndex("Status", "ExpireAt")
+                        .HasDatabaseName("ix_assets_status_expire_at")
+                        .HasFilter("expire_at IS NOT NULL");
+
+                    b.HasIndex("Status", "PublishAt")
+                        .HasDatabaseName("ix_assets_status_publish_at")
+                        .HasFilter("publish_at IS NOT NULL");
+
+                    b.HasIndex("Status", "RetentionPolicyId")
+                        .HasDatabaseName("ix_assets_status_retention_policy_id")
+                        .HasFilter("retention_policy_id IS NOT NULL");
 
                     b.HasIndex("TenantId", "ChecksumSha256")
                         .HasDatabaseName("ix_assets_tenant_id_checksum_sha256")
@@ -327,6 +346,53 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_renditions_tenant_id_version_id_profile_page_no");
 
                     b.ToTable("renditions", (string)null);
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.RetentionPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("ArchiveAfterDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("archive_after_days");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<int?>("DeleteAfterDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("delete_after_days");
+
+                    b.Property<bool>("LegalHoldExempt")
+                        .HasColumnType("boolean")
+                        .HasColumnName("legal_hold_exempt");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_retention_policies");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_retention_policies_tenant_id_name");
+
+                    b.ToTable("retention_policies", (string)null);
                 });
 
             modelBuilder.Entity("Dam.Domain.Assets.Upload", b =>
@@ -1179,6 +1245,12 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasForeignKey("FolderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_assets_folders_folder_id");
+
+                    b.HasOne("Dam.Domain.Assets.RetentionPolicy", null)
+                        .WithMany()
+                        .HasForeignKey("RetentionPolicyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_assets_retention_policies_retention_policy_id");
                 });
 
             modelBuilder.Entity("Dam.Domain.Assets.AssetVersion", b =>
