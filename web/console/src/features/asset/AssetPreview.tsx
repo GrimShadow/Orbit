@@ -6,14 +6,21 @@ interface AssetPreviewProps {
   assetId: string;
   type: string;
   title: string;
+  status: string;
 }
 
 /** A preview player for image/video/PDF (spec Step 1.8: "preview player for image/video/PDF"); anything else falls back
  * to a plain download link. Renditions are watermarked by the delivery origin itself while the asset is unpublished
- * (ADR-0006) - the console never needs to know or show that separately. */
-export function AssetPreview({ assetId, type, title }: AssetPreviewProps) {
+ * (ADR-0006) - the console never needs to know or show that separately.
+ *
+ * `original` is only asked for once the asset is published: the delivery origin rejects the *entire* link request
+ * with a 409 if `original` is requested for an unpublished asset (its bytes can't be shared unwatermarked at all -
+ * ADR-0006/0007), so asking for it alongside `preview` up front would fail the whole request and hide the
+ * perfectly-available watermarked preview behind it. */
+export function AssetPreview({ assetId, type, title, status }: AssetPreviewProps) {
   const { t } = useTranslation();
-  const linkQuery = useDeliveryLink(assetId, ['preview', 'original'], true);
+  const renditions = status === 'published' ? ['preview', 'original'] : ['preview'];
+  const linkQuery = useDeliveryLink(assetId, renditions, true);
 
   if (linkQuery.isPending)
     return (

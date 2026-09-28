@@ -87,14 +87,28 @@ const VERSIONS = [
 
 const LINKS = { expiresAt: '2026-01-01T01:00:00Z', watermarked: true, links: { preview: 'https://cdn.test/a1-preview.jpg' } };
 
-function standardHandlers(overrides: Partial<Record<string, (call: Call) => Response | Promise<Response>>> = {}) {
+/** Mirrors the real delivery-link handler's actual rule (`Delivery.cs`): the whole request 409s if `original` is asked
+ * for on an unpublished asset, rather than silently degrading to just the renditions that are allowed. A stub that
+ * always returned success regardless of what was requested wouldn't have caught the bug this guards against - the
+ * console asked for `preview` and `original` together for every asset, so every freshly uploaded (draft) asset 409'd
+ * and showed "Preview is not available" despite a perfectly good watermarked preview existing. */
+async function linksResponse(call: Call, status: string) {
+  const body = (await call.json()) as { renditions: string[] };
+  if (status !== 'published' && body.renditions.includes('original')) return json({ error: 'conflict' }, 409);
+  return json(LINKS);
+}
+
+function standardHandlers(
+  overrides: Partial<Record<string, (call: Call) => Response | Promise<Response>>> = {},
+  assetStatus = ASSET.status,
+) {
   return (call: Call): Response | Promise<Response> | undefined => {
     const { method, pathname } = call;
     if (overrides[pathname]) return overrides[pathname]!(call);
-    if (pathname === '/api/v1/assets/a1' && method === 'GET') return json(ASSET);
+    if (pathname === '/api/v1/assets/a1' && method === 'GET') return json({ ...ASSET, status: assetStatus });
     if (pathname === '/api/v1/schemas/image') return json(SCHEMA);
     if (pathname === '/api/v1/assets/a1/versions') return json(VERSIONS);
-    if (pathname === '/api/v1/assets/a1/links') return json(LINKS);
+    if (pathname === '/api/v1/assets/a1/links') return linksResponse(call, assetStatus);
     return undefined;
   };
 }
@@ -118,6 +132,13 @@ describe('AssetDetailPage', () => {
     expect(screen.getByText('Image')).toBeInTheDocument();
     expect(await screen.findByRole('img', { name: 'Hero shot' })).toHaveAttribute('src', 'https://cdn.test/a1-preview.jpg');
     expect(screen.getByRole('link', { name: 'Back to library' })).toHaveAttribute('href', '/library');
+  });
+
+  it('shows a preview for a published asset requesting both preview and original', async () => {
+    mockApi(standardHandlers({}, 'published'));
+    renderAt('/library/assets/a1');
+
+    expect(await screen.findByRole('img', { name: 'Hero shot' })).toHaveAttribute('src', 'https://cdn.test/a1-preview.jpg');
   });
 
   it('lets the schema-generated metadata form be edited and saved, sending only the metadata field', async () => {
