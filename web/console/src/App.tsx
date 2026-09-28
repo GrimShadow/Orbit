@@ -4,7 +4,10 @@ import { Route, Routes } from 'react-router-dom';
 import { ApiError } from './api/client';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { AssetDetailPage } from './features/asset/AssetDetailPage';
+import { CollectionDetailPage } from './features/collections/CollectionDetailPage';
+import { CollectionsPage } from './features/collections/CollectionsPage';
 import { LibraryPage } from './features/library/LibraryPage';
+import { SearchPage } from './features/search/SearchPage';
 import { UploadPage } from './features/upload/UploadPage';
 import { CallbackPage, HomePage, LoginPage, MePage, NotFoundPage } from './pages/Pages';
 import { ErrorBoundary } from './shell/ErrorBoundary';
@@ -27,6 +30,9 @@ export function App() {
                 <Route index element={<HomePage />} />
                 <Route path="/library" element={<LibraryPage />} />
                 <Route path="/library/assets/:id" element={<AssetDetailPage />} />
+                <Route path="/search" element={<SearchPage />} />
+                <Route path="/collections" element={<CollectionsPage />} />
+                <Route path="/collections/:id" element={<CollectionDetailPage />} />
                 <Route path="/upload" element={<UploadPage />} />
                 <Route path="/me" element={<MePage />} />
               </Route>

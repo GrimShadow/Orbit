@@ -106,6 +106,8 @@ export function Shell() {
               {t('nav.home')}
             </NavLink>
             <NavLink to="/library">{t('nav.library')}</NavLink>
+            <NavLink to="/search">{t('nav.search')}</NavLink>
+            <NavLink to="/collections">{t('nav.collections')}</NavLink>
             <NavLink to="/upload">{t('nav.upload')}</NavLink>
             <NavLink to="/me">{t('nav.account')}</NavLink>
           </nav>

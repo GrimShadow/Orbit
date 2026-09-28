@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, useToast } from '../../ui';
 import { availableActions } from '../asset/lifecycle';
+import { useCreateStaticCollection } from '../collections/collectionsApi';
+import { NameCollectionDialog } from '../collections/NameCollectionDialog';
 import { useBulkEditTags, useBulkMove, useBulkTransition } from './bulkEditApi';
 import type { BulkResult } from './bulkOrchestrator';
 import type { AssetDto } from './assets';
@@ -36,12 +38,14 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
   const editTags = useBulkEditTags();
   const move = useBulkMove();
   const transition = useBulkTransition();
+  const createCollection = useCreateStaticCollection();
   const [tagsInput, setTagsInput] = useState('');
   const [folderId, setFolderId] = useState(UNSET_FOLDER);
+  const [saveOpen, setSaveOpen] = useState(false);
 
   const selected = assets.filter((a) => selectedIds.includes(a.id));
   const actions = commonActions(selected);
-  const busy = editTags.isPending || move.isPending || transition.isPending;
+  const busy = editTags.isPending || move.isPending || transition.isPending || createCollection.isPending;
   const parsedTags = tagsInput
     .split(',')
     .map((s) => s.trim())
@@ -132,6 +136,28 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
           ))}
         </div>
       )}
+
+      <Button variant="secondary" size="sm" disabled={busy} onClick={() => setSaveOpen(true)}>
+        {t('library.bulk.saveAsCollection')}
+      </Button>
+      <NameCollectionDialog
+        open={saveOpen}
+        title={t('library.bulk.saveAsCollectionTitle')}
+        busy={createCollection.isPending}
+        onClose={() => setSaveOpen(false)}
+        onSave={(name) =>
+          createCollection.mutate(
+            { name, assetIds: selectedIds },
+            {
+              onSuccess: () => {
+                setSaveOpen(false);
+                push({ title: t('library.bulk.saveAsCollectionSucceeded', { name }), tone: 'success' });
+                onClear();
+              },
+            },
+          )
+        }
+      />
     </div>
   );
 }

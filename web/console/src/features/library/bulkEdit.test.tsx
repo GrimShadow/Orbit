@@ -207,6 +207,50 @@ describe('bulk edit', () => {
     expect(transitioned).toEqual([]);
   });
 
+  it('saves the current selection as a static collection', async () => {
+    let created: { name: string; type: string; assetIds: string[] } | undefined;
+    mockApi((call) => {
+      if (call.pathname === '/api/v1/assets') return json({ items: ASSETS, nextCursor: null });
+      if (call.pathname === '/api/v1/collections' && call.method === 'POST') {
+        return (async () => {
+          created = (await call.json()) as typeof created;
+          return json(
+            {
+              id: 'c1',
+              name: created!.name,
+              type: 'static',
+              query: null,
+              assetIds: created!.assetIds,
+              visibility: 'private',
+              ownerId: 'u1',
+              createdAt: '2026-01-01T00:00:00Z',
+              updatedAt: '2026-01-01T00:00:00Z',
+            },
+            201,
+          );
+        })();
+      }
+      return undefined;
+    });
+    renderAt('/library');
+
+    await screen.findByText('Hero shot');
+    await userEvent.click(screen.getByLabelText('Select all 2 assets on this page'));
+    const bar = await screen.findByRole('region', { name: '2 assets selected' });
+
+    await userEvent.click(within(bar).getByRole('button', { name: 'Save as collection' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Save selection as a collection' });
+    await userEvent.type(within(dialog).getByLabelText('Name'), 'Hero shots');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(created?.name).toBe('Hero shots'));
+    expect(created?.type).toBe('static');
+    expect(created?.assetIds.sort()).toEqual(['a1', 'a2']);
+    expect(await screen.findByText('Collection "Hero shots" created')).toBeInTheDocument();
+    // Selection clears once the collection is created.
+    expect(screen.queryByRole('region', { name: /selected/ })).not.toBeInTheDocument();
+  });
+
   it('offers a shared lifecycle action when every selected asset is in the same status', async () => {
     const transitioned: string[] = [];
     mockApi((call) => {
