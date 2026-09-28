@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Select, useToast } from '../../ui';
+import { BookmarkSimple, Button, FolderSimple, Input, Select, Tag, useToast } from '../../ui';
+import { ActionIcon } from '../asset/actionIcon';
 import { availableActions } from '../asset/lifecycle';
 import { useCreateStaticCollection } from '../collections/collectionsApi';
 import { NameCollectionDialog } from '../collections/NameCollectionDialog';
@@ -85,6 +86,7 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
         loading={editTags.isPending}
         onClick={() => editTags.mutate({ assets: selected, tags: parsedTags, remove: false }, { onSuccess: report })}
       >
+        <Tag size={16} weight="bold" aria-hidden="true" />
         {t('library.bulk.addTags')}
       </Button>
       <Button
@@ -94,6 +96,7 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
         loading={editTags.isPending}
         onClick={() => editTags.mutate({ assets: selected, tags: parsedTags, remove: true }, { onSuccess: report })}
       >
+        <Tag size={16} aria-hidden="true" />
         {t('library.bulk.removeTags')}
       </Button>
 
@@ -116,6 +119,7 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
             loading={move.isPending}
             onClick={() => move.mutate({ ids: selectedIds, folderId: folderId || null }, { onSuccess: report })}
           >
+            <FolderSimple size={16} weight="bold" aria-hidden="true" />
             {t('library.bulk.move')}
           </Button>
         </>
@@ -131,6 +135,7 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
               loading={transition.isPending}
               onClick={() => transition.mutate({ ids: selectedIds, action }, { onSuccess: report })}
             >
+              <ActionIcon action={action} size={16} weight="bold" aria-hidden="true" />
               {t(`asset.action.${action}`)}
             </Button>
           ))}
@@ -138,6 +143,7 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
       )}
 
       <Button variant="secondary" size="sm" disabled={busy} onClick={() => setSaveOpen(true)}>
+        <BookmarkSimple size={16} weight="bold" aria-hidden="true" />
         {t('library.bulk.saveAsCollection')}
       </Button>
       <NameCollectionDialog

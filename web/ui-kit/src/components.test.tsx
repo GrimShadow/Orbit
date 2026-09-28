@@ -3,9 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
 import { useState } from 'react';
 import {
+  Breadcrumb,
   Button,
   Drawer,
   FacetList,
+  FileTypeIcon,
   Input,
   Modal,
   Select,
@@ -263,6 +265,72 @@ describe('ThumbnailGrid', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Roadster hero' }));
     expect(onToggle).toHaveBeenCalledWith('1', true);
   });
+
+  it('renders an optional icon and metadata line, and marks a selected card', () => {
+    render(
+      <ThumbnailGrid
+        label="Assets"
+        items={[
+          {
+            id: '1',
+            title: 'Roadster hero',
+            subtitle: 'Image',
+            icon: <span data-testid="type-icon" />,
+            meta: 'Updated 6 days ago',
+          },
+        ]}
+        selectedIds={['1']}
+        onToggleSelect={() => {}}
+      />,
+    );
+    expect(screen.getByTestId('type-icon')).toBeInTheDocument();
+    expect(screen.getByText('Updated 6 days ago')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Select Roadster hero' })).toBeChecked();
+    expect(screen.getByRole('listitem')).toHaveClass('dam-thumb--selected');
+  });
+});
+
+describe('FileTypeIcon', () => {
+  it('falls back to a generic file icon for an unknown type', () => {
+    const { container: known } = render(<FileTypeIcon type="image" data-testid="icon" />);
+    const { container: unknown } = render(<FileTypeIcon type="something-new" data-testid="icon" />);
+    // Different asset types render different icon markup (and an unmapped type still renders something, not nothing).
+    expect(known.querySelector('svg')).toBeInTheDocument();
+    expect(unknown.querySelector('svg')).toBeInTheDocument();
+    expect(known.innerHTML).not.toBe(unknown.innerHTML);
+  });
+});
+
+describe('Breadcrumb', () => {
+  it('renders the root and ancestors as buttons, the current segment as text, and navigates on click', async () => {
+    const onNavigate = vi.fn();
+    render(
+      <Breadcrumb
+        label="Folder path"
+        rootLabel="All folders"
+        items={[
+          { id: 'brand', label: 'Brand' },
+          { id: 'roadster', label: 'Roadster' },
+        ]}
+        onNavigate={onNavigate}
+      />,
+    );
+    expect(screen.getByRole('navigation', { name: 'Folder path' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All folders' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Brand' })).toBeInTheDocument();
+    expect(screen.getByText('Roadster')).toHaveAttribute('aria-current', 'page');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Brand' }));
+    expect(onNavigate).toHaveBeenCalledWith('brand');
+    await userEvent.click(screen.getByRole('button', { name: 'All folders' }));
+    expect(onNavigate).toHaveBeenCalledWith(undefined);
+  });
+
+  it('renders only the current segment as text when at the root', () => {
+    render(<Breadcrumb label="Folder path" rootLabel="All folders" items={[]} onNavigate={() => {}} />);
+    expect(screen.getByText('All folders')).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
 });
 
 describe('accessibility (axe)', () => {
@@ -309,7 +377,18 @@ describe('accessibility (axe)', () => {
             selected={{}}
             onChange={() => {}}
           />
-          <ThumbnailGrid label="Assets" items={[{ id: '1', title: 'One' }]} onToggleSelect={() => {}} />
+          <ThumbnailGrid
+            label="Assets"
+            items={[{ id: '1', title: 'One', icon: <FileTypeIcon type="image" />, meta: 'Updated 6 days ago' }]}
+            selectedIds={['1']}
+            onToggleSelect={() => {}}
+          />
+          <Breadcrumb
+            label="Folder path"
+            rootLabel="All folders"
+            items={[{ id: 'brand', label: 'Brand' }]}
+            onNavigate={() => {}}
+          />
           <Skeleton />
         </main>
       </ToastProvider>,

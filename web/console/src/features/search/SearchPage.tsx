@@ -1,20 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Button, FacetList, Input, LoadingRegion, Skeleton, ThumbnailGrid, useToast, type Facet, type Thumb } from '../../ui';
+import { BookmarkSimple, Button, FacetList, Input, LoadingRegion, Skeleton, ThumbnailGrid, useToast, type Facet } from '../../ui';
+import { toAssetThumb } from '../library/assetThumb';
 import { useCreateSmartCollection } from '../collections/collectionsApi';
 import { NameCollectionDialog } from '../collections/NameCollectionDialog';
-import { SEARCH_FACET_FIELDS, useSearch, type SearchHitDto, type SearchResultDto } from './searchApi';
+import { SEARCH_FACET_FIELDS, useSearch, type SearchResultDto } from './searchApi';
 import './search.css';
-
-function toThumb(t: (key: string) => string, hit: SearchHitDto): Thumb {
-  return {
-    id: hit.id,
-    title: hit.title,
-    subtitle: t(`library.type.${hit.type}`),
-    badge: t(`library.status.${hit.status}`),
-  };
-}
 
 function toFacets(t: (key: string) => string, result: SearchResultDto | undefined): Facet[] {
   if (!result) return [];
@@ -33,7 +25,7 @@ function toFacets(t: (key: string) => string, result: SearchResultDto | undefine
  * (ADR-0012). Runs with an empty query by default (a pure filter/browse over everything the caller can see) and
  * lets the current query - text + facet filters - be saved as a named smart collection ("saved search", ADR-0018). */
 export function SearchPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { push } = useToast();
   const [queryText, setQueryText] = useState('');
@@ -75,6 +67,7 @@ export function SearchPage() {
 
         <div className="dam-search__main">
           <Button variant="secondary" onClick={() => setSaveOpen(true)} disabled={!searchQuery.data}>
+            <BookmarkSimple size={16} weight="bold" aria-hidden="true" />
             {t('search.saveSearch')}
           </Button>
 
@@ -93,7 +86,7 @@ export function SearchPage() {
                 <p className="dam-empty">{t('search.empty')}</p>
               ) : (
                 <ThumbnailGrid
-                  items={searchQuery.data.hits.map((h) => toThumb(t, h))}
+                  items={searchQuery.data.hits.map((h) => toAssetThumb(t, i18n.language, h))}
                   label={t('search.resultsLabel')}
                   onOpen={(id) => navigate(`/library/assets/${id}`)}
                 />

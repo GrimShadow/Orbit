@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../ui';
+import { ActionIcon } from './actionIcon';
 import { useTransition } from './assetApi';
 import { availableActions } from './lifecycle';
 
@@ -18,6 +19,7 @@ export function LifecycleActions({ assetId, status }: { assetId: string; status:
           loading={transition.isPending && transition.variables?.action === action}
           onClick={() => transition.mutate({ action })}
         >
+          <ActionIcon action={action} size={16} weight="bold" aria-hidden="true" />
           {t(`asset.action.${action}`)}
         </Button>
       ))}

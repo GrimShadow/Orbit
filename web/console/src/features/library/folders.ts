@@ -1,5 +1,5 @@
 import { unwrap, type components } from '@dam/sdk-js';
-import type { SelectOption, TreeNode } from '@dam/ui-kit';
+import type { BreadcrumbItem, SelectOption, TreeNode } from '@dam/ui-kit';
 import { useQuery } from '@tanstack/react-query';
 import { useApiClient } from '../../api/apiClient';
 
@@ -38,4 +38,17 @@ export function folderOptions(folders: readonly FolderDto[]): SelectOption[] {
   return [...folders]
     .sort((a, b) => a.path.localeCompare(b.path))
     .map((folder) => ({ value: folder.id, label: `${'—'.repeat(folder.path.split('.').length - 1)} ${folder.label}`.trim() }));
+}
+
+/** The ancestor chain (root-first) for the currently-selected folder, for a breadcrumb trail above the library grid -
+ * walks `parentId` rather than parsing `path`, since the path is a name-based ltree key (not ids) and a folder can be
+ * renamed without its id changing. */
+export function folderBreadcrumb(folders: readonly FolderDto[], folderId: string | undefined): BreadcrumbItem[] {
+  if (!folderId) return [];
+  const byId = new Map(folders.map((f) => [f.id, f]));
+  const chain: BreadcrumbItem[] = [];
+  for (let current = byId.get(folderId); current; current = current.parentId ? byId.get(current.parentId) : undefined) {
+    chain.unshift({ id: current.id, label: current.label });
+  }
+  return chain;
 }
