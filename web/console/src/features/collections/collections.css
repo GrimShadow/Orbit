@@ -1,0 +1,12 @@
+.dam-collections__row {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-2) 0;
+  border-bottom: 1px solid var(--dam-border);
+}
+
+.dam-collections__row > a {
+  flex: 1 1 auto;
+  min-width: 0;
+}
