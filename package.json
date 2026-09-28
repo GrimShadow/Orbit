@@ -7,10 +7,12 @@
     "build": "pnpm -r build",
     "test": "pnpm -r --if-present test",
     "lint": "pnpm -r --if-present lint",
-    "format:check": "prettier --check \"web/**/*.{ts,tsx,css,json}\" --ignore-path .prettierignore"
+    "format:check": "prettier --check \"web/**/*.{ts,tsx,css,json}\" --ignore-path .prettierignore",
+    "e2e": "playwright test --config tests/e2e/playwright.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "9",
+    "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "16",
     "@testing-library/user-event": "^14.6.7",

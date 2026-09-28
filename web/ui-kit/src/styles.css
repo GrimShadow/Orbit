@@ -62,6 +62,15 @@
   --dam-focus: #93c5fd;
 }
 
+/* Without this, any element that combines an explicit/100% width with padding or a border renders wider than its
+ * container in the default content-box model - the console's own header overflowed the viewport by exactly its
+ * padding at narrow widths (caught by the Step 1.8g Playwright suite's 390px check) until this was added. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .dam-root,
 body {
   font-family: var(--dam-font);
