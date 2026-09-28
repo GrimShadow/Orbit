@@ -18,6 +18,7 @@ public sealed record InitiateUploadRequest(string FileName, long Size, string? C
 public sealed record PartNumbersRequest(IReadOnlyList<int> PartNumbers);
 public sealed record CompleteUploadRequest(IReadOnlyList<PartEtag>? Parts = null, string? Sha256 = null);
 public sealed record BulkUploadRequest(Guid? FolderId, Guid? BatchId, JsonElement? Metadata, IReadOnlyList<string>? Tags, IReadOnlyList<BulkFileRequest> Files);
+public sealed record ThumbnailLinksBatchRequest(IReadOnlyList<Guid> AssetIds);
 
 public static class AssetEndpoints
 {
@@ -72,6 +73,10 @@ public static class AssetEndpoints
         assets.MapPost("/{id:guid}/links", (Guid id, CreateLinkRequest r, IDispatcher d, CancellationToken ct) =>
                 Run(d, new CreateDeliveryLinkCommand(id, r), v => Task.FromResult(Results.Ok(v)), ct))
             .WithName("CreateDeliveryLink").WithSummary("Signed, expiring URLs to renditions or one transform, served by the delivery origin / CDN").Produces<DeliveryLinkDto>();
+        assets.MapPost("/links/batch", (ThumbnailLinksBatchRequest r, IDispatcher d, CancellationToken ct) =>
+                Run(d, new CreateThumbnailLinksBatchCommand(r.AssetIds), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("CreateThumbnailLinksBatch").WithSummary("Signed thumbnail links for many assets at once, for a library/search grid")
+            .Produces<IReadOnlyDictionary<string, string?>>();
         assets.MapGet("/{id:guid}/similar", (Guid id, IDispatcher d, CancellationToken ct, string? by, int? maxDistance, int? limit) =>
                 by is null or "phash"
                     ? Run(d, new FindSimilarQuery(id, maxDistance, limit), v => Task.FromResult(Results.Ok(v)), ct)

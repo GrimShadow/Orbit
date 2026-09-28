@@ -15,6 +15,7 @@ import {
   type Column,
   type TreeNode,
 } from '../../ui';
+import { useThumbnailLinks } from '../asset/assetApi';
 import { toAssetThumb } from './assetThumb';
 import { useAssets, type AssetDto } from './assets';
 import { BulkEditBar } from './BulkEditBar';
@@ -88,6 +89,8 @@ export function LibraryPage() {
     cursor,
     limit: 50,
   });
+  // Only the grid view shows images; skip the batch link request entirely while viewing the list/table.
+  const thumbnailLinks = useThumbnailLinks(view === 'grid' ? (assetsQuery.data?.items.map((a) => a.id) ?? []) : []);
 
   const columns: Column<AssetDto>[] = [
     { key: 'title', header: t('library.columnTitle'), render: (a) => <Link to={`/library/assets/${a.id}`}>{a.title}</Link> },
@@ -181,7 +184,7 @@ export function LibraryPage() {
 
               {view === 'grid' ? (
                 <ThumbnailGrid
-                  items={assetsQuery.data.items.map((a) => toAssetThumb(t, i18n.language, a))}
+                  items={assetsQuery.data.items.map((a) => toAssetThumb(t, i18n.language, a, thumbnailLinks.data?.[a.id]))}
                   label={t('library.assetsLabel')}
                   onOpen={(id) => navigate(`/library/assets/${id}`)}
                   selectedIds={[...selected]}

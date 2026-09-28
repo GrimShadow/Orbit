@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { BookmarkSimple, Button, FacetList, Input, LoadingRegion, Skeleton, ThumbnailGrid, useToast, type Facet } from '../../ui';
+import { useThumbnailLinks } from '../asset/assetApi';
 import { toAssetThumb } from '../library/assetThumb';
 import { useCreateSmartCollection } from '../collections/collectionsApi';
 import { NameCollectionDialog } from '../collections/NameCollectionDialog';
@@ -49,6 +50,7 @@ export function SearchPage() {
     limit: 50,
   };
   const searchQuery = useSearch(body, true);
+  const thumbnailLinks = useThumbnailLinks(searchQuery.data?.hits.map((h) => h.id) ?? []);
   const createSmart = useCreateSmartCollection();
 
   return (
@@ -86,7 +88,7 @@ export function SearchPage() {
                 <p className="dam-empty">{t('search.empty')}</p>
               ) : (
                 <ThumbnailGrid
-                  items={searchQuery.data.hits.map((h) => toAssetThumb(t, i18n.language, h))}
+                  items={searchQuery.data.hits.map((h) => toAssetThumb(t, i18n.language, h, thumbnailLinks.data?.[h.id]))}
                   label={t('search.resultsLabel')}
                   onOpen={(id) => navigate(`/library/assets/${id}`)}
                 />

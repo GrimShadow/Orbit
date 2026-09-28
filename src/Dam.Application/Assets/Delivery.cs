@@ -74,6 +74,56 @@ public sealed class CreateDeliveryLinkHandler(
     }
 }
 
+/// <summary>
+/// Signed thumbnail links for many assets in one call - what a library/search grid needs to show real image thumbnails
+/// instead of one <c>POST /assets/{id}/links</c> per card (which doesn't scale to a grid of dozens). Deliberately
+/// narrow: always the "thumb" profile (the one name shared by every renderable kind - image, video poster, PDF/Office
+/// first page, spec Step 1.5), no transform, no IP binding, the default TTL. A generic "batch anything" endpoint is
+/// not needed here and would just widen the surface for no current caller.
+///
+/// An asset that cannot be shown a thumbnail for any reason - not found, no read permission, deleted/blocked, no
+/// version yet - maps to a null link rather than failing the whole batch; a grid always has some assets like this
+/// (still uploading, no permission on a mixed selection) and one bad id must not blank out every other thumbnail.
+/// </summary>
+/// <remarks>Keyed by the asset id's string form, not <see cref="Guid"/> itself - a plain string key serializes
+/// unambiguously as JSON object property names; a Guid-keyed dictionary's wire format is not worth relying on.</remarks>
+public sealed record CreateThumbnailLinksBatchCommand(IReadOnlyList<Guid> AssetIds) : ICommand<IReadOnlyDictionary<string, string?>>;
+
+public sealed class CreateThumbnailLinksBatchHandler(
+    IRepository<Asset> assets, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz,
+    DeliveryTokenSigner signer, DeliverySettings settings, ITenantContext tenant, IClock clock)
+    : IRequestHandler<CreateThumbnailLinksBatchCommand, IReadOnlyDictionary<string, string?>>
+{
+    private const int MaxBatchSize = 200;
+    private const string ThumbProfile = "thumb";
+
+    public async Task<Result<IReadOnlyDictionary<string, string?>>> Handle(CreateThumbnailLinksBatchCommand c, CancellationToken ct)
+    {
+        if (c.AssetIds.Count > MaxBatchSize)
+            return Error.Validation(new Dictionary<string, string[]> { ["assetIds"] = [$"At most {MaxBatchSize} at a time."] });
+
+        var expires = clock.UtcNow.Add(settings.DefaultTokenTtl);
+        var result = new Dictionary<string, string?>();
+        foreach (var id in c.AssetIds.Distinct())
+            result[id.ToString()] = await LinkForAsync(id, expires, ct);
+        return result;
+    }
+
+    /// <summary>Null for anything that isn't a plain, readable asset with a file - the same checks
+    /// <see cref="CreateDeliveryLinkHandler"/> makes, just turned into "no thumbnail" instead of an error.</summary>
+    private async Task<string?> LinkForAsync(Guid id, DateTimeOffset expires, CancellationToken ct)
+    {
+        var (asset, path) = await AssetAccess.LoadAsync(assets, folders, q, id, ct);
+        if (asset is null || asset.CurrentVersionId is null) return null;
+        if (asset.Status is AssetStatuses.Deleted or AssetStatuses.Blocked) return null;
+        if (!await authz.CanAsync(Permissions.AssetsRead, asset.ToResource(path), ct)) return null;
+
+        var watermark = asset.Status != AssetStatuses.Published;
+        var token = signer.Sign(new DeliveryClaims(tenant.TenantId, asset.Id, $"r:{ThumbProfile}", expires, null, watermark));
+        return $"{settings.LinkBase}/d/{token}/{asset.Id}/{ThumbProfile}";
+    }
+}
+
 /// <summary>The renditions already made for an asset's current version. Missing ones are made on first request.</summary>
 public sealed record ListRenditionsQuery(Guid AssetId) : IQuery<IReadOnlyList<RenditionDto>>;
 

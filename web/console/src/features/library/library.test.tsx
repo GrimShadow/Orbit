@@ -100,15 +100,22 @@ function renderAt(route: string) {
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-function mockApi(assetsPage: { items: unknown[]; nextCursor: string | null } = { items: ASSETS, nextCursor: null }) {
+function mockApi(
+  assetsPage: { items: unknown[]; nextCursor: string | null } = { items: ASSETS, nextCursor: null },
+  thumbnailLinks: Record<string, string | null> = {},
+) {
   const calls: Request[] = [];
   vi.stubGlobal(
     'fetch',
-    vi.fn((request: Request) => {
+    vi.fn(async (request: Request) => {
       calls.push(request);
       const url = new URL(request.url);
-      if (url.pathname === '/api/v1/folders') return Promise.resolve(json(FOLDERS));
-      if (url.pathname === '/api/v1/assets') return Promise.resolve(json(assetsPage));
+      if (url.pathname === '/api/v1/folders') return json(FOLDERS);
+      if (url.pathname === '/api/v1/assets') return json(assetsPage);
+      if (url.pathname === '/api/v1/assets/links/batch') {
+        const { assetIds } = (await request.json()) as { assetIds: string[] };
+        return json(Object.fromEntries(assetIds.map((id) => [id, thumbnailLinks[id] ?? null])));
+      }
       throw new Error(`unexpected request: ${url.pathname}`);
     }),
   );
@@ -190,5 +197,31 @@ describe('LibraryPage', () => {
     mockApi({ items: [], nextCursor: null });
     renderAt('/library');
     expect(await screen.findByText('No assets match these filters.')).toBeInTheDocument();
+  });
+
+  it('shows a real thumbnail image once the batch link request resolves', async () => {
+    mockApi(undefined, { a1: 'https://cdn.test/a1-thumb.webp' });
+    const { container } = renderAt('/library');
+    await screen.findByText('Hero shot');
+
+    const img = await waitFor(() => {
+      const el = container.querySelector('img.dam-thumb__img');
+      if (!el) throw new Error('thumbnail image not rendered yet');
+      return el;
+    });
+    expect(img).toHaveAttribute('src', 'https://cdn.test/a1-thumb.webp');
+  });
+
+  it('stops requesting thumbnail links once switched to the list/table view', async () => {
+    const calls = mockApi();
+    renderAt('/library');
+    await screen.findByText('Hero shot');
+    const isBatchCall = (r: Request) => new URL(r.url).pathname === '/api/v1/assets/links/batch';
+    await waitFor(() => expect(calls.some(isBatchCall)).toBe(true)); // the default grid view did ask for one
+
+    const batchCallsInGrid = calls.filter(isBatchCall).length;
+    await userEvent.click(screen.getByRole('button', { name: 'List' }));
+    await screen.findByRole('table');
+    expect(calls.filter(isBatchCall)).toHaveLength(batchCallsInGrid); // no further batch call once in list view
   });
 });

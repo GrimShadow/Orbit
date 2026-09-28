@@ -2298,6 +2298,40 @@
         }
       }
     },
+    "/api/v1/assets/links/batch": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Signed thumbnail links for many assets at once, for a library/search grid",
+        "operationId": "CreateThumbnailLinksBatch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThumbnailLinksBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assets/{id}/similar": {
       "get": {
         "tags": [
@@ -5194,6 +5228,21 @@
           "children": {
             "type": "array",
             "items": {}
+          }
+        }
+      },
+      "ThumbnailLinksBatchRequest": {
+        "required": [
+          "assetIds"
+        ],
+        "type": "object",
+        "properties": {
+          "assetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
