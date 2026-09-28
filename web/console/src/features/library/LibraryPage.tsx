@@ -2,20 +2,23 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import {
+  Breadcrumb,
   Button,
   LoadingRegion,
+  Rows,
   Select,
   Skeleton,
+  SquaresFour,
   Table,
   ThumbnailGrid,
   Tree,
   type Column,
-  type Thumb,
   type TreeNode,
 } from '../../ui';
+import { toAssetThumb } from './assetThumb';
 import { useAssets, type AssetDto } from './assets';
 import { BulkEditBar } from './BulkEditBar';
-import { buildFolderTree, useFolders } from './folders';
+import { buildFolderTree, folderBreadcrumb, useFolders } from './folders';
 import './library.css';
 
 const STATUSES = ['draft', 'in_review', 'approved', 'published', 'expired', 'archived'];
@@ -52,18 +55,10 @@ function FolderSidebar({ selectedId, onSelect }: { selectedId?: string; onSelect
   );
 }
 
-function toThumb(t: (key: string) => string, asset: AssetDto): Thumb {
-  return {
-    id: asset.id,
-    title: asset.title,
-    subtitle: t(`library.type.${asset.type}`),
-    badge: t(`library.status.${asset.status}`),
-  };
-}
-
 export function LibraryPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const foldersQuery = useFolders();
   const [folderId, setFolderId] = useState<string | undefined>();
   const [status, setStatus] = useState('');
   const [type, setType] = useState('');
@@ -109,6 +104,14 @@ export function LibraryPage() {
           <FolderSidebar selectedId={folderId} onSelect={(id) => setFilter(() => setFolderId(id))} />
         </aside>
         <div className="dam-library__main">
+          {foldersQuery.data && (
+            <Breadcrumb
+              label={t('library.folders')}
+              rootLabel={t('library.allFolders')}
+              items={folderBreadcrumb(foldersQuery.data, folderId)}
+              onNavigate={(id) => setFilter(() => setFolderId(id))}
+            />
+          )}
           <div className="dam-library__toolbar">
             <Select
               label={t('library.status')}
@@ -135,6 +138,7 @@ export function LibraryPage() {
                 className="dam-btn dam-btn--ghost"
                 onClick={() => setView('grid')}
               >
+                <SquaresFour size={16} weight="bold" aria-hidden="true" />
                 {t('library.viewGrid')}
               </button>
               <button
@@ -143,6 +147,7 @@ export function LibraryPage() {
                 className="dam-btn dam-btn--ghost"
                 onClick={() => setView('list')}
               >
+                <Rows size={16} weight="bold" aria-hidden="true" />
                 {t('library.viewList')}
               </button>
             </div>
@@ -176,7 +181,7 @@ export function LibraryPage() {
 
               {view === 'grid' ? (
                 <ThumbnailGrid
-                  items={assetsQuery.data.items.map((a) => toThumb(t, a))}
+                  items={assetsQuery.data.items.map((a) => toAssetThumb(t, i18n.language, a))}
                   label={t('library.assetsLabel')}
                   onOpen={(id) => navigate(`/library/assets/${id}`)}
                   selectedIds={[...selected]}

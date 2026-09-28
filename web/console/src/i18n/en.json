@@ -88,6 +88,7 @@
     "columnStatus": "Status",
     "columnUpdated": "Updated",
     "next": "Next page",
+    "updatedRelative": "Updated {{time}}",
     "selectAsset": "Select {{title}}",
     "selectAllOnPage_one": "Select all {{count}} asset on this page",
     "selectAllOnPage_other": "Select all {{count}} assets on this page",

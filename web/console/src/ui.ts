@@ -1,18 +1,44 @@
 // Single import point for the shared design system.
 export {
+  Archive,
+  ArrowUUpLeft,
+  BookmarkSimple,
+  Breadcrumb,
   Button,
+  CheckCircle,
+  Clock,
   FacetList,
+  FileTypeIcon,
+  FolderSimple,
   Input,
   LoadingRegion,
+  Megaphone,
   Modal,
+  PaperPlaneTilt,
+  Rows,
   Select,
   Skeleton,
+  SquaresFour,
   Table,
   Tabs,
+  Tag,
   ThumbnailGrid,
   Tree,
+  UploadSimple,
   useToast,
+  XCircle,
 } from '@dam/ui-kit';
-export type { Column, Facet, FacetOption, SelectOption, TabItem, Thumb, ToastInput, TreeNode } from '@dam/ui-kit';
+export type {
+  BreadcrumbItem,
+  Column,
+  Facet,
+  FacetOption,
+  IconProps,
+  SelectOption,
+  TabItem,
+  Thumb,
+  ToastInput,
+  TreeNode,
+} from '@dam/ui-kit';
 import { createElement, type ReactNode } from 'react';
 export const Badge = ({ children }: { children: ReactNode }) => createElement('span', { className: 'dam-badge' }, children);

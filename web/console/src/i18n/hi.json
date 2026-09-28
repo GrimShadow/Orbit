@@ -88,6 +88,7 @@
     "columnStatus": "स्थिति",
     "columnUpdated": "अद्यतन",
     "next": "अगला पृष्ठ",
+    "updatedRelative": "{{time}} अद्यतन",
     "selectAsset": "{{title}} चुनें",
     "selectAllOnPage_one": "इस पृष्ठ पर {{count}} एसेट चुनें",
     "selectAllOnPage_other": "इस पृष्ठ पर सभी {{count}} एसेट चुनें",

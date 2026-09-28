@@ -1,9 +1,16 @@
+import { Check } from '@phosphor-icons/react';
+import type { ReactNode } from 'react';
+
 export interface Thumb {
   id: string;
   title: string;
   subtitle?: string;
   imageUrl?: string;
   badge?: string;
+  /** Shown inline before the subtitle - typically a small file-type glyph (see `FileTypeIcon`). */
+  icon?: ReactNode;
+  /** A secondary metadata line below the subtitle, e.g. a relative "Updated 6 days ago". */
+  meta?: string;
 }
 
 interface ThumbnailGridProps {
@@ -25,31 +32,43 @@ export function ThumbnailGrid({
 }: ThumbnailGridProps) {
   return (
     <ul className="dam-grid" aria-label={label}>
-      {items.map((t) => (
-        <li key={t.id} className="dam-thumb">
-          {onToggleSelect && (
-            <input
-              type="checkbox"
-              className="dam-thumb__select"
-              aria-label={selectLabel(t.title)}
-              checked={selectedIds?.includes(t.id) ?? false}
-              onChange={(e) => onToggleSelect(t.id, e.target.checked)}
-            />
-          )}
-          <button type="button" className="dam-thumb__open" onClick={() => onOpen?.(t.id)}>
-            {t.imageUrl ? (
-              <img className="dam-thumb__img" src={t.imageUrl} alt="" loading="lazy" />
-            ) : (
-              <div className="dam-thumb__img" aria-hidden="true" />
+      {items.map((t) => {
+        const isSelected = selectedIds?.includes(t.id) ?? false;
+        return (
+          <li key={t.id} className={`dam-thumb${isSelected ? ' dam-thumb--selected' : ''}`}>
+            {onToggleSelect && (
+              <label className="dam-thumb__select-wrap">
+                <input
+                  type="checkbox"
+                  className="dam-thumb__select"
+                  aria-label={selectLabel(t.title)}
+                  checked={isSelected}
+                  onChange={(e) => onToggleSelect(t.id, e.target.checked)}
+                />
+                <Check weight="bold" className="dam-thumb__select-check" aria-hidden="true" />
+              </label>
             )}
-            <div className="dam-thumb__meta">
-              <div className="dam-thumb__title">{t.title}</div>
-              {t.subtitle && <div className="dam-thumb__sub">{t.subtitle}</div>}
-              {t.badge && <span className="dam-badge">{t.badge}</span>}
-            </div>
-          </button>
-        </li>
-      ))}
+            <button type="button" className="dam-thumb__open" onClick={() => onOpen?.(t.id)}>
+              {t.imageUrl ? (
+                <img className="dam-thumb__img" src={t.imageUrl} alt="" loading="lazy" />
+              ) : (
+                <div className="dam-thumb__img" aria-hidden="true" />
+              )}
+              <div className="dam-thumb__meta">
+                <div className="dam-thumb__title">{t.title}</div>
+                {(t.icon || t.subtitle) && (
+                  <div className="dam-thumb__sub">
+                    {t.icon}
+                    {t.subtitle}
+                  </div>
+                )}
+                {t.meta && <div className="dam-thumb__metaline">{t.meta}</div>}
+                {t.badge && <span className="dam-badge">{t.badge}</span>}
+              </div>
+            </button>
+          </li>
+        );
+      })}
     </ul>
   );
 }

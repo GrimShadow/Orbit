@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { folderOptions, useFolders } from '../library/folders';
-import { Badge, Button, Input, Select } from '../../ui';
+import { Badge, Button, Input, Select, UploadSimple } from '../../ui';
 import { Dropzone } from './Dropzone';
 import { useUploadBatch } from './useUploadBatch';
 import './upload.css';
@@ -80,6 +80,7 @@ export function UploadPage() {
           </div>
 
           <Button type="submit" variant="primary" disabled={files.length === 0}>
+            <UploadSimple size={16} weight="bold" aria-hidden="true" />
             {t('upload.start')}
           </Button>
         </form>

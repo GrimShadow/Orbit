@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Badge, Button, Input, LoadingRegion, Modal, Select, Skeleton, ThumbnailGrid, type Thumb } from '../../ui';
-import type { SearchHitDto } from '../search/searchApi';
+import { Badge, Button, Input, LoadingRegion, Modal, Select, Skeleton, ThumbnailGrid } from '../../ui';
+import { toAssetThumb } from '../library/assetThumb';
 import {
   useCollection,
   useCollectionContents,
@@ -11,10 +11,6 @@ import {
   useShareCollection,
 } from './collectionsApi';
 import './collections.css';
-
-function toThumb(t: (key: string) => string, hit: SearchHitDto): Thumb {
-  return { id: hit.id, title: hit.title, subtitle: t(`library.type.${hit.type}`), badge: t(`library.status.${hit.status}`) };
-}
 
 function RenameForm({ id, initialName }: { id: string; initialName: string }) {
   const { t } = useTranslation();
@@ -38,7 +34,7 @@ function RenameForm({ id, initialName }: { id: string; initialName: string }) {
 }
 
 export function CollectionDetailPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const collectionQuery = useCollection(id!);
@@ -98,7 +94,7 @@ export function CollectionDetailPage() {
       ) : (
         <>
           <ThumbnailGrid
-            items={contentsQuery.data.hits.map((h) => toThumb(t, h))}
+            items={contentsQuery.data.hits.map((h) => toAssetThumb(t, i18n.language, h))}
             label={t('collections.contentsLabel')}
             onOpen={(assetId) => navigate(`/library/assets/${assetId}`)}
           />

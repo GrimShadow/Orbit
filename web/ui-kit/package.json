@@ -24,5 +24,8 @@
     "@storybook/react": "8",
     "@storybook/react-vite": "8",
     "storybook": "8"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10"
   }
 }
