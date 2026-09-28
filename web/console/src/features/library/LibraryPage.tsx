@@ -14,6 +14,7 @@ import {
   type TreeNode,
 } from '../../ui';
 import { useAssets, type AssetDto } from './assets';
+import { BulkEditBar } from './BulkEditBar';
 import { buildFolderTree, useFolders } from './folders';
 import './library.css';
 
@@ -68,11 +69,21 @@ export function LibraryPage() {
   const [type, setType] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [cursor, setCursor] = useState<string | undefined>();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const setFilter = (apply: () => void) => {
     setCursor(undefined);
+    setSelected(new Set());
     apply();
   };
+
+  const toggleSelect = (id: string, isSelected: boolean) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      if (isSelected) next.add(id);
+      else next.delete(id);
+      return next;
+    });
 
   const assetsQuery = useAssets({
     folderId,
@@ -148,11 +159,29 @@ export function LibraryPage() {
             </div>
           ) : (
             <>
+              {assetsQuery.data.items.length > 0 && (
+                <label className="dam-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={assetsQuery.data.items.every((a) => selected.has(a.id))}
+                    onChange={(e) => setSelected(e.target.checked ? new Set(assetsQuery.data.items.map((a) => a.id)) : new Set())}
+                  />
+                  {t('library.selectAllOnPage', { count: assetsQuery.data.items.length })}
+                </label>
+              )}
+
+              {selected.size > 0 && (
+                <BulkEditBar assets={assetsQuery.data.items} selectedIds={[...selected]} onClear={() => setSelected(new Set())} />
+              )}
+
               {view === 'grid' ? (
                 <ThumbnailGrid
                   items={assetsQuery.data.items.map((a) => toThumb(t, a))}
                   label={t('library.assetsLabel')}
                   onOpen={(id) => navigate(`/library/assets/${id}`)}
+                  selectedIds={[...selected]}
+                  onToggleSelect={toggleSelect}
+                  selectLabel={(title) => t('library.selectAsset', { title })}
                 />
               ) : (
                 <Table
@@ -161,13 +190,19 @@ export function LibraryPage() {
                   getRowId={(a) => a.id}
                   caption={t('library.assetsLabel')}
                   emptyMessage={t('library.empty')}
+                  selectedIds={[...selected]}
+                  onToggleSelect={toggleSelect}
+                  selectLabel={(a) => t('library.selectAsset', { title: a.title })}
                 />
               )}
               {assetsQuery.data.items.length === 0 && view === 'grid' && <p className="dam-empty">{t('library.empty')}</p>}
               {assetsQuery.data.nextCursor && (
                 <Button
                   variant="secondary"
-                  onClick={() => setCursor(assetsQuery.data.nextCursor!)}
+                  onClick={() => {
+                    setSelected(new Set());
+                    setCursor(assetsQuery.data.nextCursor!);
+                  }}
                   loading={assetsQuery.isFetching}
                 >
                   {t('library.next')}
