@@ -1,10 +1,11 @@
-import { Select } from '@dam/ui-kit';
-import { useEffect, useRef, useState } from 'react';
+import { Button, Modal, Select } from '@dam/ui-kit';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useMe } from '../api/me';
 import { useAuth } from '../auth/AuthProvider';
 import { LANGUAGES, setLanguage } from '../i18n';
+import { HELP_KEY, isHelpShortcut, isShortcutTarget, matchNavShortcut, NAV_SHORTCUTS } from './keyboardShortcuts';
 import './shell.css';
 
 function TenantSwitcher() {
@@ -90,6 +91,54 @@ function UserMenu() {
   );
 }
 
+/** Single-key navigation shortcuts (spec Step 1.8: "keyboard shortcuts") plus a `?`-triggered help dialog listing
+ * them - active only once signed in, and never while focus is on a form control (`isShortcutTarget`, so shortcuts
+ * can never hijack ordinary typing elsewhere in the console). */
+function KeyboardShortcuts() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isShortcutTarget(e.target)) return;
+      if (isHelpShortcut(e)) {
+        e.preventDefault();
+        setHelpOpen((o) => !o);
+        return;
+      }
+      const path = matchNavShortcut(e);
+      if (path) navigate(path);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [navigate]);
+
+  return (
+    <>
+      <Button variant="ghost" size="sm" onClick={() => setHelpOpen(true)} aria-label={t('shell.shortcuts.button')}>
+        {HELP_KEY}
+      </Button>
+      <Modal open={helpOpen} title={t('shell.shortcuts.title')} onClose={() => setHelpOpen(false)}>
+        <dl className="dam-dl">
+          {NAV_SHORTCUTS.map((s) => (
+            <Fragment key={s.key}>
+              <dt>
+                <kbd>{s.key}</kbd>
+              </dt>
+              <dd>{t(s.labelKey)}</dd>
+            </Fragment>
+          ))}
+          <dt>
+            <kbd>{HELP_KEY}</kbd>
+          </dt>
+          <dd>{t('shell.shortcuts.help')}</dd>
+        </dl>
+      </Modal>
+    </>
+  );
+}
+
 export function Shell() {
   const { t } = useTranslation();
   const auth = useAuth();
@@ -115,6 +164,7 @@ export function Shell() {
         <div className="dam-header__tools">
           {auth.status === 'authenticated' && <TenantSwitcher />}
           <LanguageSwitcher />
+          {auth.status === 'authenticated' && <KeyboardShortcuts />}
           <UserMenu />
         </div>
       </header>

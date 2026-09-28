@@ -17,7 +17,14 @@
     "language": "भाषा",
     "userMenu": "खाता मेनू",
     "signOut": "साइन आउट",
-    "defaultTenant": "टेनेंट {{id}}"
+    "defaultTenant": "टेनेंट {{id}}",
+    "shortcuts.button": "कीबोर्ड शॉर्टकट",
+    "shortcuts.title": "कीबोर्ड शॉर्टकट",
+    "shortcuts.library": "लाइब्रेरी पर जाएँ",
+    "shortcuts.search": "खोज पर जाएँ",
+    "shortcuts.collections": "संग्रह पर जाएँ",
+    "shortcuts.upload": "अपलोड पर जाएँ",
+    "shortcuts.help": "यह सहायता दिखाएँ"
   },
   "login": {
     "title": "Orbit में साइन इन करें",

@@ -17,7 +17,14 @@
     "language": "Language",
     "userMenu": "Account menu",
     "signOut": "Sign out",
-    "defaultTenant": "Tenant {{id}}"
+    "defaultTenant": "Tenant {{id}}",
+    "shortcuts.button": "Keyboard shortcuts",
+    "shortcuts.title": "Keyboard shortcuts",
+    "shortcuts.library": "Go to Library",
+    "shortcuts.search": "Go to Search",
+    "shortcuts.collections": "Go to Collections",
+    "shortcuts.upload": "Go to Upload",
+    "shortcuts.help": "Show this help"
   },
   "login": {
     "title": "Sign in to Orbit",

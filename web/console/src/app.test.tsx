@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { axe } from 'vitest-axe';
@@ -154,6 +154,58 @@ describe('shell', () => {
     await waitFor(() => expect(screen.getByRole('main').textContent).not.toBe(''));
     if (route === '/me') await screen.findByRole('heading', { name: 'My account' });
     expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('keyboard shortcuts', () => {
+  it('navigates on a single-key shortcut', async () => {
+    mockFetch((request) => {
+      const path = new URL(request.url).pathname;
+      if (path === '/api/v1/me') return json(ME);
+      if (path === '/api/v1/folders') return json([]);
+      if (path === '/api/v1/assets') return json({ items: [], nextCursor: null });
+      throw new Error(`unexpected request: ${path}`);
+    });
+    renderAt('/', signedIn);
+    await screen.findByRole('heading', { name: 'Welcome, Dev Admin' });
+
+    await userEvent.keyboard('l');
+    expect(await screen.findByRole('heading', { name: 'Library' })).toBeInTheDocument();
+  });
+
+  it('does not hijack typing into a text field', async () => {
+    mockFetch((request) => {
+      const path = new URL(request.url).pathname;
+      if (path === '/api/v1/me') return json(ME);
+      if (path === '/api/v1/folders') return json([]);
+      throw new Error(`unexpected request: ${path}`);
+    });
+    renderAt('/upload', signedIn);
+    await screen.findByRole('heading', { name: 'Upload' });
+
+    await userEvent.type(screen.getByLabelText('Tags'), 'library');
+    expect(screen.getByRole('heading', { name: 'Upload' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Library' })).not.toBeInTheDocument();
+  });
+
+  it('opens and closes the shortcuts help with "?"', async () => {
+    mockFetch(() => json(ME));
+    renderAt('/', signedIn);
+    await screen.findByRole('heading', { name: 'Welcome, Dev Admin' });
+
+    await userEvent.keyboard('?');
+    const dialog = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' });
+    expect(within(dialog).getByText('Go to Library')).toBeInTheDocument();
+
+    await userEvent.keyboard('?');
+    expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).not.toBeInTheDocument();
+  });
+
+  it('also opens the help dialog from the visible button', async () => {
+    mockFetch(() => json(ME));
+    renderAt('/', signedIn);
+    await userEvent.click(await screen.findByRole('button', { name: 'Keyboard shortcuts' }));
+    expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
   });
 });
 
