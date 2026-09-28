@@ -71,7 +71,7 @@ export function AssetDetailPage() {
       <LifecycleActions assetId={asset.id} status={asset.status} />
 
       <div className="dam-asset-preview">
-        <AssetPreview assetId={asset.id} type={asset.type} title={asset.title} />
+        <AssetPreview assetId={asset.id} type={asset.type} title={asset.title} status={asset.status} />
       </div>
 
       <Tabs
