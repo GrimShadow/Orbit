@@ -90,6 +90,22 @@ export function useDeliveryLink(id: string, renditions: string[], enabled: boole
   });
 }
 
+/** Signed thumbnail links for many assets in one call (`POST /assets/links/batch`) - what a library/search/collection
+ * grid needs to show real image thumbnails, instead of one `useDeliveryLink` per card (which doesn't scale to a grid
+ * of dozens). An id the batch couldn't produce a thumbnail for (no permission, no file yet, deleted) maps to `null`;
+ * `toAssetThumb` treats that the same as "not requested yet" and falls back to the file-type icon. */
+export function useThumbnailLinks(assetIds: string[]) {
+  const api = useApiClient();
+  const key = [...assetIds].sort().join(',');
+  return useQuery({
+    queryKey: ['thumbnailLinks', key],
+    queryFn: async () =>
+      unwrap(await api.POST('/api/v1/assets/links/batch', { body: { assetIds } })) as Record<string, string | null>,
+    enabled: assetIds.length > 0,
+    staleTime: 4 * 60 * 1000,
+  });
+}
+
 export function useSchema(assetType: string) {
   const api = useApiClient();
   return useQuery({

@@ -717,6 +717,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assets/links/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Signed thumbnail links for many assets at once, for a library/search grid */
+        post: operations["CreateThumbnailLinksBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assets/{id}/similar": {
         parameters: {
             query?: never;
@@ -1587,6 +1604,9 @@ export interface components {
         TermNodeDto: {
             term: components["schemas"]["TermDto"];
             children: unknown[];
+        };
+        ThumbnailLinksBatchRequest: {
+            assetIds: string[];
         };
         TransformRequest: {
             /** Format: int32 */
@@ -3312,6 +3332,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeliveryLinkDto"];
+                };
+            };
+        };
+    };
+    CreateThumbnailLinksBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThumbnailLinksBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
         };

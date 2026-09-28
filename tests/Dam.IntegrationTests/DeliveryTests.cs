@@ -356,4 +356,54 @@ public sealed class DeliveryTests(PostgresFixture pg, RabbitFixture mq) : Pipeli
         Sql($"UPDATE assets SET status = 'deleted' WHERE id = '{img}'");
         Assert.Equal(HttpStatusCode.NotFound, (await http.GetAsync(url)).StatusCode);
     }
+
+    // ---- batch thumbnail links (library/search grid) -----------------------------------------------------------
+
+    [Fact]
+    public async Task A_batch_of_thumbnail_links_serves_the_thumb_profile_watermarked_only_when_unpublished()
+    {
+        var (_, admin, folder) = await TenantWithPacks();
+        using var worker = StartWorker(NoScan); await worker.StartAsync();
+        var draft = await IngestedImage(admin, folder, publish: false);
+        var published = await IngestedImage(admin, folder, publish: true);
+
+        var res = await Call(HttpMethod.Post, "/api/v1/assets/links/batch", admin, new { assetIds = new[] { draft, published } });
+        Assert.Equal(HttpStatusCode.OK, res.Status);
+
+        var http = await Delivery();
+        var draftUrl = res.Body.GetProperty(draft.ToString()).GetString();
+        var publishedUrl = res.Body.GetProperty(published.ToString()).GetString();
+        Assert.NotNull(draftUrl);
+        Assert.NotNull(publishedUrl);
+
+        var draftRes = await http.GetAsync(PathOf(draftUrl!));
+        Assert.Equal(HttpStatusCode.OK, draftRes.StatusCode);
+        Assert.Contains("private", draftRes.Headers.CacheControl!.ToString());              // unpublished -> watermarked, not publicly cached
+
+        var publishedRes = await http.GetAsync(PathOf(publishedUrl!));
+        Assert.Equal(HttpStatusCode.OK, publishedRes.StatusCode);
+        Assert.Contains("public", publishedRes.Headers.CacheControl!.ToString());
+    }
+
+    [Fact]
+    public async Task A_batch_thumbnail_link_request_never_fails_whole_for_one_bad_id_and_caps_its_size()
+    {
+        var (_, admin, folder) = await TenantWithPacks();
+        using var worker = StartWorker(NoScan); await worker.StartAsync();
+        var real = await IngestedImage(admin, folder);
+        var deleted = await IngestedImage(admin, folder);
+        Sql($"UPDATE assets SET status = 'deleted' WHERE id = '{deleted}'");
+        var noFileYet = await NewAsset(admin, folder);
+        var missing = Guid.NewGuid();
+
+        var mixed = await Call(HttpMethod.Post, "/api/v1/assets/links/batch", admin, new { assetIds = new[] { real, deleted, noFileYet, missing } });
+        Assert.Equal(HttpStatusCode.OK, mixed.Status);
+        Assert.NotNull(mixed.Body.GetProperty(real.ToString()).GetString());
+        Assert.Equal(JsonValueKind.Null, mixed.Body.GetProperty(deleted.ToString()).ValueKind);      // deleted looks absent, not an error
+        Assert.Equal(JsonValueKind.Null, mixed.Body.GetProperty(noFileYet.ToString()).ValueKind);     // no version uploaded yet
+        Assert.Equal(JsonValueKind.Null, mixed.Body.GetProperty(missing.ToString()).ValueKind);       // doesn't exist at all
+
+        var tooMany = Enumerable.Range(0, 201).Select(_ => Guid.NewGuid()).ToArray();
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Call(HttpMethod.Post, "/api/v1/assets/links/batch", admin, new { assetIds = tooMany })).Status);
+    }
 }
