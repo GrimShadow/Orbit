@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Route, Routes } from 'react-router-dom';
 import { ApiError } from './api/client';
 import { ProtectedRoute } from './auth/ProtectedRoute';
+import { AssetDetailPage } from './features/asset/AssetDetailPage';
 import { LibraryPage } from './features/library/LibraryPage';
 import { UploadPage } from './features/upload/UploadPage';
 import { CallbackPage, HomePage, LoginPage, MePage, NotFoundPage } from './pages/Pages';
@@ -25,6 +26,7 @@ export function App() {
               <Route element={<ProtectedRoute />}>
                 <Route index element={<HomePage />} />
                 <Route path="/library" element={<LibraryPage />} />
+                <Route path="/library/assets/:id" element={<AssetDetailPage />} />
                 <Route path="/upload" element={<UploadPage />} />
                 <Route path="/me" element={<MePage />} />
               </Route>

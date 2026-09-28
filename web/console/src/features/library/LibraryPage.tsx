@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Button,
   LoadingRegion,
@@ -61,6 +62,7 @@ function toThumb(t: (key: string) => string, asset: AssetDto): Thumb {
 
 export function LibraryPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [folderId, setFolderId] = useState<string | undefined>();
   const [status, setStatus] = useState('');
   const [type, setType] = useState('');
@@ -82,7 +84,7 @@ export function LibraryPage() {
   });
 
   const columns: Column<AssetDto>[] = [
-    { key: 'title', header: t('library.columnTitle') },
+    { key: 'title', header: t('library.columnTitle'), render: (a) => <Link to={`/library/assets/${a.id}`}>{a.title}</Link> },
     { key: 'type', header: t('library.columnType'), render: (a) => t(`library.type.${a.type}`) },
     { key: 'status', header: t('library.columnStatus'), render: (a) => t(`library.status.${a.status}`) },
     { key: 'updatedAt', header: t('library.columnUpdated'), render: (a) => new Date(a.updatedAt).toLocaleString() },
@@ -147,7 +149,11 @@ export function LibraryPage() {
           ) : (
             <>
               {view === 'grid' ? (
-                <ThumbnailGrid items={assetsQuery.data.items.map((a) => toThumb(t, a))} label={t('library.assetsLabel')} />
+                <ThumbnailGrid
+                  items={assetsQuery.data.items.map((a) => toThumb(t, a))}
+                  label={t('library.assetsLabel')}
+                  onOpen={(id) => navigate(`/library/assets/${id}`)}
+                />
               ) : (
                 <Table
                   columns={columns}
