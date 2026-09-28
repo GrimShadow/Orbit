@@ -22,6 +22,10 @@ export interface TableProps<T> {
   onSortChange?: (sort: SortState) => void;
   loading?: boolean;
   emptyMessage?: string;
+  /** When set, a checkbox column is added (same optional-selection contract as `ThumbnailGrid`). */
+  selectedIds?: string[];
+  onToggleSelect?: (id: string, selected: boolean) => void;
+  selectLabel?: (row: T) => string;
 }
 
 export function Table<T>({
@@ -33,6 +37,9 @@ export function Table<T>({
   onSortChange,
   loading,
   emptyMessage = 'Nothing to show.',
+  selectedIds,
+  onToggleSelect,
+  selectLabel = (row) => `Select ${getRowId(row)}`,
 }: TableProps<T>) {
   const cell = (row: T, c: Column<T>): ReactNode =>
     c.render ? c.render(row) : String((row as Record<string, unknown>)[c.key] ?? '');
@@ -42,6 +49,11 @@ export function Table<T>({
         <caption className="dam-sr-only">{caption}</caption>
         <thead>
           <tr>
+            {onToggleSelect && (
+              <th scope="col">
+                <span className="dam-sr-only">Select</span>
+              </th>
+            )}
             {columns.map((c) => {
               const active = sort?.key === c.key;
               const ariaSort = active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined;
@@ -68,6 +80,11 @@ export function Table<T>({
           {loading
             ? Array.from({ length: 4 }, (_, i) => (
                 <tr key={i}>
+                  {onToggleSelect && (
+                    <td>
+                      <Skeleton height={16} width={16} />
+                    </td>
+                  )}
                   {columns.map((c) => (
                     <td key={c.key}>
                       <Skeleton height={16} />
@@ -77,6 +94,16 @@ export function Table<T>({
               ))
             : rows.map((r) => (
                 <tr key={getRowId(r)}>
+                  {onToggleSelect && (
+                    <td>
+                      <input
+                        type="checkbox"
+                        aria-label={selectLabel(r)}
+                        checked={selectedIds?.includes(getRowId(r)) ?? false}
+                        onChange={(e) => onToggleSelect(getRowId(r), e.target.checked)}
+                      />
+                    </td>
+                  )}
                   {columns.map((c) => (
                     <td key={c.key}>{cell(r, c)}</td>
                   ))}

@@ -84,6 +84,24 @@ describe('Table', () => {
     );
     expect(screen.getByText('No assets')).toBeInTheDocument();
   });
+  it('renders a checkbox column and reports toggles by row id', async () => {
+    const onToggle = vi.fn();
+    render(
+      <Table
+        caption="Assets"
+        rows={rows}
+        getRowId={(r) => r.id}
+        columns={[{ key: 'name', header: 'Name' }]}
+        selectedIds={['1']}
+        onToggleSelect={onToggle}
+        selectLabel={(r) => `Select ${r.name}`}
+      />,
+    );
+    expect(screen.getByRole('checkbox', { name: 'Select Alpha' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Select Beta' })).not.toBeChecked();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Beta' }));
+    expect(onToggle).toHaveBeenCalledWith('2', true);
+  });
 });
 
 describe('Modal / Drawer', () => {

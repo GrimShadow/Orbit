@@ -35,6 +35,33 @@
   font-weight: 600;
 }
 
+.dam-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+}
+
+.dam-bulkbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3);
+  background: var(--dam-surface-2);
+  border-radius: var(--dam-radius);
+}
+
+.dam-bulkbar__count {
+  font-weight: 600;
+  align-self: center;
+}
+
+.dam-bulkbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-1);
+}
+
 /* Full-width single column below ~390px (spec Step 1.8: "mobile-responsive at 390px width"). */
 @media (max-width: 640px) {
   .dam-library__layout {
