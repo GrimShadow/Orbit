@@ -1,4 +1,21 @@
 /* Orbit design tokens + component styles. Light by default; dark via OS preference or [data-theme]. */
+
+/* Self-hosted (see fonts/README.md) so the console works offline/air-gapped - no font CDN dependency. */
+@font-face {
+  font-family: 'Geist';
+  src: url('./fonts/Geist-Variable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('./fonts/GeistMono-Variable.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --dam-bg: #f6f7fb;
   --dam-surface: #ffffff;
@@ -6,15 +23,19 @@
   --dam-text: #111827;
   --dam-muted: #4b5563;
   --dam-border: #c9ced9;
-  --dam-brand: #4338ca;
-  --dam-brand-hover: #3730a3;
+  /* Forest green - a considered, non-default accent (indigo/purple is the most common AI-design tell). */
+  --dam-brand: #15803d;
+  --dam-brand-hover: #166534;
   --dam-on-brand: #ffffff;
   --dam-danger: #b91c1c;
-  --dam-success: #047857;
+  /* Teal, deliberately distinct from --dam-brand's forest green so status and identity never blur together. */
+  --dam-success: #0d9488;
   --dam-warning: #92400e;
   --dam-focus: #1d4ed8;
-  --dam-radius: 8px;
-  --dam-radius-sm: 5px;
+  --dam-radius-sm: 6px;
+  --dam-radius: 10px;
+  --dam-radius-lg: 16px;
+  --dam-shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
   --dam-shadow: 0 1px 2px rgb(16 24 40 / 0.08), 0 4px 12px rgb(16 24 40 / 0.08);
   --dam-space-1: 4px;
   --dam-space-2: 8px;
@@ -22,11 +43,15 @@
   --dam-space-4: 16px;
   --dam-space-5: 24px;
   --dam-space-6: 32px;
-  --dam-font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', sans-serif;
+  --dam-font: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', sans-serif;
+  --dam-font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --dam-text-sm: 0.875rem;
   --dam-text-md: 1rem;
   --dam-text-lg: 1.25rem;
   --dam-text-xl: 1.625rem;
+  /* Nothing had a transition before this - interactive elements changed state instantly with no feedback. */
+  --dam-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dam-duration: 160ms;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -37,11 +62,11 @@
     --dam-text: #e8ecf5;
     --dam-muted: #aab4c8;
     --dam-border: #33405f;
-    --dam-brand: #a5b4fc;
-    --dam-brand-hover: #c7d2fe;
+    --dam-brand: #4ade80;
+    --dam-brand-hover: #86efac;
     --dam-on-brand: #0b1020;
     --dam-danger: #fca5a5;
-    --dam-success: #6ee7b7;
+    --dam-success: #2dd4bf;
     --dam-warning: #fcd34d;
     --dam-focus: #93c5fd;
   }
@@ -53,11 +78,11 @@
   --dam-text: #e8ecf5;
   --dam-muted: #aab4c8;
   --dam-border: #33405f;
-  --dam-brand: #a5b4fc;
-  --dam-brand-hover: #c7d2fe;
+  --dam-brand: #4ade80;
+  --dam-brand-hover: #86efac;
   --dam-on-brand: #0b1020;
   --dam-danger: #fca5a5;
-  --dam-success: #6ee7b7;
+  --dam-success: #2dd4bf;
   --dam-warning: #fcd34d;
   --dam-focus: #93c5fd;
 }
@@ -114,6 +139,14 @@ body {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition:
+    background-color var(--dam-duration) var(--dam-ease),
+    border-color var(--dam-duration) var(--dam-ease),
+    color var(--dam-duration) var(--dam-ease),
+    transform var(--dam-duration) var(--dam-ease);
+}
+.dam-btn:active:not([disabled]) {
+  transform: scale(0.98);
 }
 .dam-btn[disabled] {
   opacity: 0.55;
@@ -191,6 +224,17 @@ body {
   background: var(--dam-surface);
   border: 1px solid var(--dam-border);
   border-radius: var(--dam-radius-sm);
+  transition:
+    border-color var(--dam-duration) var(--dam-ease),
+    box-shadow var(--dam-duration) var(--dam-ease);
+}
+.dam-input:hover:not([disabled]),
+.dam-select:hover:not([disabled]) {
+  border-color: var(--dam-muted);
+}
+.dam-input:focus,
+.dam-select:focus {
+  border-color: var(--dam-focus);
 }
 .dam-input[aria-invalid='true'],
 .dam-select[aria-invalid='true'] {
@@ -242,7 +286,7 @@ body {
 /* Dialog: modal + drawer */
 .dam-dialog {
   border: 1px solid var(--dam-border);
-  border-radius: var(--dam-radius);
+  border-radius: var(--dam-radius-lg);
   padding: 0;
   background: var(--dam-surface);
   color: var(--dam-text);
@@ -326,6 +370,12 @@ body {
   font-weight: 600;
   color: var(--dam-muted);
   border-bottom: 3px solid transparent;
+  transition:
+    color var(--dam-duration) var(--dam-ease),
+    border-color var(--dam-duration) var(--dam-ease);
+}
+.dam-tab:hover {
+  color: var(--dam-text);
 }
 .dam-tab[aria-selected='true'] {
   color: var(--dam-brand);
@@ -356,6 +406,7 @@ body {
   padding: var(--dam-space-1) var(--dam-space-2);
   border-radius: var(--dam-radius-sm);
   cursor: pointer;
+  transition: background-color var(--dam-duration) var(--dam-ease);
 }
 .dam-treeitem:focus {
   outline: none;
@@ -415,8 +466,16 @@ body {
   position: relative;
   background: var(--dam-surface);
   border: 1px solid var(--dam-border);
-  border-radius: var(--dam-radius);
+  border-radius: var(--dam-radius-lg);
   overflow: hidden;
+  box-shadow: var(--dam-shadow-sm);
+  transition:
+    box-shadow var(--dam-duration) var(--dam-ease),
+    transform var(--dam-duration) var(--dam-ease);
+}
+.dam-thumb:hover {
+  box-shadow: var(--dam-shadow);
+  transform: translateY(-2px);
 }
 .dam-thumb__open {
   all: unset;
