@@ -1,5 +1,6 @@
 .dam-collections__row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--dam-space-3);
   padding: var(--dam-space-2) 0;
