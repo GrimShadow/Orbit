@@ -59,7 +59,7 @@ jobs:
         run: dotnet build Dam.sln -c Release
       # Results go to the Security tab (free on public repos) and the job also fails on any error-level finding.
       # Dependabot PRs run with a read-only token and cannot upload, so they only get the in-job gate.
-      - uses: github/codeql-action/analyze@87ef0dc97def48aa960fbf026a2563ee9dbdb470 # v3
+      - uses: github/codeql-action/analyze@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
         with: { upload: "${{ github.actor == 'dependabot[bot]' && 'never' || 'always' }}", output: sarif-results, category: "/language:${{ matrix.language }}" }
       - name: Fail on error-level findings
         run: |
