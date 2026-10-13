@@ -62,7 +62,7 @@ export function CardMenu({ label, actions }: CardMenuProps) {
   };
 
   return (
-    <div className="dam-cardmenu" ref={root} onKeyDown={onKeyDown}>
+    <div className="dam-cardmenu" ref={root}>
       <button
         ref={trigger}
         type="button"
@@ -76,7 +76,7 @@ export function CardMenu({ label, actions }: CardMenuProps) {
         <DotsThree size={18} weight="bold" aria-hidden="true" />
       </button>
       {open && (
-        <div id={menuId} role="menu" aria-label={label} className="dam-cardmenu__list">
+        <div id={menuId} role="menu" tabIndex={-1} aria-label={label} className="dam-cardmenu__list" onKeyDown={onKeyDown}>
           {actions.map((a) => (
             <button
               key={a.key}
