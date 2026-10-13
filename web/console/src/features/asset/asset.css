@@ -56,18 +56,80 @@
     grid-template-columns: minmax(0, 1.6fr) minmax(360px, 1fr);
     align-items: start;
   }
-  .dam-asset-layout__preview {
-    position: sticky;
-    top: var(--dam-space-4);
-  }
   .dam-asset-preview__image,
   .dam-asset-preview__video {
-    max-height: calc(100dvh - 220px);
+    max-height: 60dvh;
   }
   .dam-asset-preview__frame {
-    height: calc(100dvh - 220px);
+    height: 60dvh;
   }
 }
 .dam-asset-layout__side {
   align-items: stretch;
+}
+
+.dam-asset-layout__preview {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-5);
+}
+
+/* File information: read-only facts about the current file, grouped, laid out as label/value pairs. */
+.dam-fileinfo {
+  background: var(--dam-surface);
+  border: 1px solid var(--dam-border);
+  border-radius: var(--dam-radius);
+  padding: var(--dam-space-4) var(--dam-space-5);
+}
+.dam-fileinfo__title {
+  margin: 0 0 var(--dam-space-3);
+  font-size: var(--dam-text-lg);
+}
+.dam-fileinfo__groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--dam-space-5);
+}
+.dam-fileinfo__group-title {
+  margin: 0 0 var(--dam-space-2);
+  font-size: var(--dam-text-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dam-muted);
+}
+.dam-facts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dam-facts__row {
+  display: grid;
+  grid-template-columns: minmax(110px, 40%) 1fr;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-2) 0;
+  border-bottom: 1px solid var(--dam-border);
+}
+.dam-facts__row:last-child {
+  border-bottom: 0;
+}
+.dam-facts dt {
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+.dam-facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--dam-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.dam-facts__mono {
+  font-family: var(--dam-font-mono, ui-monospace, monospace);
+}
+.dam-asset-summary {
+  margin: 0;
+  color: var(--dam-muted);
+  font-variant-numeric: tabular-nums;
 }

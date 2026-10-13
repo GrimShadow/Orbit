@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Badge, Button, Input, LoadingRegion, Skeleton, Tabs } from '../../ui';
 import { AssetPreview } from './AssetPreview';
+import { AssetSummary, FileInfo } from './FileInfo';
 import { useAsset, useUpdateAsset } from './assetApi';
 import { LifecycleActions } from './LifecycleActions';
 import { MetadataForm } from './MetadataForm';
@@ -67,12 +68,14 @@ export function AssetDetailPage() {
         <Badge>{t(`library.status.${asset.status}`)}</Badge>
         <Badge>{t(`library.type.${asset.type}`)}</Badge>
       </div>
+      <AssetSummary assetId={asset.id} />
 
       <div className="dam-asset-layout">
         <div className="dam-asset-layout__preview">
           <div className="dam-asset-preview">
             <AssetPreview assetId={asset.id} type={asset.type} title={asset.title} status={asset.status} />
           </div>
+          <FileInfo asset={asset} />
         </div>
         <div className="dam-asset-layout__side dam-stack">
           <LifecycleActions assetId={asset.id} status={asset.status} />
