@@ -17,7 +17,9 @@ public sealed record SetLegalHoldRequest(bool Hold);
 public sealed record InitiateUploadRequest(string FileName, long Size, string? ContentType, bool AllowDuplicate = false, string? Sha256 = null);
 public sealed record PartNumbersRequest(IReadOnlyList<int> PartNumbers);
 public sealed record CompleteUploadRequest(IReadOnlyList<PartEtag>? Parts = null, string? Sha256 = null);
-public sealed record BulkUploadRequest(Guid? FolderId, Guid? BatchId, JsonElement? Metadata, IReadOnlyList<string>? Tags, IReadOnlyList<BulkFileRequest> Files);
+public sealed record BulkUploadRequest(
+    Guid? FolderId, Guid? BatchId, JsonElement? Metadata, IReadOnlyList<string>? Tags, IReadOnlyList<BulkFileRequest> Files,
+    IReadOnlyDictionary<string, JsonElement>? MetadataByType = null);
 public sealed record ThumbnailLinksBatchRequest(IReadOnlyList<Guid> AssetIds);
 
 public static class AssetEndpoints
@@ -89,7 +91,7 @@ public static class AssetEndpoints
             .WithName("InitiateUpload").WithSummary("Open a resumable multipart upload; returns presigned part URLs. File bytes go straight to storage")
             .Produces<UploadStartDto>(StatusCodes.Status201Created);
         assets.MapPost("/bulk-upload", (BulkUploadRequest r, IDispatcher d, CancellationToken ct) =>
-                Run(d, new BulkUploadCommand(r.FolderId, r.BatchId, r.Metadata, r.Tags, r.Files), v => Task.FromResult(Results.Ok(v)), ct))
+                Run(d, new BulkUploadCommand(r.FolderId, r.BatchId, r.Metadata, r.Tags, r.Files, r.MetadataByType), v => Task.FromResult(Results.Ok(v)), ct))
             .WithName("BulkUpload").WithSummary("One draft asset and one upload per file, all sharing the batch metadata and tags. Failures are per file")
             .Produces<BulkUploadResultDto>();
 

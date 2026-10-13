@@ -49,6 +49,9 @@ public static class UploadPolicy
 
     public static bool IsBlocked(string fileName) => Blocked.Contains(Extension(fileName));
 
+    /// <summary>The asset types a file can be created as: the typed ones above, plus the catch-all "other".</summary>
+    public static bool IsKnownType(string assetType) => assetType == "other" || Extensions.ContainsKey(assetType);
+
     public static bool IsAllowed(string assetType, string fileName)
     {
         var ext = Extension(fileName);

@@ -422,6 +422,42 @@ public sealed class UploadTests(PostgresFixture pg, RabbitFixture mq) : AssetTes
     }
 
     [Fact]
+    public async Task Bulk_upload_lets_each_file_choose_its_type_and_title_and_each_type_its_own_metadata()
+    {
+        var (t, admin, folder) = await Setup();
+        var res = await Call(HttpMethod.Post, "/api/v1/assets/bulk-upload", admin, new
+        {
+            folderId = folder,
+            metadataByType = new { image = new { credit = "Agency X" } },
+            files = new object[]
+            {
+                new { fileName = "site.zip", size = 100L, assetType = "html5", title = "Spring microsite" },     // a .zip is ambiguous; the uploader chose
+                new { fileName = "guide.pdf", size = 100L, assetType = "manual" },                               // a pdf defaults to document
+                new { fileName = "hero.jpg", size = 100L, title = "  Hero shot  " },
+                new { fileName = "plain.zip", size = 100L },                                                       // unchosen, a zip stays "other"
+                new { fileName = "photo.png", size = 100L, assetType = "video" },                                  // wrong for the extension
+                new { fileName = "odd.jpg", size = 100L, assetType = "banana" },                                   // not a type at all
+            },
+        });
+        Assert.Equal(HttpStatusCode.OK, res.Status);
+        var items = res.Body.GetProperty("items").EnumerateArray().ToList();
+        Assert.Equal(4, res.Body.GetProperty("created").GetInt32());
+        Assert.Contains("cannot be uploaded as video", items[4].GetProperty("error").GetString());
+        Assert.Contains("Unknown asset type", items[5].GetProperty("error").GetString());
+
+        async Task<JsonElement> Asset(int i) => (await Call(HttpMethod.Get, $"/api/v1/assets/{items[i].GetProperty("assetId").GetGuid()}", admin)).Body;
+        var site = await Asset(0);
+        Assert.Equal(("html5", "Spring microsite"), (site.GetProperty("type").GetString(), site.GetProperty("title").GetString()));
+        var guide = await Asset(1);
+        Assert.Equal(("manual", "guide"), (guide.GetProperty("type").GetString(), guide.GetProperty("title").GetString()));      // no title given -> file name
+        var hero = await Asset(2);
+        Assert.Equal("Hero shot", hero.GetProperty("title").GetString());                                                          // trimmed
+        Assert.Equal("Agency X", hero.GetProperty("metadata").GetProperty("credit").GetString());                                  // image got its own metadata
+        Assert.Equal("other", (await Asset(3)).GetProperty("type").GetString());                                                   // unchosen, a zip stays "other"
+        Assert.NotEqual("Agency X", site.GetProperty("metadata").TryGetProperty("credit", out var c) ? c.GetString() : null);      // html5 did not get the image-only value
+    }
+
+    [Fact]
     public async Task Bulk_upload_reports_bad_batch_metadata_per_file_and_enforces_its_limits()
     {
         var (tenant, admin, folder) = await Setup();

@@ -1076,6 +1076,10 @@ export interface components {
             /** Format: int64 */
             size: number;
             contentType: string | null;
+            /** @default null */
+            assetType: string | null;
+            /** @default null */
+            title: string | null;
         };
         BulkUploadItemDto: {
             fileName: string;
@@ -1092,6 +1096,8 @@ export interface components {
             metadata: components["schemas"]["NullableOfJsonElement"];
             tags: string[] | null;
             files: components["schemas"]["BulkFileRequest"][];
+            /** @default null */
+            metadataByType: Record<string, never> | null;
         };
         BulkUploadResultDto: {
             /** Format: uuid */

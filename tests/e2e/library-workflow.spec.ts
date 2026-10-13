@@ -32,7 +32,7 @@ test('uploads an asset, edits its metadata, publishes it, and it appears in sear
   await page.goto('/upload');
   await page.locator('input[type="file"]').setInputFiles({ name: fileName, mimeType: 'image/png', buffer: uniquePng(seed) });
   await expect(page.getByText(fileName)).toBeVisible();
-  await page.getByRole('button', { name: 'Start upload' }).click();
+  await page.getByRole('button', { name: /^Upload \d+ files?$/ }).click();
   await expect(page.getByRole('link', { name: 'Go to the library' })).toBeVisible({ timeout: 30_000 });
 
   // Find the freshly-uploaded asset via search and confirm it landed as a draft image asset before editing it.
@@ -90,7 +90,7 @@ test('bulk edits 50 assets in under 5 seconds', async ({ page }) => {
   await page.goto('/upload');
   await page.locator('input[type="file"]').setInputFiles(files);
   await page.getByRole('textbox', { name: 'Tags' }).fill(runId);
-  await page.getByRole('button', { name: 'Start upload' }).click();
+  await page.getByRole('button', { name: /^Upload \d+ files?$/ }).click();
   await expect(page.getByRole('link', { name: 'Go to the library' })).toBeVisible({ timeout: 60_000 });
 
   await page.goto('/library');

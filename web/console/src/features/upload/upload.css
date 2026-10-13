@@ -1,24 +1,80 @@
+.dam-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-5);
+}
+.dam-upload__header h1 {
+  margin: 0 0 var(--dam-space-1);
+}
+.dam-upload__header p {
+  margin: 0;
+  max-width: 70ch;
+}
+.dam-upload__formwrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-5);
+}
+
+/* Drop zone */
 .dam-dropzone {
   position: relative;
   border: 2px dashed var(--dam-border);
-  border-radius: var(--dam-radius);
-  padding: var(--dam-space-6);
+  border-radius: var(--dam-radius-lg);
+  background: var(--dam-surface);
+  padding: var(--dam-space-8, 48px) var(--dam-space-6);
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: var(--dam-space-1);
+  align-items: center;
+  gap: var(--dam-space-3);
+  transition:
+    border-color var(--dam-duration) var(--dam-ease),
+    background-color var(--dam-duration) var(--dam-ease);
 }
-
+.dam-dropzone:hover {
+  border-color: var(--dam-brand);
+}
 .dam-dropzone--active {
   border-color: var(--dam-brand);
   background: var(--dam-surface-2);
 }
-
+.dam-dropzone--compact {
+  flex-direction: row;
+  justify-content: center;
+  padding: var(--dam-space-4) var(--dam-space-5);
+}
+.dam-dropzone__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: var(--dam-surface-2);
+  color: var(--dam-brand);
+}
+.dam-dropzone--compact .dam-dropzone__icon {
+  width: 40px;
+  height: 40px;
+}
 .dam-dropzone__label {
   display: flex;
   flex-direction: column;
   gap: var(--dam-space-1);
   cursor: pointer;
+}
+.dam-dropzone__label strong {
+  font-size: var(--dam-text-lg);
+}
+.dam-dropzone--compact .dam-dropzone__label {
+  align-items: flex-start;
+  text-align: start;
+}
+.dam-dropzone--compact .dam-dropzone__label strong {
+  font-size: var(--dam-text-md);
+}
+.dam-dropzone__detail {
+  max-width: 60ch;
 }
 
 /* Visually hidden but still focusable/clickable, so keyboard and screen-reader users get the native file picker. */
@@ -30,22 +86,80 @@
   opacity: 0;
   cursor: pointer;
 }
+.dam-dropzone:focus-within {
+  outline: 3px solid var(--dam-focus);
+  outline-offset: 2px;
+}
 
-.dam-upload__done {
+.dam-upload__notice {
+  margin: 0;
+  padding: var(--dam-space-2) var(--dam-space-3);
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-surface-2);
+  font-size: var(--dam-text-sm);
+}
+
+/* Queue + side panel */
+.dam-upload__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--dam-space-5);
+  align-items: start;
+}
+@media (min-width: 1100px) {
+  .dam-upload__layout {
+    grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr);
+  }
+}
+.dam-upload__sectionhead {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--dam-space-4);
   align-items: center;
+  justify-content: space-between;
+  gap: var(--dam-space-3);
+  margin-bottom: var(--dam-space-3);
 }
-
-.dam-upload__form {
+.dam-upload__sectionhead h2,
+.dam-upload__card h2,
+.dam-upload__progresscard h2 {
+  margin: 0;
+  font-size: var(--dam-text-lg);
+}
+.dam-upload__side {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: var(--dam-space-4);
-  align-items: flex-end;
+  min-width: 0;
+}
+.dam-upload__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-4) var(--dam-space-5);
+  background: var(--dam-surface);
+  border: 1px solid var(--dam-border);
+  border-radius: var(--dam-radius);
+}
+.dam-upload__card > .dam-hint {
+  margin: 0;
+}
+.dam-upload__details {
+  border-top: 1px solid var(--dam-border);
+  padding-top: var(--dam-space-3);
+}
+.dam-upload__details summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--dam-space-3);
+  cursor: pointer;
+  font-weight: 600;
+}
+.dam-upload__details-body {
+  margin-top: var(--dam-space-3);
+  align-items: stretch;
 }
 
-.dam-upload__list {
+.dam-queue {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -53,34 +167,190 @@
   flex-direction: column;
   gap: var(--dam-space-2);
 }
-
-.dam-upload__item {
+.dam-queue__row {
   display: flex;
   align-items: center;
   gap: var(--dam-space-3);
-  padding: var(--dam-space-2);
+  padding: var(--dam-space-3);
+  background: var(--dam-surface);
   border: 1px solid var(--dam-border);
-  border-radius: var(--dam-radius-sm);
+  border-radius: var(--dam-radius);
 }
-
-.dam-upload__name {
+.dam-queue__row--problem {
+  border-color: var(--dam-danger);
+  background: color-mix(in srgb, var(--dam-danger) 6%, var(--dam-surface));
+}
+.dam-queue__thumb {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-surface-2);
+  color: var(--dam-muted);
+}
+.dam-queue__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dam-queue__main {
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-1);
+}
+.dam-queue__title {
+  width: 100%;
+  font-weight: 600;
+}
+.dam-queue__resulttitle {
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.dam-queue__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dam-space-2) var(--dam-space-3);
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.dam-queue__filename {
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-queue__type {
+  width: auto;
+  min-width: 0;
+  padding-block: 2px;
+  font-size: var(--dam-text-sm);
+}
+.dam-queue__problem {
+  margin: 0;
+  color: var(--dam-danger);
+  font-size: var(--dam-text-sm);
+}
+.dam-queue__remove {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dam-muted);
+  cursor: pointer;
+  transition: color var(--dam-duration) var(--dam-ease);
+}
+.dam-queue__remove:hover {
+  color: var(--dam-danger);
+}
+.dam-queue__remove:focus-visible {
+  outline: 3px solid var(--dam-focus);
+}
+.dam-queue__progress {
+  width: 100%;
+}
+.dam-queue__status {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--dam-space-2);
+}
+.dam-queue__ok {
+  color: var(--dam-success);
+}
+.dam-queue__bad {
+  color: var(--dam-danger);
+}
 
-.dam-upload__item progress {
-  flex: 0 0 120px;
+/* Sticky action bar: the summary and the Upload button stay in reach however long the list gets. */
+.dam-upload__bar {
+  position: sticky;
+  bottom: var(--dam-space-3);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3) var(--dam-space-4);
+  background: var(--dam-surface);
+  border: 1px solid var(--dam-border);
+  border-radius: var(--dam-radius);
+  box-shadow: var(--dam-shadow);
+}
+.dam-upload__summary {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--dam-space-2) var(--dam-space-4);
+}
+.dam-upload__problemcount {
+  color: var(--dam-danger);
+  font-size: var(--dam-text-sm);
+}
+
+/* Results */
+.dam-upload__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+}
+.dam-upload__progresscard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+  padding: var(--dam-space-4) var(--dam-space-5);
+  background: var(--dam-surface);
+  border: 1px solid var(--dam-border);
+  border-radius: var(--dam-radius);
+}
+.dam-upload__progresscard progress {
+  width: 100%;
+  height: 10px;
+}
+.dam-upload__progresscard p {
+  margin: 0;
+}
+.dam-upload__done {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-3);
+  align-items: center;
+}
+.dam-upload__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-4);
+  align-items: flex-end;
 }
 
 @media (max-width: 640px) {
-  .dam-upload__item {
+  .dam-dropzone {
+    padding: var(--dam-space-6) var(--dam-space-4);
+  }
+  /* Only result rows (which carry a status column) stack; a queue row keeps its thumbnail beside the title. */
+  .dam-queue__row:has(.dam-queue__status) {
     flex-wrap: wrap;
   }
-
-  .dam-upload__item progress {
+  .dam-queue__status {
     flex-basis: 100%;
+    justify-content: flex-start;
+  }
+  .dam-upload__bar {
+    bottom: 0;
   }
 }

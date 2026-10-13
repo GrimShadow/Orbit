@@ -237,10 +237,13 @@ public sealed class AbortUploadHandler(
 
 /// <summary>
 /// Creates one draft asset per file, all in the same folder with the same batch metadata and tags, and opens an upload
-/// for each. Failures are reported per file, so 199 good files are not lost to one bad one.
+/// for each. Failures are reported per file, so 199 good files are not lost to one bad one. A file may name its own asset
+/// type and title; <c>MetadataByType</c> replaces the shared <c>Metadata</c> for the types it lists (a form can only offer
+/// fields that exist in one type's schema, so a mixed batch needs one document per type).
 /// </summary>
-public sealed record BulkUploadCommand(Guid? FolderId, Guid? BatchId, JsonElement? Metadata, IReadOnlyList<string>? Tags, IReadOnlyList<BulkFileRequest> Files)
-    : ICommand<BulkUploadResultDto>;
+public sealed record BulkUploadCommand(
+    Guid? FolderId, Guid? BatchId, JsonElement? Metadata, IReadOnlyList<string>? Tags, IReadOnlyList<BulkFileRequest> Files,
+    IReadOnlyDictionary<string, JsonElement>? MetadataByType = null) : ICommand<BulkUploadResultDto>;
 
 public sealed class BulkUploadValidator : AbstractValidator<BulkUploadCommand>
 {
@@ -279,15 +282,22 @@ public sealed class BulkUploadHandler(
             var name = UploadPolicy.CleanFileName(file.FileName);
             var type = UploadPolicy.InferType(name);
             if (type is null) { items.Add(new(file.FileName, null, null, "This file type is not accepted.")); continue; }
+            if (file.AssetType is { Length: > 0 } requested)
+            {
+                requested = requested.Trim().ToLowerInvariant();
+                if (!UploadPolicy.IsKnownType(requested)) { items.Add(new(file.FileName, null, null, $"Unknown asset type '{requested}'.")); continue; }
+                if (!UploadPolicy.IsAllowed(requested, name)) { items.Add(new(file.FileName, null, null, $"A .{UploadPolicy.Extension(name)} file cannot be uploaded as {requested}.")); continue; }
+                type = requested;
+            }
 
             if (!await authz.CanAsync(Permissions.AssetsCreate, new ResourceContext { Type = "asset", FolderPath = folder?.Path, AssetType = type, OwnerId = profile.UserId, Status = AssetStatuses.Draft }, ct))
                 return Error.Forbidden();
 
             if (!built.TryGetValue(type, out var meta))
-                built[type] = meta = await builder.BuildAsync(type, folder, c.Metadata, requireFields: false, ct);
+                built[type] = meta = await builder.BuildAsync(type, folder, c.MetadataByType is { } perType && perType.TryGetValue(type, out var own) ? own : c.Metadata, requireFields: false, ct);
             if (meta.IsFailure) { items.Add(new(file.FileName, null, null, $"Batch metadata is not valid for {type} assets: {Describe(meta.Error)}")); continue; }
 
-            var title = Path.GetFileNameWithoutExtension(name);
+            var title = file.Title?.Trim() is { Length: > 0 } given ? given : Path.GetFileNameWithoutExtension(name);
             var asset = Asset.CreateShell(tenant.TenantId, folder?.Id, type, title.Length == 0 ? name : title[..Math.Min(title.Length, 300)], profile.UserId, now);
             asset.SetMetadata(meta.Value.Metadata, meta.Value.SchemaVersion, meta.Value.Projection, now);
             if (tags is not null) asset.SetTags(tags, now);
