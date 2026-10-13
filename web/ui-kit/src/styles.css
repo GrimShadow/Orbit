@@ -110,6 +110,13 @@ body {
 a:not([class]) {
   color: var(--dam-brand);
 }
+/* Native progress bars take the brand colour rather than the browser's default blue. */
+progress {
+  accent-color: var(--dam-brand);
+}
+a.dam-btn {
+  text-decoration: none;
+}
 .dam-sr-only {
   position: absolute;
   width: 1px;

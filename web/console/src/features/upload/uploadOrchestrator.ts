@@ -23,7 +23,7 @@ export async function uploadFile(
   file: File,
   start: UploadStart,
   onProgress: (fraction: number) => void,
-): Promise<{ status: string; error?: string }> {
+): Promise<{ status: string; error?: string; duplicateOfAssetId?: string }> {
   const { id: uploadId, partSize, partCount } = start.upload;
   const urlByPart = new Map(start.parts.map((p) => [p.partNumber, p.url]));
 
@@ -61,5 +61,5 @@ export async function uploadFile(
     await new Promise((resolve) => setTimeout(resolve, 500));
     latest = unwrap(await api.GET('/api/v1/uploads/{id}', { params: { path: { id: uploadId } } }));
   }
-  return { status: latest.status, error: latest.error || undefined };
+  return { status: latest.status, error: latest.error || undefined, duplicateOfAssetId: latest.duplicateOfAssetId ?? undefined };
 }

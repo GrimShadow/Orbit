@@ -28,7 +28,10 @@ public sealed record UploadDto(
 /// <summary>An open upload with its first presigned part URLs. Ask for more with POST /uploads/{id}/parts.</summary>
 public sealed record UploadStartDto(UploadDto Upload, IReadOnlyList<PartUrlDto> Parts);
 
-public sealed record BulkFileRequest(string FileName, long Size, string? ContentType);
+/// <param name="AssetType">Optional: the type to create this file as. Omitted, it is guessed from the extension - which cannot
+/// tell an HTML5 bundle from a 3D package or a manual (all .zip), or a document from a manual (both .pdf).</param>
+/// <param name="Title">Optional: the asset's title. Omitted, it is the file name without its extension.</param>
+public sealed record BulkFileRequest(string FileName, long Size, string? ContentType, string? AssetType = null, string? Title = null);
 
 public sealed record BulkUploadItemDto(string FileName, Guid? AssetId, UploadStartDto? Upload, string? Error);
 

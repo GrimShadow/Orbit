@@ -3380,6 +3380,16 @@
           "contentType": {
             "type": "string",
             "nullable": true
+          },
+          "assetType": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "default": null,
+            "nullable": true
           }
         }
       },
@@ -3444,6 +3454,11 @@
             "items": {
               "$ref": "#/components/schemas/BulkFileRequest"
             }
+          },
+          "metadataByType": {
+            "type": "object",
+            "default": null,
+            "nullable": true
           }
         }
       },

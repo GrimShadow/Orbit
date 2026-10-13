@@ -182,8 +182,13 @@ describe('keyboard shortcuts', () => {
     });
     renderAt('/upload', signedIn);
     await screen.findByRole('heading', { name: 'Upload' });
+    // The destination form (with its Tags field) appears once there is a file to put somewhere.
+    await userEvent.upload(
+      document.querySelector('input[type="file"]') as HTMLInputElement,
+      new File(['x'], 'a.jpg', { lastModified: 1 }),
+    );
 
-    await userEvent.type(screen.getByLabelText('Tags'), 'library');
+    await userEvent.type(await screen.findByLabelText('Tags'), 'library');
     expect(screen.getByRole('heading', { name: 'Upload' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Library' })).not.toBeInTheDocument();
   });
