@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { ContextMenu, type MenuItem } from './Menu';
 
 export interface TreeNode {
   id: string;
@@ -12,6 +13,10 @@ interface TreeProps {
   selectedId?: string;
   onSelect?: (id: string) => void;
   defaultExpanded?: string[];
+  /** Right-click (and the keyboard context-menu key) on a node opens these actions; none -> the browser's own menu. */
+  nodeActions?: (id: string) => MenuItem[];
+  menuLabel?: (nodeLabel: string) => string;
+  onMenuOpen?: (id: string) => void;
 }
 
 interface Flat {
@@ -21,7 +26,17 @@ interface Flat {
 }
 
 /** WAI-ARIA tree: roving tabindex, ↑↓ move, → expand/enter, ← collapse/parent, Home/End, Enter/Space select. */
-export function Tree({ nodes, label, selectedId, onSelect, defaultExpanded = [] }: TreeProps) {
+export function Tree({
+  nodes,
+  label,
+  selectedId,
+  onSelect,
+  defaultExpanded = [],
+  nodeActions,
+  menuLabel = (l) => l,
+  onMenuOpen,
+}: TreeProps) {
+  const [context, setContext] = useState<{ id: string; x: number; y: number } | null>(null);
   const [expanded, setExpanded] = useState(() => new Set(defaultExpanded));
   const [focusId, setFocusId] = useState(selectedId ?? nodes[0]?.id);
   const root = useRef<HTMLUListElement>(null);
@@ -113,7 +128,16 @@ export function Tree({ nodes, label, selectedId, onSelect, defaultExpanded = [] 
             focus(n.id);
           }}
         >
-          <div className="dam-treeitem__row">
+          <div
+            className="dam-treeitem__row"
+            onContextMenu={(e) => {
+              if (!nodeActions || nodeActions(n.id).length === 0) return;
+              e.preventDefault();
+              e.stopPropagation();
+              onMenuOpen?.(n.id);
+              setContext({ id: n.id, x: e.clientX, y: e.clientY });
+            }}
+          >
             <span className="dam-caret" aria-hidden="true">
               {hasKids ? (open ? '▾' : '▸') : ''}
             </span>
@@ -127,6 +151,15 @@ export function Tree({ nodes, label, selectedId, onSelect, defaultExpanded = [] 
   return (
     <ul ref={root} role="tree" aria-label={label} className="dam-tree">
       {render(nodes, 1)}
+      {context && nodeActions && (
+        <ContextMenu
+          x={context.x}
+          y={context.y}
+          label={menuLabel(visible.find((v) => v.node.id === context.id)?.node.label ?? '')}
+          items={nodeActions(context.id)}
+          onClose={() => setContext(null)}
+        />
+      )}
     </ul>
   );
 }

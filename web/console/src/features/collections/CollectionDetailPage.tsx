@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Input, LoadingRegion, Modal, Select, Skeleton, ThumbnailGrid } from '../../ui';
 import { useThumbnailLinks } from '../asset/assetApi';
-import { useCardActions } from '../library/cardActions';
+import { useItemActions } from '../library/itemActions';
 import { toAssetThumb } from '../library/assetThumb';
 import {
   useCollection,
@@ -45,7 +45,8 @@ export function CollectionDetailPage() {
   const [cursor, setCursor] = useState<string | undefined>();
   const contentsQuery = useCollectionContents(id!, cursor);
   const thumbnailLinks = useThumbnailLinks(contentsQuery.data?.hits.map((h) => h.id) ?? []);
-  const cardActions = useCardActions(contentsQuery.data?.hits ?? []);
+  const itemActions = useItemActions();
+  const hitById = (id: string) => contentsQuery.data?.hits.find((h) => h.id === id);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (collectionQuery.isPending)
@@ -101,7 +102,14 @@ export function CollectionDetailPage() {
             items={contentsQuery.data.hits.map((h) => toAssetThumb(t, i18n.language, h, thumbnailLinks.data?.[h.id]))}
             label={t('collections.contentsLabel')}
             onOpen={(assetId) => navigate(`/library/assets/${assetId}`)}
-            cardActions={cardActions}
+            cardActions={(assetId) => {
+              const hit = hitById(assetId);
+              return hit ? itemActions.assetMenu(hit) : [];
+            }}
+            onMenuOpen={(assetId) => {
+              const hit = hitById(assetId);
+              if (hit) itemActions.prefetchAsset(hit);
+            }}
             menuLabel={(title) => t('library.card.actionsFor', { title })}
           />
           {contentsQuery.data.nextCursor && (
@@ -131,6 +139,7 @@ export function CollectionDetailPage() {
           </Button>
         </div>
       </Modal>
+      {itemActions.dialogs}
     </div>
   );
 }

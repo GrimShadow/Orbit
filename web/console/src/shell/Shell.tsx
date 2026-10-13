@@ -1,3 +1,4 @@
+import { ThemeSwitcher } from './ThemeSwitcher';
 import { Button, Modal, Select } from '@dam/ui-kit';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -164,6 +165,7 @@ export function Shell() {
         <div className="dam-header__tools">
           {auth.status === 'authenticated' && <TenantSwitcher />}
           <LanguageSwitcher />
+          <ThemeSwitcher />
           {auth.status === 'authenticated' && <KeyboardShortcuts />}
           <UserMenu />
         </div>

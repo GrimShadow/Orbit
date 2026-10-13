@@ -92,6 +92,40 @@
   margin: 0;
   font-size: var(--dam-text-xl);
 }
+.dam-theme {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--dam-border);
+  border-radius: 999px;
+  background: var(--dam-surface);
+}
+.dam-theme__btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dam-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--dam-duration) var(--dam-ease),
+    color var(--dam-duration) var(--dam-ease);
+}
+.dam-theme__btn:hover {
+  color: var(--dam-text);
+}
+.dam-theme__btn[aria-pressed='true'] {
+  background: var(--dam-brand);
+  color: var(--dam-on-brand);
+}
+.dam-theme__btn:focus-visible {
+  outline: 3px solid var(--dam-focus);
+  outline-offset: 1px;
+}
 .dam-usermenu {
   position: relative;
 }

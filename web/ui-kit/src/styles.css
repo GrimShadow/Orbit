@@ -71,7 +71,11 @@
     --dam-focus: #93c5fd;
   }
 }
+:root[data-theme='light'] {
+  color-scheme: light;
+}
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --dam-bg: #0b1020;
   --dam-surface: #131a2e;
   --dam-surface-2: #1b2440;
@@ -577,19 +581,44 @@ a.dam-btn {
   position: absolute;
   top: calc(100% + 4px);
   inset-inline-end: 0;
-  min-width: 200px;
+  z-index: 3;
+}
+
+/* Shared by the "..." menu, the right-click menu and submenus. */
+.dam-menu {
+  position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 220px;
   padding: var(--dam-space-1);
   background: var(--dam-surface);
   border: 1px solid var(--dam-border);
   border-radius: var(--dam-radius);
   box-shadow: var(--dam-shadow);
 }
-.dam-cardmenu__item {
+.dam-menu--sub {
+  position: absolute;
+  top: calc(-1 * var(--dam-space-1) - 1px);
+  inset-inline-start: calc(100% - 4px);
+  z-index: 1;
+}
+.dam-menu--sub.dam-menu--flip {
+  inset-inline-start: auto;
+  inset-inline-end: calc(100% - 4px);
+}
+.dam-menu__entry {
+  position: relative;
+}
+.dam-menu__sep {
+  height: 1px;
+  margin: var(--dam-space-1) calc(-1 * var(--dam-space-1));
+  background: var(--dam-border);
+}
+.dam-menu__item {
   display: flex;
   align-items: center;
   gap: var(--dam-space-2);
+  width: 100%;
   padding: var(--dam-space-2) var(--dam-space-3);
   border: 0;
   border-radius: var(--dam-radius-sm);
@@ -600,13 +629,36 @@ a.dam-btn {
   text-align: start;
   cursor: pointer;
 }
-.dam-cardmenu__item:hover,
-.dam-cardmenu__item:focus-visible {
+.dam-menu__item:hover,
+.dam-menu__item:focus-visible,
+.dam-menu__item[aria-expanded='true'] {
   background: var(--dam-surface-2);
   outline: none;
 }
-.dam-cardmenu__item--danger {
+.dam-menu__item:disabled {
+  color: var(--dam-muted);
+  cursor: default;
+  background: transparent;
+}
+.dam-menu__item--danger {
   color: var(--dam-danger);
+}
+.dam-menu__lead {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  flex: 0 0 16px;
+}
+.dam-menu__label {
+  flex: 1 1 auto;
+}
+.dam-menu__caret {
+  flex: 0 0 auto;
+  color: var(--dam-muted);
+}
+.dam-contextmenu {
+  position: fixed;
+  z-index: 3000;
 }
 .dam-thumb__select-wrap {
   position: absolute;

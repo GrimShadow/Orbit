@@ -1,0 +1,45 @@
+import { useCallback, useSyncExternalStore } from 'react';
+
+export type ThemePreference = 'light' | 'dark' | 'system';
+const KEY = 'dam.theme';
+const listeners = new Set<() => void>();
+
+export function readTheme(): ThemePreference {
+  try {
+    const v = localStorage.getItem(KEY);
+    return v === 'light' || v === 'dark' ? v : 'system';
+  } catch {
+    return 'system'; // storage can be unavailable (private windows, blocked site data) - follow the OS
+  }
+}
+
+/** Light and dark pin `data-theme` on <html> (the design tokens key off it); system removes it so the OS preference
+ * (`prefers-color-scheme`) decides. */
+export function applyTheme(preference: ThemePreference) {
+  const root = document.documentElement;
+  if (preference === 'system') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', preference);
+}
+
+export function setTheme(preference: ThemePreference) {
+  try {
+    if (preference === 'system') localStorage.removeItem(KEY);
+    else localStorage.setItem(KEY, preference);
+  } catch {
+    /* the choice still applies for this visit */
+  }
+  applyTheme(preference);
+  cache = preference;
+  listeners.forEach((l) => l());
+}
+
+let cache: ThemePreference | undefined;
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => listeners.delete(l);
+};
+
+export function useTheme(): [ThemePreference, (p: ThemePreference) => void] {
+  const preference = useSyncExternalStore(subscribe, () => (cache ??= readTheme()));
+  return [preference, useCallback((p: ThemePreference) => setTheme(p), [])];
+}

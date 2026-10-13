@@ -1,8 +1,10 @@
 import { unwrap, type components } from '@dam/sdk-js';
 import type { BreadcrumbItem, SelectOption, TreeNode } from '@dam/ui-kit';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApiClient } from '../../api/apiClient';
 
+/** `name` is the folder's display name (renameable); `label` is its slug, the immutable segment of its dotted `path` -
+ * so anything shown to a person uses `name`. */
 export type FolderDto = components['schemas']['FolderDto'];
 
 export function useFolders() {
@@ -28,7 +30,7 @@ export function buildFolderTree(folders: readonly FolderDto[]): TreeNode[] {
   for (const siblings of byParent.values()) siblings.sort((a, b) => a.name.localeCompare(b.name));
 
   const build = (parentKey: string): TreeNode[] =>
-    (byParent.get(parentKey) ?? []).map((folder) => ({ id: folder.id, label: folder.label, children: build(folder.id) }));
+    (byParent.get(parentKey) ?? []).map((folder) => ({ id: folder.id, label: folder.name, children: build(folder.id) }));
   return build('');
 }
 
@@ -37,7 +39,7 @@ export function buildFolderTree(folders: readonly FolderDto[]): TreeNode[] {
 export function folderOptions(folders: readonly FolderDto[]): SelectOption[] {
   return [...folders]
     .sort((a, b) => a.path.localeCompare(b.path))
-    .map((folder) => ({ value: folder.id, label: `${'—'.repeat(folder.path.split('.').length - 1)} ${folder.label}`.trim() }));
+    .map((folder) => ({ value: folder.id, label: `${'—'.repeat(folder.path.split('.').length - 1)} ${folder.name}`.trim() }));
 }
 
 /** The ancestor chain (root-first) for the currently-selected folder, for a breadcrumb trail above the library grid -
@@ -48,7 +50,35 @@ export function folderBreadcrumb(folders: readonly FolderDto[], folderId: string
   const byId = new Map(folders.map((f) => [f.id, f]));
   const chain: BreadcrumbItem[] = [];
   for (let current = byId.get(folderId); current; current = current.parentId ? byId.get(current.parentId) : undefined) {
-    chain.unshift({ id: current.id, label: current.label });
+    chain.unshift({ id: current.id, label: current.name });
   }
   return chain;
+}
+
+/** Folder create / rename / delete - the backend has always had these (`POST/PATCH/DELETE /folders`); the console just
+ * had no way to reach them. Each refreshes the folder list so the tree, breadcrumb and pickers all update. */
+export function useFolderMutations() {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['folders'] });
+  const create = useMutation({
+    mutationFn: async ({ name, parentId }: { name: string; parentId: string | null }) =>
+      unwrap(await api.POST('/api/v1/folders', { body: { parentId, name, label: null, inheritedMetadata: null } })),
+    onSuccess: refresh,
+  });
+  const rename = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) =>
+      unwrap(
+        await api.PATCH('/api/v1/folders/{id}', {
+          params: { path: { id } },
+          body: { name, inheritedMetadata: null, defaultWorkflowId: null, clearDefaultWorkflow: false },
+        }),
+      ),
+    onSuccess: refresh,
+  });
+  const remove = useMutation({
+    mutationFn: async (id: string) => unwrap(await api.DELETE('/api/v1/folders/{id}', { params: { path: { id } } })),
+    onSuccess: refresh,
+  });
+  return { create, rename, remove };
 }

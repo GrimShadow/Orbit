@@ -1,6 +1,8 @@
 import { Check } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { CardMenu, type CardAction } from './CardMenu';
+import { ContextMenu } from './Menu';
 
 export interface Thumb {
   id: string;
@@ -24,6 +26,8 @@ interface ThumbnailGridProps {
   /** Per-card quick actions, shown behind a "..." menu on the card; omit (or return none) for no menu. */
   cardActions?: (id: string) => CardAction[];
   menuLabel?: (title: string) => string;
+  /** Called when a card's menu (button or right-click) opens - e.g. to load what its items depend on. */
+  onMenuOpen?: (id: string) => void;
 }
 
 export function ThumbnailGrid({
@@ -35,13 +39,25 @@ export function ThumbnailGrid({
   selectLabel = (t) => `Select ${t}`,
   cardActions,
   menuLabel = (t) => `Actions for ${t}`,
+  onMenuOpen,
 }: ThumbnailGridProps) {
+  const [context, setContext] = useState<{ id: string; x: number; y: number } | null>(null);
+  const contextItem = context ? items.find((i) => i.id === context.id) : undefined;
   return (
     <ul className="dam-grid" aria-label={label}>
       {items.map((t) => {
         const isSelected = selectedIds?.includes(t.id) ?? false;
         return (
-          <li key={t.id} className={`dam-thumb${isSelected ? ' dam-thumb--selected' : ''}`}>
+          <li
+            key={t.id}
+            className={`dam-thumb${isSelected ? ' dam-thumb--selected' : ''}`}
+            onContextMenu={(e) => {
+              if (!cardActions || cardActions(t.id).length === 0) return;
+              e.preventDefault();
+              onMenuOpen?.(t.id);
+              setContext({ id: t.id, x: e.clientX, y: e.clientY });
+            }}
+          >
             {onToggleSelect && (
               <label className="dam-thumb__select-wrap">
                 <input
@@ -54,7 +70,7 @@ export function ThumbnailGrid({
                 <Check weight="bold" className="dam-thumb__select-check" aria-hidden="true" />
               </label>
             )}
-            {cardActions && <CardMenu label={menuLabel(t.title)} actions={cardActions(t.id)} />}
+            {cardActions && <CardMenu label={menuLabel(t.title)} actions={cardActions(t.id)} onOpen={() => onMenuOpen?.(t.id)} />}
             <button type="button" className="dam-thumb__open" onClick={() => onOpen?.(t.id)}>
               {t.imageUrl ? (
                 <img className="dam-thumb__img" src={t.imageUrl} alt="" loading="lazy" />
@@ -76,6 +92,15 @@ export function ThumbnailGrid({
           </li>
         );
       })}
+      {context && contextItem && cardActions && (
+        <ContextMenu
+          x={context.x}
+          y={context.y}
+          label={menuLabel(contextItem.title)}
+          items={cardActions(context.id)}
+          onClose={() => setContext(null)}
+        />
+      )}
     </ul>
   );
 }

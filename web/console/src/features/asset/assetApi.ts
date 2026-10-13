@@ -1,5 +1,5 @@
-import { unwrap, type components } from '@dam/sdk-js';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { unwrap, type ApiClient, type components } from '@dam/sdk-js';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApiClient } from '../../api/apiClient';
 
 export type AssetDto = components['schemas']['AssetDto'];
@@ -10,12 +10,34 @@ export type FieldDto = components['schemas']['FieldDto'];
 export type VocabularyDto = components['schemas']['VocabularyDto'];
 export type TermDto = components['schemas']['TermDto'];
 
-export function useAsset(id: string) {
-  const api = useApiClient();
-  return useQuery({
+/** Query definitions shared by the hooks below and by code that has to warm the same caches imperatively (the
+ * right-click menus fetch what their items depend on with `queryClient.fetchQuery`). */
+export const assetOptions = (api: ApiClient, id: string) =>
+  queryOptions({
     queryKey: ['asset', id],
     queryFn: async () => unwrap(await api.GET('/api/v1/assets/{id}', { params: { path: { id } } })),
   });
+export const schemaOptions = (api: ApiClient, assetType: string) =>
+  queryOptions({
+    queryKey: ['schema', assetType],
+    queryFn: async () => unwrap(await api.GET('/api/v1/schemas/{assetType}', { params: { path: { assetType } } })),
+  });
+export const vocabulariesOptions = (api: ApiClient) =>
+  queryOptions({ queryKey: ['vocabularies'], queryFn: async () => unwrap(await api.GET('/api/v1/vocabularies')) });
+export const termsOptions = (api: ApiClient, vocabularyId: string) =>
+  queryOptions({
+    queryKey: ['vocabulary', vocabularyId, 'terms'],
+    queryFn: async () => {
+      const nodes = unwrap(
+        await api.GET('/api/v1/vocabularies/{id}/terms', { params: { path: { id: vocabularyId }, query: { tree: true } } }),
+      );
+      return flattenTerms(nodes as unknown as TermNode[]);
+    },
+  });
+
+export function useAsset(id: string) {
+  const api = useApiClient();
+  return useQuery(assetOptions(api, id));
 }
 
 export function useUpdateAsset(id: string) {
@@ -108,15 +130,12 @@ export function useThumbnailLinks(assetIds: string[]) {
 
 export function useSchema(assetType: string) {
   const api = useApiClient();
-  return useQuery({
-    queryKey: ['schema', assetType],
-    queryFn: async () => unwrap(await api.GET('/api/v1/schemas/{assetType}', { params: { path: { assetType } } })),
-  });
+  return useQuery(schemaOptions(api, assetType));
 }
 
 export function useVocabularies() {
   const api = useApiClient();
-  return useQuery({ queryKey: ['vocabularies'], queryFn: async () => unwrap(await api.GET('/api/v1/vocabularies')) });
+  return useQuery(vocabulariesOptions(api));
 }
 
 /** Terms for one vocabulary, flattened depth-first with the same indentation convention `folderOptions` uses - good
@@ -142,14 +161,5 @@ function flattenTerms(nodes: TermNode[], depth = 0): FlatTerm[] {
 
 export function useTerms(vocabularyId: string | undefined) {
   const api = useApiClient();
-  return useQuery({
-    queryKey: ['vocabulary', vocabularyId, 'terms'],
-    queryFn: async () => {
-      const nodes = unwrap(
-        await api.GET('/api/v1/vocabularies/{id}/terms', { params: { path: { id: vocabularyId! }, query: { tree: true } } }),
-      );
-      return flattenTerms(nodes as unknown as TermNode[]);
-    },
-    enabled: !!vocabularyId,
-  });
+  return useQuery({ ...termsOptions(api, vocabularyId ?? ''), enabled: !!vocabularyId });
 }

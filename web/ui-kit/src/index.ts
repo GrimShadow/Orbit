@@ -10,6 +10,7 @@ export * from './components/Tree';
 export * from './components/FacetList';
 export * from './components/ThumbnailGrid';
 export * from './components/CardMenu';
+export * from './components/Menu';
 export * from './components/Skeleton';
 export * from './components/Breadcrumb';
 export * from './components/FileTypeIcon';
@@ -22,13 +23,20 @@ export {
   BookmarkSimple,
   CheckCircle,
   Clock,
+  Desktop,
   Eye,
+  FolderPlus,
   FolderSimple,
   Megaphone,
+  Moon,
   PaperPlaneTilt,
+  PencilSimple,
   Rows,
+  ShareNetwork,
   SquaresFour,
+  Sun,
   Tag,
+  Trash,
   UploadSimple,
   XCircle,
 } from '@phosphor-icons/react';

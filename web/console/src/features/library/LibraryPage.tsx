@@ -8,6 +8,7 @@ import {
   Rows,
   Select,
   Skeleton,
+  FolderPlus,
   SquaresFour,
   Table,
   ThumbnailGrid,
@@ -16,7 +17,7 @@ import {
   type TreeNode,
 } from '../../ui';
 import { useThumbnailLinks } from '../asset/assetApi';
-import { useCardActions } from './cardActions';
+import { useItemActions } from './itemActions';
 import { toAssetThumb } from './assetThumb';
 import { useAssets, type AssetDto } from './assets';
 import { BulkEditBar } from './BulkEditBar';
@@ -26,7 +27,15 @@ import './library.css';
 const STATUSES = ['draft', 'in_review', 'approved', 'published', 'expired', 'archived', 'deleted'];
 const TYPES = ['image', 'video', 'audio', 'document', 'manual', '3d', 'html5', 'other'];
 
-function FolderSidebar({ selectedId, onSelect }: { selectedId?: string; onSelect: (id: string | undefined) => void }) {
+function FolderSidebar({
+  selectedId,
+  onSelect,
+  actions,
+}: {
+  selectedId?: string;
+  onSelect: (id: string | undefined) => void;
+  actions: ReturnType<typeof useItemActions>;
+}) {
   const { t } = useTranslation();
   const { data, error, isPending, refetch } = useFolders();
 
@@ -52,7 +61,23 @@ function FolderSidebar({ selectedId, onSelect }: { selectedId?: string; onSelect
       <button type="button" className="dam-btn dam-btn--ghost" aria-pressed={!selectedId} onClick={() => onSelect(undefined)}>
         {t('library.allFolders')}
       </button>
-      <Tree nodes={tree} label={t('library.folders')} selectedId={selectedId} onSelect={onSelect} />
+      <Tree
+        nodes={tree}
+        label={t('library.folders')}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        nodeActions={actions.folderMenu}
+        menuLabel={(name) => t('item.actionsForFolder', { name })}
+        onMenuOpen={actions.prefetchFolder}
+      />
+      <button
+        type="button"
+        className="dam-btn dam-btn--secondary dam-btn--sm"
+        onClick={() => actions.newFolder(selectedId ?? null)}
+      >
+        <FolderPlus size={16} weight="bold" aria-hidden="true" />
+        {t('item.newFolder')}
+      </button>
     </div>
   );
 }
@@ -91,7 +116,14 @@ export function LibraryPage() {
     limit: 50,
   });
   // Only the grid view shows images; skip the batch link request entirely while viewing the list/table.
-  const cardActions = useCardActions(assetsQuery.data?.items ?? []);
+  const itemActions = useItemActions({
+    onOpenFolder: (id) => setFilter(() => setFolderId(id)),
+    // Deleting the folder you are looking at would leave an empty view of nothing - go back to everything.
+    onFolderDeleted: (id) => {
+      if (id === folderId) setFilter(() => setFolderId(undefined));
+    },
+  });
+  const assetById = (id: string) => assetsQuery.data?.items.find((a) => a.id === id);
   const thumbnailLinks = useThumbnailLinks(view === 'grid' ? (assetsQuery.data?.items.map((a) => a.id) ?? []) : []);
 
   const columns: Column<AssetDto>[] = [
@@ -106,7 +138,7 @@ export function LibraryPage() {
       <h1>{t('library.title')}</h1>
       <div className="dam-library__layout">
         <aside className="dam-library__sidebar" aria-label={t('library.folders')}>
-          <FolderSidebar selectedId={folderId} onSelect={(id) => setFilter(() => setFolderId(id))} />
+          <FolderSidebar selectedId={folderId} onSelect={(id) => setFilter(() => setFolderId(id))} actions={itemActions} />
         </aside>
         <div className="dam-library__main">
           {foldersQuery.data && (
@@ -192,7 +224,14 @@ export function LibraryPage() {
                   selectedIds={[...selected]}
                   onToggleSelect={toggleSelect}
                   selectLabel={(title) => t('library.selectAsset', { title })}
-                  cardActions={cardActions}
+                  cardActions={(id) => {
+                    const asset = assetById(id);
+                    return asset ? itemActions.assetMenu(asset) : [];
+                  }}
+                  onMenuOpen={(id) => {
+                    const asset = assetById(id);
+                    if (asset) itemActions.prefetchAsset(asset);
+                  }}
                   menuLabel={(title) => t('library.card.actionsFor', { title })}
                 />
               ) : (
@@ -224,6 +263,7 @@ export function LibraryPage() {
           )}
         </div>
       </div>
+      {itemActions.dialogs}
     </div>
   );
 }
