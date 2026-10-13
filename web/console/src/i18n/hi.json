@@ -73,6 +73,7 @@
     "status.published": "प्रकाशित",
     "status.expired": "समाप्त",
     "status.archived": "अभिलेखागार में",
+    "status.deleted": "हटाया गया",
     "type.image": "छवि",
     "type.video": "वीडियो",
     "type.audio": "ऑडियो",
@@ -107,7 +108,13 @@
     "bulk.someFailed": "{{succeeded}} अद्यतन किए गए, {{failed}} विफल",
     "bulk.saveAsCollection": "संग्रह के रूप में सहेजें",
     "bulk.saveAsCollectionTitle": "चयन को संग्रह के रूप में सहेजें",
-    "bulk.saveAsCollectionSucceeded": "संग्रह \"{{name}}\" बनाया गया"
+    "bulk.saveAsCollectionSucceeded": "संग्रह \"{{name}}\" बनाया गया",
+    "card": {
+      "open": "विवरण खोलें",
+      "actionsFor": "{{title}} के लिए क्रियाएँ",
+      "actionDone": "{{action}}: हो गया",
+      "actionFailed": "{{action}} विफल रहा"
+    }
   },
   "search": {
     "title": "खोज",

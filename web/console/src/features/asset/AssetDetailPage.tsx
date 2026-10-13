@@ -52,7 +52,7 @@ export function AssetDetailPage() {
     );
   if (assetQuery.error || !assetQuery.data)
     return (
-      <div role="alert" className="dam-page dam-stack">
+      <div role="alert" className="dam-page dam-page--narrow dam-stack">
         <p>{t('asset.loadFailed')}</p>
         <Link to="/library">{t('upload.goToLibrary')}</Link>
       </div>
@@ -68,28 +68,36 @@ export function AssetDetailPage() {
         <Badge>{t(`library.type.${asset.type}`)}</Badge>
       </div>
 
-      <LifecycleActions assetId={asset.id} status={asset.status} />
-
-      <div className="dam-asset-preview">
-        <AssetPreview assetId={asset.id} type={asset.type} title={asset.title} status={asset.status} />
+      <div className="dam-asset-layout">
+        <div className="dam-asset-layout__preview">
+          <div className="dam-asset-preview">
+            <AssetPreview assetId={asset.id} type={asset.type} title={asset.title} status={asset.status} />
+          </div>
+        </div>
+        <div className="dam-asset-layout__side dam-stack">
+          <LifecycleActions assetId={asset.id} status={asset.status} />
+          <Tabs
+            label={t('asset.tabs')}
+            tabs={[
+              {
+                id: 'metadata',
+                label: t('asset.metadataTab'),
+                content: (
+                  <div className="dam-stack">
+                    <DetailsForm assetId={asset.id} title={asset.title} tags={asset.tags} />
+                    <MetadataForm
+                      assetId={asset.id}
+                      assetType={asset.type}
+                      metadata={asset.metadata as Record<string, unknown>}
+                    />
+                  </div>
+                ),
+              },
+              { id: 'versions', label: t('asset.versionsTab'), content: <VersionsPanel assetId={asset.id} /> },
+            ]}
+          />
+        </div>
       </div>
-
-      <Tabs
-        label={t('asset.tabs')}
-        tabs={[
-          {
-            id: 'metadata',
-            label: t('asset.metadataTab'),
-            content: (
-              <div className="dam-stack">
-                <DetailsForm assetId={asset.id} title={asset.title} tags={asset.tags} />
-                <MetadataForm assetId={asset.id} assetType={asset.type} metadata={asset.metadata as Record<string, unknown>} />
-              </div>
-            ),
-          },
-          { id: 'versions', label: t('asset.versionsTab'), content: <VersionsPanel assetId={asset.id} /> },
-        ]}
-      />
     </div>
   );
 }

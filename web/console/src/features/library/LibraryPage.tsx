@@ -16,6 +16,7 @@ import {
   type TreeNode,
 } from '../../ui';
 import { useThumbnailLinks } from '../asset/assetApi';
+import { useCardActions } from './cardActions';
 import { toAssetThumb } from './assetThumb';
 import { useAssets, type AssetDto } from './assets';
 import { BulkEditBar } from './BulkEditBar';
@@ -90,6 +91,7 @@ export function LibraryPage() {
     limit: 50,
   });
   // Only the grid view shows images; skip the batch link request entirely while viewing the list/table.
+  const cardActions = useCardActions(assetsQuery.data?.items ?? []);
   const thumbnailLinks = useThumbnailLinks(view === 'grid' ? (assetsQuery.data?.items.map((a) => a.id) ?? []) : []);
 
   const columns: Column<AssetDto>[] = [
@@ -190,6 +192,8 @@ export function LibraryPage() {
                   selectedIds={[...selected]}
                   onToggleSelect={toggleSelect}
                   selectLabel={(title) => t('library.selectAsset', { title })}
+                  cardActions={cardActions}
+                  menuLabel={(title) => t('library.card.actionsFor', { title })}
                 />
               ) : (
                 <Table

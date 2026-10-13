@@ -73,6 +73,7 @@
     "status.published": "Published",
     "status.expired": "Expired",
     "status.archived": "Archived",
+    "status.deleted": "Deleted",
     "type.image": "Image",
     "type.video": "Video",
     "type.audio": "Audio",
@@ -107,7 +108,13 @@
     "bulk.someFailed": "{{succeeded}} updated, {{failed}} failed",
     "bulk.saveAsCollection": "Save as collection",
     "bulk.saveAsCollectionTitle": "Save selection as a collection",
-    "bulk.saveAsCollectionSucceeded": "Collection \"{{name}}\" created"
+    "bulk.saveAsCollectionSucceeded": "Collection \"{{name}}\" created",
+    "card": {
+      "open": "Open details",
+      "actionsFor": "Actions for {{title}}",
+      "actionDone": "{{action}}: done",
+      "actionFailed": "{{action}} failed"
+    }
   },
   "search": {
     "title": "Search",

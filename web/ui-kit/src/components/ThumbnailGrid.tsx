@@ -1,5 +1,6 @@
 import { Check } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
+import { CardMenu, type CardAction } from './CardMenu';
 
 export interface Thumb {
   id: string;
@@ -20,6 +21,9 @@ interface ThumbnailGridProps {
   selectedIds?: string[];
   onToggleSelect?: (id: string, selected: boolean) => void;
   selectLabel?: (title: string) => string;
+  /** Per-card quick actions, shown behind a "..." menu on the card; omit (or return none) for no menu. */
+  cardActions?: (id: string) => CardAction[];
+  menuLabel?: (title: string) => string;
 }
 
 export function ThumbnailGrid({
@@ -29,6 +33,8 @@ export function ThumbnailGrid({
   selectedIds,
   onToggleSelect,
   selectLabel = (t) => `Select ${t}`,
+  cardActions,
+  menuLabel = (t) => `Actions for ${t}`,
 }: ThumbnailGridProps) {
   return (
     <ul className="dam-grid" aria-label={label}>
@@ -48,6 +54,7 @@ export function ThumbnailGrid({
                 <Check weight="bold" className="dam-thumb__select-check" aria-hidden="true" />
               </label>
             )}
+            {cardActions && <CardMenu label={menuLabel(t.title)} actions={cardActions(t.id)} />}
             <button type="button" className="dam-thumb__open" onClick={() => onOpen?.(t.id)}>
               {t.imageUrl ? (
                 <img className="dam-thumb__img" src={t.imageUrl} alt="" loading="lazy" />
