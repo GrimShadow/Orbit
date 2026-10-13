@@ -245,6 +245,10 @@ public sealed class AssetTests(PostgresFixture pg) : AssetTestBase(pg)
         Assert.Equal(HttpStatusCode.NoContent, (await Call(HttpMethod.Delete, $"/api/v1/assets/{id}", admin)).Status);
         var gone = await Call(HttpMethod.Get, $"/api/v1/assets/{id}", admin);
         Assert.Equal("deleted", gone.Body.GetProperty("status").GetString()); // still readable by those who may see non-published assets
+        // ...but it is a trash: gone from the default listing, and listed only when asked for by status.
+        async Task<List<string>> Listed(string query) => (await Call(HttpMethod.Get, $"/api/v1/assets?limit=200{query}", admin)).Body.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("id").GetString()!).ToList();
+        Assert.DoesNotContain(id.ToString(), await Listed(""));
+        Assert.Contains(id.ToString(), await Listed("&status=deleted"));
         Assert.Equal(HttpStatusCode.NotFound, (await Call(HttpMethod.Get, $"/api/v1/assets/{id}", ApiTestHost.TokenFor(t, Guid.NewGuid(), ["Viewer"]))).Status);
         Assert.Equal(HttpStatusCode.Conflict, (await Call(HttpMethod.Patch, $"/api/v1/assets/{id}", admin, new { title = "x" })).Status);
         Assert.Equal(1, Count(t, "SELECT count(*) FROM audit_log WHERE action = 'asset.status.changed'"));
