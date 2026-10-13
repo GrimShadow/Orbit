@@ -12,6 +12,9 @@ RUN dotnet publish src/${PROJECT}/${PROJECT}.csproj -c Release -a ${TARGETARCH/a
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 ARG PROJECT
 ENV PROJECT_DLL=${PROJECT}.dll ASPNETCORE_URLS=http://+:8080 DOTNET_EnableDiagnostics=0
+# Pull in Debian's security fixes published since the base image was built (e.g. perl-base CVEs fixed in deb12u4 that the
+# CI container scan flags as fixable HIGH/CRITICAL). Every host, not just the media ones - the base image carries them all.
+RUN apt-get update && apt-get -y --no-install-recommends upgrade && rm -rf /var/lib/apt/lists/*
 # Only the worker and the delivery origin touch media: ffmpeg (probe, poster frames, video renditions), poppler-utils
 # (pdfinfo, pdftoppm for PDF page renditions), and just the three LibreOffice components that read Word/PowerPoint/Excel
 # files (not the full suite: no Draw, Base, Math, or GUI/help/language extras) to convert them to PDF. The other hosts
