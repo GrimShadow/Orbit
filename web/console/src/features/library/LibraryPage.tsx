@@ -23,7 +23,7 @@ import { BulkEditBar } from './BulkEditBar';
 import { buildFolderTree, folderBreadcrumb, useFolders } from './folders';
 import './library.css';
 
-const STATUSES = ['draft', 'in_review', 'approved', 'published', 'expired', 'archived'];
+const STATUSES = ['draft', 'in_review', 'approved', 'published', 'expired', 'archived', 'deleted'];
 const TYPES = ['image', 'video', 'audio', 'document', 'manual', '3d', 'html5', 'other'];
 
 function FolderSidebar({ selectedId, onSelect }: { selectedId?: string; onSelect: (id: string | undefined) => void }) {
