@@ -130,8 +130,10 @@ public sealed class ListAssetsHandler(IRepository<Asset> assets, IRepository<Fol
         var more = false;
         while (page.Count <= limit && scanned < MaxRowsScanned)
         {
-            var chunk = cursor is { } after ? query.Where(a => a.Id.CompareTo(after) > 0) : query;
-            var rows = await q.ToListAsync(chunk.OrderBy(a => a.Id).Take(limit * 4), ct);
+            // Newest first: ids are UUIDv7 (time-ordered), so descending id is descending creation time - a just-uploaded asset
+            // is on the first page rather than buried behind everything older.
+            var chunk = cursor is { } after ? query.Where(a => a.Id.CompareTo(after) < 0) : query;
+            var rows = await q.ToListAsync(chunk.OrderByDescending(a => a.Id).Take(limit * 4), ct);
             if (rows.Count == 0) break;
             foreach (var a in rows)
             {

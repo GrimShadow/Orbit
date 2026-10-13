@@ -224,4 +224,30 @@ describe('LibraryPage', () => {
     await screen.findByRole('table');
     expect(calls.filter(isBatchCall)).toHaveLength(batchCallsInGrid); // no further batch call once in list view
   });
+
+  it('offers Open plus the valid lifecycle actions in a card menu, and runs one against that asset', async () => {
+    const transitions: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (url.pathname === '/api/v1/folders') return json(FOLDERS);
+        if (url.pathname === '/api/v1/assets') return json({ items: [asset({ status: 'draft' })], nextCursor: null });
+        if (url.pathname === '/api/v1/assets/links/batch') return json({ a1: null });
+        if (url.pathname === '/api/v1/assets/a1/transitions/submit') {
+          transitions.push(url.pathname);
+          return json({ ...asset({ status: 'in_review' }) });
+        }
+        throw new Error(`unexpected request: ${url.pathname}`);
+      }),
+    );
+    renderAt('/library');
+    await screen.findByText('Hero shot');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Hero shot' }));
+    expect(screen.getByRole('menuitem', { name: 'Open details' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Submit for review' }));
+
+    await waitFor(() => expect(transitions).toHaveLength(1));
+  });
 });

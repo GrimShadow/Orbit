@@ -40,7 +40,7 @@ export function UploadPage() {
   };
 
   return (
-    <div className="dam-page dam-stack">
+    <div className="dam-page dam-page--medium dam-stack">
       <h1>{t('upload.title')}</h1>
 
       {state.status === 'idle' ? (

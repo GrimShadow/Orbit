@@ -39,3 +39,35 @@
     height: 320px;
   }
 }
+
+/* Wide screens: the preview takes the main column and stays in view while the metadata/versions panel scrolls beside it. */
+.dam-asset-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--dam-space-5);
+  width: 100%;
+}
+.dam-asset-layout__side {
+  min-width: 0;
+  width: 100%;
+}
+@media (min-width: 1024px) {
+  .dam-asset-layout {
+    grid-template-columns: minmax(0, 1.6fr) minmax(360px, 1fr);
+    align-items: start;
+  }
+  .dam-asset-layout__preview {
+    position: sticky;
+    top: var(--dam-space-4);
+  }
+  .dam-asset-preview__image,
+  .dam-asset-preview__video {
+    max-height: calc(100dvh - 220px);
+  }
+  .dam-asset-preview__frame {
+    height: calc(100dvh - 220px);
+  }
+}
+.dam-asset-layout__side {
+  align-items: stretch;
+}

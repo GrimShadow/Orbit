@@ -98,11 +98,17 @@
 
 .dam-root,
 body {
+  margin: 0;
   font-family: var(--dam-font);
   color: var(--dam-text);
   background: var(--dam-bg);
   font-size: var(--dam-text-md);
   line-height: 1.5;
+}
+/* Plain in-content links (back links, table titles) take the brand colour instead of the browser's default blue;
+ * anything with a class (nav items, buttons rendered as links) keeps its own styling. */
+a:not([class]) {
+  color: var(--dam-brand);
 }
 .dam-sr-only {
   position: absolute;
@@ -460,7 +466,7 @@ body {
   padding: 0;
   display: grid;
   gap: var(--dam-space-4);
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
 }
 .dam-thumb {
   position: relative;
@@ -520,6 +526,80 @@ body {
   color: var(--dam-muted);
   font-size: var(--dam-text-sm);
   font-variant-numeric: tabular-nums;
+}
+.dam-cardmenu {
+  position: absolute;
+  top: var(--dam-space-2);
+  inset-inline-end: var(--dam-space-2);
+  z-index: 2;
+}
+.dam-cardmenu__trigger {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(17 24 39 / 0.55);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--dam-duration) var(--dam-ease),
+    background-color var(--dam-duration) var(--dam-ease);
+}
+.dam-thumb:hover .dam-cardmenu__trigger,
+.dam-cardmenu__trigger:focus-visible,
+.dam-cardmenu__trigger[aria-expanded='true'] {
+  opacity: 1;
+}
+.dam-cardmenu__trigger:hover {
+  background: rgb(17 24 39 / 0.8);
+}
+.dam-cardmenu__trigger:focus-visible {
+  outline: 3px solid var(--dam-focus);
+  outline-offset: 1px;
+}
+@media (hover: none) {
+  .dam-cardmenu__trigger {
+    opacity: 1;
+  }
+}
+.dam-cardmenu__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline-end: 0;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: var(--dam-space-1);
+  background: var(--dam-surface);
+  border: 1px solid var(--dam-border);
+  border-radius: var(--dam-radius);
+  box-shadow: var(--dam-shadow);
+}
+.dam-cardmenu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+  padding: var(--dam-space-2) var(--dam-space-3);
+  border: 0;
+  border-radius: var(--dam-radius-sm);
+  background: transparent;
+  color: var(--dam-text);
+  font: inherit;
+  font-size: var(--dam-text-sm);
+  text-align: start;
+  cursor: pointer;
+}
+.dam-cardmenu__item:hover,
+.dam-cardmenu__item:focus-visible {
+  background: var(--dam-surface-2);
+  outline: none;
+}
+.dam-cardmenu__item--danger {
+  color: var(--dam-danger);
 }
 .dam-thumb__select-wrap {
   position: absolute;

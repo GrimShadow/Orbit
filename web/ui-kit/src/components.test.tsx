@@ -5,6 +5,7 @@ import { useState } from 'react';
 import {
   Breadcrumb,
   Button,
+  CardMenu,
   Drawer,
   FacetList,
   FileTypeIcon,
@@ -394,5 +395,58 @@ describe('accessibility (axe)', () => {
       </ToastProvider>,
     );
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  describe('CardMenu', () => {
+    const actions = (onSelect: (k: string) => void) => [
+      { key: 'open', label: 'Open details', onSelect: () => onSelect('open') },
+      { key: 'submit', label: 'Submit for review', onSelect: () => onSelect('submit') },
+    ];
+
+    it('opens a menu on click, moves with arrow keys, runs the chosen action and closes', async () => {
+      const chosen: string[] = [];
+      render(<CardMenu label="Actions for Hero" actions={actions((k) => chosen.push(k))} />);
+      const trigger = screen.getByRole('button', { name: 'Actions for Hero' });
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+      await userEvent.click(trigger);
+      expect(trigger).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('menuitem', { name: 'Open details' })).toHaveFocus();
+
+      await userEvent.keyboard('{ArrowDown}');
+      expect(screen.getByRole('menuitem', { name: 'Submit for review' })).toHaveFocus();
+      await userEvent.keyboard('{Enter}');
+      expect(chosen).toEqual(['submit']);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+    });
+
+    it('closes on Escape and returns focus to the trigger', async () => {
+      render(<CardMenu label="Actions" actions={actions(() => {})} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Actions' }));
+      await userEvent.keyboard('{Escape}');
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Actions' })).toHaveFocus();
+    });
+
+    it('renders nothing when there are no actions', () => {
+      const { container } = render(<CardMenu label="Actions" actions={[]} />);
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it('is shown on a ThumbnailGrid card only when cardActions is given, with no axe violations', async () => {
+      const { container } = render(
+        <main>
+          <ThumbnailGrid
+            items={[{ id: 'a1', title: 'Hero' }]}
+            label="Assets"
+            cardActions={() => actions(() => {})}
+            menuLabel={(t) => `Actions for ${t}`}
+          />
+        </main>,
+      );
+      expect(screen.getByRole('button', { name: 'Actions for Hero' })).toBeInTheDocument();
+      expect(await axe(container)).toHaveNoViolations();
+    });
   });
 });

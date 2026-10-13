@@ -21,7 +21,7 @@ export function CollectionsPage() {
     );
   if (collectionsQuery.error)
     return (
-      <div role="alert" className="dam-page dam-stack">
+      <div role="alert" className="dam-page dam-page--medium dam-stack">
         <p>{t('collections.loadFailed')}</p>
         <Button onClick={() => void collectionsQuery.refetch()}>{t('library.retry')}</Button>
       </div>
@@ -29,7 +29,7 @@ export function CollectionsPage() {
 
   const collections = collectionsQuery.data;
   return (
-    <div className="dam-page dam-stack">
+    <div className="dam-page dam-page--medium dam-stack">
       <h1>{t('collections.title')}</h1>
       {collections.length === 0 ? (
         <p className="dam-empty">{t('collections.empty')}</p>

@@ -7,6 +7,7 @@ export {
   Button,
   CheckCircle,
   Clock,
+  Eye,
   FacetList,
   FileTypeIcon,
   FolderSimple,
@@ -30,6 +31,7 @@ export {
 } from '@dam/ui-kit';
 export type {
   BreadcrumbItem,
+  CardAction,
   Column,
   Facet,
   FacetOption,

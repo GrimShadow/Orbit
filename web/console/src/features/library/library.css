@@ -5,8 +5,12 @@
 }
 
 .dam-library__sidebar {
-  flex: 0 0 220px;
+  flex: 0 0 260px;
   min-width: 0;
+  position: sticky;
+  top: var(--dam-space-4);
+  max-height: calc(100dvh - 2 * var(--dam-space-4));
+  overflow-y: auto;
 }
 
 .dam-library__main {
@@ -71,5 +75,8 @@
   .dam-library__sidebar {
     flex-basis: auto;
     width: 100%;
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
 }

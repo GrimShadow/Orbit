@@ -17,7 +17,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error?: 
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div role="alert" className="dam-page dam-stack">
+      <div role="alert" className="dam-page dam-page--narrow dam-stack">
         <h1>{i18n.t('error.title')}</h1>
         <p>{i18n.t('error.body')}</p>
         <Button variant="primary" onClick={() => window.location.reload()}>

@@ -211,7 +211,7 @@ public sealed class AssetTests(PostgresFixture pg) : AssetTestBase(pg)
         Assert.Equal(9, seen.Count);            // 5 + 3 in the sub-folder + 1 video, and not "elsewhere"
         Assert.Equal(3, pages);
         Assert.Equal(seen.Distinct().Count(), seen.Count);
-        Assert.Equal(seen.Order().ToList(), seen);
+        Assert.Equal(seen.OrderDescending().ToList(), seen);          // newest first
 
         Assert.Equal(5, (await Call(HttpMethod.Get, $"/api/v1/assets?folderId={brand}&includeSubfolders=false&type=image", admin)).Body.GetProperty("items").GetArrayLength());
         Assert.Equal(1, (await Call(HttpMethod.Get, "/api/v1/assets?type=video", admin)).Body.GetProperty("items").GetArrayLength());

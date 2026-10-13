@@ -22,7 +22,7 @@
   flex-wrap: wrap;
   align-items: end;
   gap: var(--dam-space-4) var(--dam-space-5);
-  padding: var(--dam-space-3) var(--dam-space-5);
+  padding: var(--dam-space-3) clamp(var(--dam-space-4), 2.5vw, 48px);
   background: var(--dam-surface);
   border-bottom: 1px solid var(--dam-border);
 }
@@ -65,16 +65,22 @@
 }
 .dam-main {
   flex: 1;
-  padding: var(--dam-space-5);
-  max-width: 1200px;
+  padding: var(--dam-space-5) clamp(var(--dam-space-4), 2.5vw, 48px);
   width: 100%;
-  margin-inline: auto;
+  min-width: 0;
 }
 .dam-main:focus {
   outline: none;
 }
 .dam-page {
+  width: 100%;
+}
+/* Text and form pages stay at a readable measure; data-heavy pages (library, search, collections, asset detail) are fluid. */
+.dam-page--narrow {
   max-width: 720px;
+}
+.dam-page--medium {
+  max-width: 960px;
 }
 .dam-stack {
   display: flex;

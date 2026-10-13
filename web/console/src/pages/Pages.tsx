@@ -11,7 +11,7 @@ export function LoginPage() {
   const auth = useAuth();
   const from = (useLocation().state as { from?: string } | null)?.from;
   return (
-    <div className="dam-page dam-stack">
+    <div className="dam-page dam-page--narrow dam-stack">
       <h1>{t('login.title')}</h1>
       <p>{t('login.body')}</p>
       <Button variant="primary" loading={auth.status === 'loading'} onClick={() => void auth.signIn(from)}>
@@ -37,7 +37,7 @@ export function CallbackPage() {
 
   if (failed) {
     return (
-      <div role="alert" className="dam-page dam-stack">
+      <div role="alert" className="dam-page dam-page--narrow dam-stack">
         <h1>{t('callback.failed')}</h1>
         <Link to="/login">{t('callback.retry')}</Link>
       </div>
@@ -54,7 +54,7 @@ export function HomePage() {
   const { t } = useTranslation();
   const auth = useAuth();
   return (
-    <div className="dam-page dam-stack">
+    <div className="dam-page dam-page--narrow dam-stack">
       <h1>{t('home.title', { name: auth.name ?? auth.email ?? '' })}</h1>
       <p>{t('home.body')}</p>
     </div>
@@ -76,7 +76,7 @@ export function MePage() {
   if (error) {
     const api = error instanceof ApiError ? error : undefined;
     return (
-      <div role="alert" className="dam-page dam-stack">
+      <div role="alert" className="dam-page dam-page--narrow dam-stack">
         <h1>{t('me.loadFailed')}</h1>
         <p>{api ? `${api.status} ${api.title}` : error.message}</p>
         {api?.correlationId && <p className="dam-hint">{t('me.reference', { id: api.correlationId })}</p>}
@@ -85,7 +85,7 @@ export function MePage() {
     );
   }
   return (
-    <div className="dam-page dam-stack">
+    <div className="dam-page dam-page--narrow dam-stack">
       <h1>{t('me.title')}</h1>
       <dl className="dam-dl">
         <dt>{t('me.name')}</dt>
@@ -135,7 +135,7 @@ export function MePage() {
 export function NotFoundPage() {
   const { t } = useTranslation();
   return (
-    <div className="dam-page dam-stack">
+    <div className="dam-page dam-page--narrow dam-stack">
       <h1>{t('notFound.title')}</h1>
       <p>{t('notFound.body')}</p>
       <Link to="/">{t('notFound.home')}</Link>
