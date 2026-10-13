@@ -82,7 +82,16 @@ const SCHEMA = {
 
 const VERSIONS = [
   { id: 'v1', versionNo: 1, isCurrent: false, sizeBytes: 1024, mime: 'image/jpeg', createdAt: '2026-01-01T00:00:00Z' },
-  { id: 'v2', versionNo: 2, isCurrent: true, sizeBytes: 2048, mime: 'image/jpeg', createdAt: '2026-01-02T00:00:00Z' },
+  {
+    id: 'v2',
+    versionNo: 2,
+    isCurrent: true,
+    sizeBytes: 2048,
+    mime: 'image/jpeg',
+    sha256: 'f'.repeat(64),
+    technicalMetadata: { file: { fileName: 'hero.jpg' }, image: { width: 1920, height: 1080, hasAlpha: false } },
+    createdAt: '2026-01-02T00:00:00Z',
+  },
 ];
 
 const LINKS = { expiresAt: '2026-01-01T01:00:00Z', watermarked: true, links: { preview: 'https://cdn.test/a1-preview.jpg' } };
@@ -132,6 +141,18 @@ describe('AssetDetailPage', () => {
     expect(screen.getByText('Image')).toBeInTheDocument();
     expect(await screen.findByRole('img', { name: 'Hero shot' })).toHaveAttribute('src', 'https://cdn.test/a1-preview.jpg');
     expect(screen.getByRole('link', { name: 'Back to library' })).toHaveAttribute('href', '/library');
+  });
+
+  it('shows file information: summary line, size, dimensions and file name', async () => {
+    mockApi(standardHandlers());
+    renderAt('/library/assets/a1');
+
+    const info = await screen.findByRole('region', { name: 'File information' });
+    expect(within(info).getByText('hero.jpg')).toBeInTheDocument();
+    expect(within(info).getByText('1920 × 1080 px')).toBeInTheDocument();
+    expect(within(info).getByText('2.0 KB')).toBeInTheDocument();
+    expect(within(info).getByText('16:9')).toBeInTheDocument();
+    expect(screen.getByText('JPEG · 1920 × 1080 · 2.0 KB')).toBeInTheDocument();
   });
 
   it('shows a preview for a published asset requesting both preview and original', async () => {
