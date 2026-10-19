@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BookmarkSimple, Button, FolderSimple, Input, Select, Tag, useToast } from '../../ui';
+import { BookmarkSimple, Button, FolderSimple, Select, Tag, TagInput, X, useToast } from '../../ui';
 import { ActionIcon } from '../asset/actionIcon';
 import { availableActions } from '../asset/lifecycle';
 import { useCreateStaticCollection } from '../collections/collectionsApi';
@@ -40,17 +40,14 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
   const move = useBulkMove();
   const transition = useBulkTransition();
   const createCollection = useCreateStaticCollection();
-  const [tagsInput, setTagsInput] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [folderId, setFolderId] = useState(UNSET_FOLDER);
+  const [panel, setPanel] = useState<'tags' | 'move' | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
 
   const selected = assets.filter((a) => selectedIds.includes(a.id));
   const actions = commonActions(selected);
   const busy = editTags.isPending || move.isPending || transition.isPending || createCollection.isPending;
-  const parsedTags = tagsInput
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
 
   const report = (result: BulkResult) => {
     if (result.failed.length === 0) {
@@ -61,91 +58,134 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
         tone: 'error',
       });
     }
-    setTagsInput('');
+    setTags([]);
     setFolderId(UNSET_FOLDER);
+    setPanel(null);
     onClear();
   };
 
+  const togglePanel = (next: 'tags' | 'move') => setPanel((p) => (p === next ? null : next));
+
   return (
-    <div className="dam-bulkbar" role="region" aria-label={t('library.bulk.selectedCount', { count: selectedIds.length })}>
-      <span className="dam-bulkbar__count">{t('library.bulk.selectedCount', { count: selectedIds.length })}</span>
-      <Button variant="ghost" size="sm" onClick={onClear}>
-        {t('library.bulk.clear')}
-      </Button>
+    <>
+      <div className="dam-bulkdock">
+        <div className="dam-bulkbar" role="region" aria-label={t('library.bulk.selectedCount', { count: selectedIds.length })}>
+          {panel === 'tags' && (
+            <div className="dam-bulkbar__panel">
+              <div className="dam-bulkbar__panelfield">
+                <TagInput
+                  label={t('library.bulk.tagsLabel')}
+                  value={tags}
+                  onChange={setTags}
+                  placeholder={t('library.bulk.tagsPlaceholder')}
+                  removeLabel={(tag) => t('library.bulk.removeTagChip', { tag })}
+                  listLabel={t('library.bulk.tagsChosen')}
+                />
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={tags.length === 0 || busy}
+                loading={editTags.isPending}
+                onClick={() => editTags.mutate({ assets: selected, tags, remove: false }, { onSuccess: report })}
+              >
+                {t('library.bulk.addTags')}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={tags.length === 0 || busy}
+                loading={editTags.isPending}
+                onClick={() => editTags.mutate({ assets: selected, tags, remove: true }, { onSuccess: report })}
+              >
+                {t('library.bulk.removeTags')}
+              </Button>
+            </div>
+          )}
 
-      <Input
-        label={t('library.bulk.tagsLabel')}
-        value={tagsInput}
-        onChange={(e) => setTagsInput(e.target.value)}
-        placeholder={t('library.bulk.tagsPlaceholder')}
-      />
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={parsedTags.length === 0 || busy}
-        loading={editTags.isPending}
-        onClick={() => editTags.mutate({ assets: selected, tags: parsedTags, remove: false }, { onSuccess: report })}
-      >
-        <Tag size={16} weight="bold" aria-hidden="true" />
-        {t('library.bulk.addTags')}
-      </Button>
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={parsedTags.length === 0 || busy}
-        loading={editTags.isPending}
-        onClick={() => editTags.mutate({ assets: selected, tags: parsedTags, remove: true }, { onSuccess: report })}
-      >
-        <Tag size={16} aria-hidden="true" />
-        {t('library.bulk.removeTags')}
-      </Button>
+          {panel === 'move' && foldersQuery.data && (
+            <div className="dam-bulkbar__panel">
+              <div className="dam-bulkbar__panelfield">
+                <Select
+                  label={t('library.bulk.moveLabel')}
+                  value={folderId}
+                  onChange={(e) => setFolderId(e.target.value)}
+                  options={[
+                    { value: UNSET_FOLDER, label: t('library.bulk.chooseFolder') },
+                    { value: '', label: t('upload.noFolder') },
+                    ...folderOptions(foldersQuery.data),
+                  ]}
+                />
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={folderId === UNSET_FOLDER || busy}
+                loading={move.isPending}
+                onClick={() => move.mutate({ ids: selectedIds, folderId: folderId || null }, { onSuccess: report })}
+              >
+                {t('library.bulk.move')}
+              </Button>
+            </div>
+          )}
 
-      {foldersQuery.data && (
-        <>
-          <Select
-            label={t('library.bulk.moveLabel')}
-            value={folderId}
-            onChange={(e) => setFolderId(e.target.value)}
-            options={[
-              { value: UNSET_FOLDER, label: t('library.bulk.chooseFolder') },
-              { value: '', label: t('upload.noFolder') },
-              ...folderOptions(foldersQuery.data),
-            ]}
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={folderId === UNSET_FOLDER || busy}
-            loading={move.isPending}
-            onClick={() => move.mutate({ ids: selectedIds, folderId: folderId || null }, { onSuccess: report })}
-          >
-            <FolderSimple size={16} weight="bold" aria-hidden="true" />
-            {t('library.bulk.move')}
-          </Button>
-        </>
-      )}
-
-      {actions.length > 0 && (
-        <div className="dam-bulkbar__actions" role="group" aria-label={t('asset.lifecycleActions')}>
-          {actions.map((action) => (
-            <Button
-              key={action}
-              variant={action === 'reject' ? 'danger' : 'secondary'}
-              size="sm"
-              loading={transition.isPending}
-              onClick={() => transition.mutate({ ids: selectedIds, action }, { onSuccess: report })}
-            >
-              <ActionIcon action={action} size={16} weight="bold" aria-hidden="true" />
-              {t(`asset.action.${action}`)}
+          <div className="dam-bulkbar__row">
+            <span className="dam-bulkbar__count">{t('library.bulk.selectedCount', { count: selectedIds.length })}</span>
+            <Button variant="ghost" size="sm" onClick={onClear}>
+              <X size={14} weight="bold" aria-hidden="true" />
+              {t('library.bulk.clear')}
             </Button>
-          ))}
-        </div>
-      )}
+            <span className="dam-bulkbar__sep" aria-hidden="true" />
 
-      <Button variant="secondary" size="sm" disabled={busy} onClick={() => setSaveOpen(true)}>
-        <BookmarkSimple size={16} weight="bold" aria-hidden="true" />
-        {t('library.bulk.saveAsCollection')}
-      </Button>
+            <div className="dam-bulkbar__actions">
+              <Button
+                variant="secondary"
+                size="sm"
+                aria-expanded={panel === 'tags'}
+                disabled={busy}
+                onClick={() => togglePanel('tags')}
+              >
+                <Tag size={16} weight="bold" aria-hidden="true" />
+                {t('library.bulk.tags')}
+              </Button>
+              {foldersQuery.data && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  aria-expanded={panel === 'move'}
+                  disabled={busy}
+                  onClick={() => togglePanel('move')}
+                >
+                  <FolderSimple size={16} weight="bold" aria-hidden="true" />
+                  {t('library.bulk.moveTo')}
+                </Button>
+              )}
+            </div>
+
+            {actions.length > 0 && (
+              <div className="dam-bulkbar__actions" role="group" aria-label={t('asset.lifecycleActions')}>
+                {actions.map((action) => (
+                  <Button
+                    key={action}
+                    variant={action === 'reject' ? 'danger' : 'secondary'}
+                    size="sm"
+                    loading={transition.isPending}
+                    onClick={() => transition.mutate({ ids: selectedIds, action }, { onSuccess: report })}
+                  >
+                    <ActionIcon action={action} size={16} weight="bold" aria-hidden="true" />
+                    {t(`asset.action.${action}`)}
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            <Button variant="secondary" size="sm" disabled={busy} onClick={() => setSaveOpen(true)}>
+              <BookmarkSimple size={16} weight="bold" aria-hidden="true" />
+              {t('library.bulk.saveAsCollection')}
+            </Button>
+          </div>
+        </div>
+      </div>
       <NameCollectionDialog
         open={saveOpen}
         title={t('library.bulk.saveAsCollectionTitle')}
@@ -164,6 +204,6 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
           )
         }
       />
-    </div>
+    </>
   );
 }

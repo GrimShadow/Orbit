@@ -38,5 +38,8 @@ exact-fit signage profiles. This step adds those, reusing the same rendition cac
 ## Consequences
 - Both the worker and delivery images now install `ffmpeg` and `poppler-utils`; the API and scheduler images stay lean.
 - `GET /assets/{id}/renditions` reports `duration` and `pageNo` where they apply.
+- For an unpublished asset the console can show only a PDF's page 1 (`preview`, watermarked) and a video's `poster`:
+  `pdf_pages-{n}` 404s and video transcodes 409 until the asset is published, so page navigation and playback appear
+  on publish (ADR-0028).
 - Adding a video or PDF profile is the same shape of change as adding an image one: extend the catalog in `RenditionProfiles`, no
   changes to the link, cache or delivery-serving logic.

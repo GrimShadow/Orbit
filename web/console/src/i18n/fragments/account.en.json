@@ -1,0 +1,31 @@
+{
+  "me": {
+    "title": "My account",
+    "subtitle": "Your profile, roles and what you can access.",
+    "profile": "Profile",
+    "workspace": "Workspace",
+    "tenant": "Tenant ID",
+    "copyTenant": "Copy tenant ID",
+    "copied": "Tenant ID copied",
+    "copyFailed": "Could not copy the tenant ID",
+    "groups": "Groups",
+    "noGroups": "You are not in any groups.",
+    "roles": "Roles",
+    "rolesHint": "Roles decide what you can do in the library.",
+    "noRoles": "No roles assigned",
+    "switchedOff": "Switched off",
+    "inactiveTitle": "Some roles are switched off",
+    "permissions": "Permissions",
+    "permissionsHint": "Everything your active roles allow you to do.",
+    "showPermissions": "Show all permissions",
+    "noPermissions": "No permissions are active.",
+    "attributes": "Access attributes",
+    "attributesHint": "Values on your account that scope which assets your roles apply to.",
+    "noAttributes": "No access attributes are set.",
+    "signOut": "Sign out",
+    "loadFailed": "Could not load your account",
+    "loadFailedBody": "Your account details are not available right now.",
+    "reference": "Reference: {{id}}",
+    "retry": "Try again"
+  }
+}

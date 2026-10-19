@@ -136,8 +136,10 @@ describe('UploadPage', () => {
       { fileName: 'hero.jpg', size: 3, contentType: 'image/jpeg', assetType: 'image', title: 'Hero shot' },
     ]);
     expect(screen.getByRole('link', { name: 'Open' })).toHaveAttribute('href', '/library/assets/a1');
-    expect(await screen.findByRole('link', { name: 'Go to the library' })).toBeInTheDocument();
-    expect(screen.getByText('Upload complete')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'View in library' })).toHaveAttribute('href', '/library');
+    expect(screen.getByRole('heading', { name: '1 asset uploaded' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Upload more' })).toBeInTheDocument();
+    expect(document.title).toBe('Upload - Orbit');
   });
 
   it('flags a file the server would refuse before anything is sent, and will not upload it', async () => {
@@ -265,5 +267,57 @@ describe('UploadPage', () => {
 
     expect(await screen.findByText('Already in the library')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View existing' })).toHaveAttribute('href', '/library/assets/existing1');
+  });
+
+  it('says what the drop zone accepts and its limits before anything is chosen', async () => {
+    mockApi(() => undefined);
+    renderAt('/upload');
+
+    const kinds = await screen.findByRole('list', { name: /Images, Video/ });
+    expect(
+      within(kinds)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Images', 'Video', 'Audio', 'Documents', '3D models', 'Web bundles']);
+    expect(screen.getByText(/Up to 500 files at a time/)).toBeInTheDocument();
+    expect(screen.getByText('Choose files')).toBeInTheDocument();
+  });
+
+  it('turns batch tags into removable chips and sends them', async () => {
+    let sent: BulkBody | undefined;
+    mockApi(async (call) => {
+      if (call.pathname === '/api/v1/assets/bulk-upload') {
+        sent = (await call.json()) as BulkBody;
+        return bulk([okItem(1, 'a.jpg')]);
+      }
+      if (call.pathname === '/api/v1/uploads/u1/complete')
+        return json({ id: 'u1', assetId: 'a1', status: 'ingested', error: '' });
+      return undefined;
+    });
+    renderAt('/upload');
+    await choose(file('a.jpg'));
+
+    const tags = await screen.findByLabelText('Tags');
+    await userEvent.type(tags, 'Spring{Enter}launch{Enter}draft{Enter}');
+    expect(screen.getByRole('button', { name: 'Remove spring' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Remove draft' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Upload 1 file' }));
+
+    await waitFor(() => expect(sent).toBeDefined());
+    expect(sent?.tags).toEqual(['spring', 'launch']);
+  });
+
+  it('reports a batch of only duplicates as nothing new, not as an upload', async () => {
+    mockApi(async (call) => {
+      if (call.pathname === '/api/v1/assets/bulk-upload') return bulk([okItem(1, 'a.jpg')]);
+      if (call.pathname === '/api/v1/uploads/u1/complete')
+        return json({ id: 'u1', assetId: 'a1', status: 'duplicate', duplicateOfAssetId: 'existing1', error: '' });
+      return undefined;
+    });
+    renderAt('/upload');
+    await choose(file('a.jpg'));
+    await userEvent.click(await screen.findByRole('button', { name: 'Upload 1 file' }));
+
+    expect(await screen.findByRole('heading', { name: 'No new assets' })).toBeInTheDocument();
   });
 });

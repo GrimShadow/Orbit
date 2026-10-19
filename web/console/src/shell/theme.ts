@@ -19,6 +19,23 @@ export function applyTheme(preference: ThemePreference) {
   const root = document.documentElement;
   if (preference === 'system') root.removeAttribute('data-theme');
   else root.setAttribute('data-theme', preference);
+  syncThemeColor(preference);
+}
+
+/** The browser chrome colour (`<meta name="theme-color">`, one per OS scheme in index.html) follows the OS setting on its
+ * own; a manual Light/Dark choice has to override both, and "system" restores what index.html declared. */
+function syncThemeColor(preference: ThemePreference) {
+  const metas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+  metas.forEach((m) => {
+    if (!m.dataset.original) m.dataset.original = m.content;
+    if (preference === 'system') {
+      m.content = m.dataset.original;
+      return;
+    }
+    const dark = /dark/.test(m.media);
+    const original = [...metas].find((x) => /dark/.test(x.media) === (preference === 'dark'));
+    m.content = (original?.dataset.original ?? original?.content ?? m.content) || (dark ? '#0b1020' : '#f4f6fb');
+  });
 }
 
 export function setTheme(preference: ThemePreference) {

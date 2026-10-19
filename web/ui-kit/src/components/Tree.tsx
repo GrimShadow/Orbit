@@ -1,3 +1,4 @@
+import { CaretRight, FolderOpen, FolderSimple } from '@phosphor-icons/react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { ContextMenu, type MenuItem } from './Menu';
 
@@ -138,10 +139,15 @@ export function Tree({
               setContext({ id: n.id, x: e.clientX, y: e.clientY });
             }}
           >
-            <span className="dam-caret" aria-hidden="true">
-              {hasKids ? (open ? '▾' : '▸') : ''}
+            <span className={`dam-caret${open ? ' dam-caret--open' : ''}`} aria-hidden="true">
+              {hasKids && <CaretRight size={12} weight="bold" />}
             </span>
-            {n.label}
+            {open && hasKids ? (
+              <FolderOpen size={16} aria-hidden="true" className="dam-treeitem__icon" />
+            ) : (
+              <FolderSimple size={16} aria-hidden="true" className="dam-treeitem__icon" />
+            )}
+            <span className="dam-treeitem__label">{n.label}</span>
           </div>
           {hasKids && open && <ul role="group">{render(n.children!, level + 1, n.id)}</ul>}
         </li>

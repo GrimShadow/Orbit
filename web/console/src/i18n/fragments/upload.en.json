@@ -1,0 +1,20 @@
+{
+  "upload": {
+    "dropHint": "Files are added as drafts you can finish later.",
+    "dropActive": "Drop to add these files",
+    "choose": "Choose files",
+    "kind": {
+      "images": "Images",
+      "video": "Video",
+      "audio": "Audio",
+      "documents": "Documents",
+      "models": "3D models",
+      "bundles": "Web bundles"
+    },
+    "doneAll_one": "{{count}} asset uploaded",
+    "doneAll_other": "{{count}} assets uploaded",
+    "doneNothingNew": "No new assets",
+    "viewInLibrary": "View in library",
+    "tagsHint": "Press Enter or comma to add. Applied to every file in this batch."
+  }
+}

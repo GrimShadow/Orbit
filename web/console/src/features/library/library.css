@@ -4,15 +4,105 @@
   align-items: flex-start;
 }
 
+/* ---- Folder navigator ---- */
 .dam-library__sidebar {
-  flex: 0 0 260px;
+  flex: 0 0 248px;
   min-width: 0;
   position: sticky;
-  top: var(--dam-space-4);
-  max-height: calc(100dvh - 2 * var(--dam-space-4));
+  top: calc(var(--dam-topbar-h, 60px) + var(--dam-space-4));
+  max-height: calc(100dvh - var(--dam-topbar-h, 60px) - 2 * var(--dam-space-4));
   overflow-y: auto;
+  padding: var(--dam-space-3);
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-lg);
+  box-shadow: var(--dam-shadow-sm);
+}
+.dam-library__sidehead {
+  margin: 0 0 var(--dam-space-2);
+  padding: 0 var(--dam-space-2);
+  color: var(--dam-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dam-foldernav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dam-foldernav__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+}
+.dam-foldernav__all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  width: 100%;
+  padding: 0 var(--dam-space-2) 0 var(--dam-space-1);
+  border: 0;
+  border-radius: var(--dam-radius-sm);
+  background: transparent;
+  color: var(--dam-text);
+  font: inherit;
+  font-size: var(--dam-text-sm);
+  text-align: start;
+  cursor: pointer;
+  transition:
+    background-color var(--dam-duration) var(--dam-ease),
+    color var(--dam-duration) var(--dam-ease);
+}
+.dam-foldernav__all > svg {
+  flex: 0 0 auto;
+  margin-inline-start: 18px;
+  color: var(--dam-muted);
+}
+.dam-foldernav__all:hover {
+  background: var(--dam-surface-2);
+}
+.dam-foldernav__all[aria-pressed='true'] {
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+  font-weight: 600;
+}
+.dam-foldernav__all[aria-pressed='true'] > svg {
+  color: inherit;
+}
+.dam-foldernav__alllabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-foldernav__count {
+  flex: 0 0 auto;
+  font-size: var(--dam-text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--dam-muted);
+}
+.dam-foldernav__all[aria-pressed='true'] .dam-foldernav__count {
+  color: inherit;
+}
+.dam-foldernav__none {
+  margin: var(--dam-space-2) var(--dam-space-2) 0;
 }
 
+/* The phone-only disclosure that stands in for the sidebar. */
+.dam-library__foldertoggle {
+  display: none;
+}
+
+/* The folder panel takes a column of the page, so the cards run a little narrower than the default to keep four across. */
+.dam-library .dam-grid {
+  grid-template-columns: repeat(auto-fill, minmax(188px, 1fr));
+}
+
+/* ---- Main column ---- */
 .dam-library__main {
   flex: 1 1 auto;
   min-width: 0;
@@ -20,63 +110,283 @@
   flex-direction: column;
   gap: var(--dam-space-4);
 }
-
 .dam-library__toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--dam-space-4);
-  align-items: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dam-space-3);
 }
-
-.dam-library__viewToggle {
+.dam-library__filters {
   display: flex;
-  gap: var(--dam-space-1);
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-library__filter {
+  min-width: 156px;
+}
+/* The filter dropdowns carry their name in the first option ("All statuses"); the label stays for assistive tech. */
+.dam-library__filter .dam-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.dam-library__filter .dam-select {
+  font-weight: 500;
 }
 
-.dam-library__viewToggle button[aria-pressed='true'],
-.dam-library__sidebar button[aria-pressed='true'] {
-  background: var(--dam-surface-2);
+.dam-library__results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+  transition: opacity var(--dam-duration) var(--dam-ease);
+}
+.dam-library__results--busy {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.dam-library__resultsbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dam-space-3);
+  min-height: 32px;
+}
+.dam-library__selectall {
+  margin: 0;
+  width: fit-content;
+  padding-inline-end: var(--dam-space-3);
+}
+.dam-check__input:indeterminate {
+  background: var(--dam-brand);
+  border-color: var(--dam-brand);
+}
+.dam-check__input:indeterminate::after {
+  transform: scale(1);
+  -webkit-mask: none;
+  mask: none;
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+}
+.dam-library__more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-4) 0 var(--dam-space-2);
+}
+.dam-library__error {
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-lg);
+}
+
+/* List view cells. */
+.dam-assetcell {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-3);
+  min-width: 0;
+}
+.dam-assetcell__fallback {
+  display: grid;
+  place-items: center;
+  color: var(--dam-muted);
+}
+.dam-assetcell__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dam-text);
   font-weight: 600;
+  text-decoration: none;
+}
+.dam-assetcell__title:hover {
+  color: var(--dam-brand);
+  text-decoration: underline;
+}
+.dam-table .dam-col--actions {
+  width: 52px;
+  padding-inline: var(--dam-space-2);
 }
 
-.dam-checkbox-label {
+/* ---- Floating bulk-action bar ---- */
+.dam-library--selecting {
+  /* Room for the floating bar (and, on phones, the tab bar under it) so the last row is never covered. */
+  padding-bottom: 168px;
+}
+.dam-bulkdock {
+  position: fixed;
+  inset-inline: var(--dam-sidebar-w, 0px) 0;
+  bottom: var(--dam-space-4);
+  z-index: var(--dam-z-sticky);
   display: flex;
+  justify-content: center;
+  padding-inline: var(--dam-gutter, var(--dam-space-4));
+  pointer-events: none;
+}
+.dam-bulkbar {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+  width: min(100%, 980px);
+  padding: var(--dam-space-3) var(--dam-space-4);
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border);
+  border-radius: var(--dam-radius-lg);
+  box-shadow: var(--dam-shadow-lg);
+  animation: dam-bulkbar-in 220ms var(--dam-ease-spring);
+}
+@keyframes dam-bulkbar-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.dam-bulkbar__row {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--dam-space-2);
 }
-
-.dam-bulkbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--dam-space-3);
-  padding: var(--dam-space-3);
-  background: var(--dam-surface-2);
-  border-radius: var(--dam-radius);
-}
-
 .dam-bulkbar__count {
-  font-weight: 600;
-  align-self: center;
+  font-weight: 700;
+  font-size: var(--dam-text-sm);
+  font-variant-numeric: tabular-nums;
+  padding-inline-end: var(--dam-space-1);
 }
-
+.dam-bulkbar__sep {
+  align-self: stretch;
+  width: 1px;
+  margin-block: 4px;
+  background: var(--dam-border-subtle);
+}
 .dam-bulkbar__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--dam-space-1);
+  gap: var(--dam-space-2);
+}
+.dam-bulkbar__row > .dam-btn:last-child {
+  margin-inline-start: auto;
+}
+.dam-bulkbar__panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--dam-space-2);
+  padding-bottom: var(--dam-space-3);
+  border-bottom: 1px solid var(--dam-border-subtle);
+}
+.dam-bulkbar__panelfield {
+  flex: 1 1 260px;
+  min-width: 0;
 }
 
-/* Full-width single column below ~390px (spec Step 1.8: "mobile-responsive at 390px width"). */
-@media (max-width: 640px) {
+/* Below the shell's desktop breakpoint there is no sidebar and a fixed tab bar sits at the bottom of the screen. */
+@media (max-width: 1023px) {
+  .dam-bulkdock {
+    inset-inline: 0;
+    bottom: calc(72px + var(--dam-space-3));
+    padding-inline: var(--dam-space-3);
+  }
+}
+
+/* ---- Folder navigator becomes a disclosure on tablets and phones ---- */
+@media (max-width: 899px) {
   .dam-library__layout {
     flex-direction: column;
+    gap: var(--dam-space-3);
   }
-
+  .dam-library__foldertoggle {
+    display: flex;
+    align-items: center;
+    gap: var(--dam-space-2);
+    width: 100%;
+    min-height: 44px;
+    margin-bottom: var(--dam-space-3);
+    padding: 0 var(--dam-space-3);
+    background: var(--dam-surface-raised);
+    border: 1px solid var(--dam-border-subtle);
+    border-radius: var(--dam-radius);
+    box-shadow: var(--dam-shadow-sm);
+    color: var(--dam-text);
+    font: inherit;
+    font-size: var(--dam-text-sm);
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+  }
+  .dam-library__foldertoggle > svg:first-child {
+    color: var(--dam-muted);
+  }
+  .dam-library__foldertoggletext {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: var(--dam-space-2);
+  }
+  .dam-library__foldertogglecurrent {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--dam-muted);
+    font-weight: 500;
+  }
+  .dam-library__foldertogglecaret {
+    transition: transform var(--dam-duration) var(--dam-ease-spring);
+  }
+  .dam-library__foldertoggle[aria-expanded='true'] .dam-library__foldertogglecaret {
+    transform: rotate(180deg);
+  }
   .dam-library__sidebar {
+    display: none;
     flex-basis: auto;
     width: 100%;
     position: static;
-    max-height: none;
-    overflow: visible;
+    max-height: 50dvh;
+  }
+  .dam-library__sidebar--open {
+    display: block;
+  }
+  .dam-library__sidehead {
+    display: none;
+  }
+  .dam-library__main {
+    width: 100%;
+  }
+}
+
+@media (max-width: 639px) {
+  .dam-library__filters {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .dam-library__filter {
+    min-width: 0;
+  }
+  .dam-library__toolbar {
+    align-items: stretch;
+  }
+  .dam-library__toolbar > .dam-segmented {
+    align-self: flex-start;
+  }
+  .dam-bulkbar__row > .dam-btn:last-child {
+    margin-inline-start: 0;
+  }
+  .dam-bulkbar__sep {
+    display: none;
+  }
+  .dam-library--selecting {
+    padding-bottom: 240px;
   }
 }

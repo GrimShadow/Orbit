@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { LoadingRegion, Skeleton } from '../../ui';
+import { Card, EmptyState, LoadingRegion, Skeleton, WarningCircle } from '../../ui';
 import type { AssetDto } from './assetApi';
 import { useAssetVersions } from './assetApi';
-import { buildFileFacts, summaryLine } from './fileFacts';
+import { buildFileFacts } from './fileFacts';
 
 /** Read-only "File information" for an asset's current version - size, dimensions, dates, checksum, scan result and
  * kind-specific facts (image, video/audio, PDF/Office) - from data the ingest pipeline already stored. */
@@ -12,17 +12,33 @@ export function FileInfo({ asset }: { asset: AssetDto }) {
 
   if (versionsQuery.isPending)
     return (
-      <LoadingRegion>
-        <Skeleton height={120} />
+      <LoadingRegion label={t('asset.fileInfoLoading')}>
+        <Card padding="md">
+          <div className="dam-stack dam-stack--fill">
+            <Skeleton width="40%" height={16} />
+            <Skeleton height={20} />
+            <Skeleton height={20} />
+            <Skeleton height={20} />
+          </div>
+        </Card>
       </LoadingRegion>
     );
+  if (versionsQuery.error)
+    return (
+      <Card as="section" padding="md" aria-labelledby="dam-fileinfo-title">
+        <h2 id="dam-fileinfo-title" className="dam-metasection__title">
+          {t('asset.fileInfo')}
+        </h2>
+        <EmptyState icon={<WarningCircle />} titleAs="p" title={t('asset.versionsFailed')} />
+      </Card>
+    );
   const version = versionsQuery.data?.find((v) => v.isCurrent);
-  if (versionsQuery.error || !version) return null; // an asset with no file yet has nothing to describe
+  if (!version) return null; // an asset with no file yet has nothing to describe
 
   const groups = buildFileFacts(asset, version, i18n.language, t as (k: string, o?: Record<string, unknown>) => string);
   return (
-    <section className="dam-fileinfo" aria-labelledby="dam-fileinfo-title">
-      <h2 id="dam-fileinfo-title" className="dam-fileinfo__title">
+    <Card as="section" padding="md" className="dam-fileinfo" aria-labelledby="dam-fileinfo-title">
+      <h2 id="dam-fileinfo-title" className="dam-metasection__title">
         {t('asset.fileInfo')}
       </h2>
       <div className="dam-fileinfo__groups">
@@ -42,12 +58,6 @@ export function FileInfo({ asset }: { asset: AssetDto }) {
           </div>
         ))}
       </div>
-    </section>
+    </Card>
   );
-}
-
-/** "JPEG · 1920 × 1080 · 406.3 KB" under the page title - the quick answer before the full table. */
-export function AssetSummary({ assetId }: { assetId: string }) {
-  const version = useAssetVersions(assetId).data?.find((v) => v.isCurrent);
-  return version ? <p className="dam-asset-summary">{summaryLine(version)}</p> : null;
 }

@@ -1,0 +1,22 @@
+{
+  "login": {
+    "title": "Sign in to Orbit",
+    "body": "Continue to your organisation's sign-in page to manage and publish digital assets.",
+    "tagline": "Manage, review and publish every digital asset from one library.",
+    "features": {
+      "organise": "Organise images, video and documents in folders and collections",
+      "review": "Route assets through review before they go live",
+      "deliver": "Share with secure, expiring delivery links"
+    },
+    "note": "Sign-in uses your organisation account.",
+    "failed": "Sign-in could not be started. Try again.",
+    "panel": "About Orbit"
+  },
+  "callback": {
+    "signingIn": "Signing you in…",
+    "hint": "This only takes a moment.",
+    "failed": "Sign-in failed",
+    "body": "We could not complete sign-in. The sign-in link may have expired or already been used.",
+    "retry": "Back to sign in"
+  }
+}

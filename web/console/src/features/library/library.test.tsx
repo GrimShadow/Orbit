@@ -180,23 +180,87 @@ describe('LibraryPage', () => {
     });
   });
 
-  it('shows a next-page button only when the API reports more results, and it asks for the next cursor', async () => {
+  it('shows a Load more button only when the API reports more results, and it asks for the next cursor', async () => {
     const calls = mockApi({ items: ASSETS, nextCursor: 'a1' });
     renderAt('/library');
     await screen.findByText('Hero shot');
+    expect(await screen.findByText('1+ assets')).toBeInTheDocument();
 
-    const next = await screen.findByRole('button', { name: 'Next page' });
+    const next = await screen.findByRole('button', { name: 'Load more' });
     await userEvent.click(next);
     await waitFor(() => {
-      const last = calls.at(-1)!;
+      const last = calls.filter((c) => new URL(c.url).pathname === '/api/v1/assets').at(-1)!;
       expect(new URL(last.url).searchParams.get('cursor')).toBe('a1');
     });
   });
 
-  it('shows an empty message when no assets match', async () => {
+  it('invites an upload when the library has nothing in it', async () => {
     mockApi({ items: [], nextCursor: null });
     renderAt('/library');
-    expect(await screen.findByText('No assets match these filters.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Your library is empty' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Upload' }).length).toBeGreaterThan(0);
+  });
+
+  it('offers to clear the filters when they leave nothing, and clearing them restores the URL state', async () => {
+    const calls = mockApi({ items: [], nextCursor: null });
+    renderAt('/library?status=draft&type=video');
+    expect(await screen.findByRole('heading', { name: 'No assets match these filters' })).toBeInTheDocument();
+    // Each active filter is a removable chip.
+    const chips = screen.getByRole('group', { name: 'Active filters' });
+    expect(within(chips).getByText('Draft')).toBeInTheDocument();
+    expect(within(chips).getByText('Video')).toBeInTheDocument();
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Clear filters' })[0]!);
+    await waitFor(() => {
+      const last = new URL(calls.filter((c) => new URL(c.url).pathname === '/api/v1/assets').at(-1)!.url);
+      expect(last.searchParams.get('status')).toBeNull();
+      expect(last.searchParams.get('type')).toBeNull();
+    });
+    expect(screen.queryByRole('group', { name: 'Active filters' })).not.toBeInTheDocument();
+  });
+
+  it('restores folder, status, type and view from the URL', async () => {
+    const calls = mockApi();
+    renderAt('/library?folder=f2&status=draft&type=image&view=list');
+    expect(await screen.findByRole('table')).toBeInTheDocument();
+    const assetCall = calls.find((c) => new URL(c.url).pathname === '/api/v1/assets')!;
+    const q = new URL(assetCall.url).searchParams;
+    expect([q.get('folderId'), q.get('status'), q.get('type')]).toEqual(['f2', 'draft', 'image']);
+    // The breadcrumb walks up from the restored folder.
+    const crumbs = await screen.findByRole('navigation', { name: 'Folders' });
+    expect(within(crumbs).getByRole('button', { name: 'Brand' })).toBeInTheDocument();
+    expect(within(crumbs).getByText('Roadster')).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByLabelText('Status')).toHaveValue('draft');
+    expect(document.title).toBe('Library - Orbit');
+  });
+
+  it('writes filter changes to the URL so back/forward can restore them', async () => {
+    mockApi();
+    renderAt('/library');
+    await screen.findByText('Hero shot');
+    await userEvent.selectOptions(screen.getByLabelText('Type'), 'video');
+    expect(await screen.findByRole('group', { name: 'Active filters' })).toHaveTextContent('Video');
+  });
+
+  it('colours the status badge by lifecycle state', async () => {
+    mockApi({ items: [asset({}), asset({ id: 'a2', title: 'Second', status: 'in_review' })], nextCursor: null });
+    renderAt('/library');
+    await screen.findByText('Hero shot');
+    const grid = screen.getByRole('list', { name: 'Assets' });
+    expect(within(grid).getByText('Published')).toHaveClass('dam-badge--success');
+    expect(within(grid).getByText('In review')).toHaveClass('dam-badge--info');
+  });
+
+  it('selects every asset with one control, which shows the mixed state while some are selected', async () => {
+    mockApi({ items: [asset({}), asset({ id: 'a2', title: 'Second' })], nextCursor: null });
+    renderAt('/library');
+    await screen.findByText('Hero shot');
+    const all = screen.getByLabelText('Select all 2 assets on this page') as HTMLInputElement;
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Hero shot' }));
+    expect(all.indeterminate).toBe(true);
+    await userEvent.click(all);
+    expect(await screen.findByRole('region', { name: '2 assets selected' })).toBeInTheDocument();
+    expect(all.checked).toBe(true);
   });
 
   it('shows a real thumbnail image once the batch link request resolves', async () => {
@@ -212,17 +276,23 @@ describe('LibraryPage', () => {
     expect(img).toHaveAttribute('src', 'https://cdn.test/a1-thumb.webp');
   });
 
-  it('stops requesting thumbnail links once switched to the list/table view', async () => {
-    const calls = mockApi();
-    renderAt('/library');
+  it('shows the thumbnail in the list view without asking for the links a second time', async () => {
+    const calls = mockApi(undefined, { a1: 'https://cdn.test/a1-thumb.webp' });
+    const { container } = renderAt('/library');
     await screen.findByText('Hero shot');
     const isBatchCall = (r: Request) => new URL(r.url).pathname === '/api/v1/assets/links/batch';
-    await waitFor(() => expect(calls.some(isBatchCall)).toBe(true)); // the default grid view did ask for one
+    await waitFor(() => expect(calls.some(isBatchCall)).toBe(true));
 
     const batchCallsInGrid = calls.filter(isBatchCall).length;
     await userEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('table');
-    expect(calls.filter(isBatchCall)).toHaveLength(batchCallsInGrid); // no further batch call once in list view
+    const thumb = await waitFor(() => {
+      const el = container.querySelector('img.dam-table__thumb');
+      if (!el) throw new Error('list thumbnail not rendered yet');
+      return el;
+    });
+    expect(thumb).toHaveAttribute('src', 'https://cdn.test/a1-thumb.webp');
+    expect(calls.filter(isBatchCall)).toHaveLength(batchCallsInGrid); // the same cached batch serves both views
   });
 
   it('offers Open plus the valid lifecycle actions in a card menu, and runs one against that asset', async () => {

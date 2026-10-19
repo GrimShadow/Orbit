@@ -1,4 +1,4 @@
-import { availableActions } from './lifecycle';
+import { availableActions, primaryAction } from './lifecycle';
 
 describe('availableActions', () => {
   it('offers submit from draft', () => {
@@ -28,5 +28,17 @@ describe('availableActions', () => {
   it('offers nothing from an unknown or deleted status', () => {
     expect(availableActions('deleted')).toEqual([]);
     expect(availableActions('purged')).toEqual([]);
+  });
+});
+
+describe('primaryAction', () => {
+  it('picks the obvious forward step for draft, in review and approved assets', () => {
+    expect(primaryAction('draft')).toBe('submit');
+    expect(primaryAction('in_review')).toBe('approve');
+    expect(primaryAction('approved')).toBe('publish');
+  });
+
+  it('has no prominent step once published, expired, archived or deleted', () => {
+    for (const status of ['published', 'expired', 'archived', 'deleted']) expect(primaryAction(status)).toBeNull();
   });
 });

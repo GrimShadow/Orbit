@@ -10,8 +10,7 @@ import { uniquePng } from './helpers/fixtures';
  * refresh. */
 async function openFromSearch(page: Page, query: string, title: string) {
   await expect(async () => {
-    await page.goto('/search');
-    await page.getByLabel('Search assets').fill(query);
+    await page.goto(`/search?q=${encodeURIComponent(query)}`);
     await expect(page.getByText(title, { exact: true })).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 20_000 });
   await page.getByText(title, { exact: true }).click();
@@ -33,39 +32,42 @@ test('uploads an asset, edits its metadata, publishes it, and it appears in sear
   await page.locator('input[type="file"]').setInputFiles({ name: fileName, mimeType: 'image/png', buffer: uniquePng(seed) });
   await expect(page.getByText(fileName)).toBeVisible();
   await page.getByRole('button', { name: /^Upload \d+ files?$/ }).click();
-  await expect(page.getByRole('link', { name: 'Go to the library' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('link', { name: 'View in library' })).toBeVisible({ timeout: 30_000 });
 
   // Find the freshly-uploaded asset via search and confirm it landed as a draft image asset before editing it.
   await openFromSearch(page, runId, title);
-  await expect(page.getByText('Draft')).toBeVisible();
-  await expect(page.getByText('Image')).toBeVisible();
+  await expect(page.locator('.dam-badge', { hasText: 'Draft' }).first()).toBeVisible();
+  await expect(page.locator('.dam-badge', { hasText: 'Image' }).first()).toBeVisible();
 
   // Edit metadata: the "core" template's `credit` field on the image schema (a plain text field, spec Step 1.8:
   // "metadata form generated from schema").
   const credit = `Credit ${runId}`;
+  await page.getByRole('tab', { name: 'Metadata' }).click();
   await page.getByLabel('Credit').fill(credit);
-  await page.getByRole('button', { name: 'Save metadata' }).click();
-  await expect(page.getByRole('button', { name: 'Save metadata' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Changes saved')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save changes' })).toBeHidden(); // the unsaved-changes bar goes away
 
   // Walk the lifecycle to published (spec Step 1.6's state machine: draft -> in_review -> approved -> published).
   await page.getByRole('button', { name: 'Submit for review' }).click();
-  await expect(page.getByText('In review')).toBeVisible();
+  await expect(page.locator('.dam-badge', { hasText: 'In review' }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Approve' }).click();
-  await expect(page.getByText('Approved')).toBeVisible();
+  await expect(page.locator('.dam-badge', { hasText: 'Approved' }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Publish' }).click();
-  await expect(page.getByText('Published')).toBeVisible();
+  await expect(page.locator('.dam-badge', { hasText: 'Published' }).first()).toBeVisible();
 
   // Appears in search (POST /search, spec Step 1.7) with the type/status facets the console actually renders
   // (ADR-0018), now reflecting the published status.
   await expect(async () => {
-    await page.goto('/search');
-    await page.getByLabel('Search assets').fill(runId);
+    await page.goto(`/search?q=${encodeURIComponent(runId)}`);
     await expect(page.getByText(title, { exact: true })).toBeVisible({ timeout: 2_000 });
     await expect(page.getByRole('group', { name: 'Status' })).toContainText('Published', { timeout: 2_000 });
   }).toPass({ timeout: 20_000 });
 
   await expect(page.getByRole('group', { name: 'Type' })).toContainText('Image');
-  await page.getByRole('checkbox', { name: /Image/ }).check();
+  // click + web-first assertion (not `.check()`): the facet list re-renders as the filtered results arrive.
+  await page.getByRole('checkbox', { name: /Image/ }).click();
+  await expect(page.getByRole('checkbox', { name: /Image/ })).toBeChecked();
   await expect(page.getByText(title, { exact: true })).toBeVisible();
 });
 
@@ -89,19 +91,20 @@ test('bulk edits 50 assets in under 5 seconds', async ({ page }) => {
 
   await page.goto('/upload');
   await page.locator('input[type="file"]').setInputFiles(files);
-  await page.getByRole('textbox', { name: 'Tags' }).fill(runId);
+  await page.getByRole('region', { name: 'Destination' }).getByRole('textbox', { name: 'Tags' }).fill(runId);
+  await page.keyboard.press('Enter'); // a chip, not free text
   await page.getByRole('button', { name: /^Upload \d+ files?$/ }).click();
-  await expect(page.getByRole('link', { name: 'Go to the library' })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole('link', { name: 'View in library' })).toBeVisible({ timeout: 60_000 });
 
-  await page.goto('/library');
-  await page.getByLabel('Type').selectOption('image');
-  await page.getByLabel('Status').selectOption('draft');
+  await page.goto('/library?type=image&status=draft');
   const selectAll = page.getByRole('checkbox', { name: `Select all ${count} assets on this page` });
   await expect(selectAll).toBeVisible({ timeout: 15_000 });
   await selectAll.check();
   await expect(page.getByRole('region', { name: `${count} assets selected` })).toBeVisible();
 
+  await page.getByRole('button', { name: 'Tags' }).click(); // opens the tag panel inside the floating bulk bar
   await page.getByRole('textbox', { name: 'Tags' }).fill('bulk-edited');
+  await page.keyboard.press('Enter');
   const start = Date.now();
   await page.getByRole('button', { name: 'Add tags' }).click();
   await expect(page.getByText(`${count} assets updated`)).toBeVisible({ timeout: 10_000 });

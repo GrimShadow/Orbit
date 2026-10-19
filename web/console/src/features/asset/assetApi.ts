@@ -1,5 +1,5 @@
-import { unwrap, type ApiClient, type components } from '@dam/sdk-js';
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiError, unwrap, type ApiClient, type components } from '@dam/sdk-js';
+import { queryOptions, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useApiClient } from '../../api/apiClient';
 
 export type AssetDto = components['schemas']['AssetDto'];
@@ -35,6 +35,13 @@ export const termsOptions = (api: ApiClient, vocabularyId: string) =>
     },
   });
 
+/** A title, tag, metadata or status change makes any cached grid/list stale; the single-asset caches are set directly. */
+function refreshLists(queryClient: QueryClient) {
+  void queryClient.invalidateQueries({
+    predicate: (q) => ['assets', 'search', 'collections'].includes(String(q.queryKey[0])),
+  });
+}
+
 export function useAsset(id: string) {
   const api = useApiClient();
   return useQuery(assetOptions(api, id));
@@ -46,7 +53,10 @@ export function useUpdateAsset(id: string) {
   return useMutation({
     mutationFn: async (body: components['schemas']['UpdateAssetRequest']) =>
       unwrap(await api.PATCH('/api/v1/assets/{id}', { params: { path: { id } }, body })),
-    onSuccess: (asset) => queryClient.setQueryData(['asset', id], asset),
+    onSuccess: (asset) => {
+      queryClient.setQueryData(['asset', id], asset);
+      refreshLists(queryClient);
+    },
   });
 }
 
@@ -61,7 +71,10 @@ export function useTransition(id: string) {
           body: { reason: reason ?? null },
         }),
       ),
-    onSuccess: (asset) => queryClient.setQueryData(['asset', id], asset),
+    onSuccess: (asset) => {
+      queryClient.setQueryData(['asset', id], asset);
+      refreshLists(queryClient);
+    },
   });
 }
 
@@ -86,12 +99,18 @@ export function useRestoreVersion(id: string) {
   });
 }
 
-export function useAssetRenditions(id: string) {
+export function useAssetRenditions(id: string, enabled = true) {
   const api = useApiClient();
   return useQuery({
     queryKey: ['asset', id, 'renditions'],
     queryFn: async () => unwrap(await api.GET('/api/v1/assets/{id}/renditions', { params: { path: { id } } })),
+    enabled,
   });
+}
+
+/** The server's own explanation when there is one (`detail`), since an ApiError's message is only its short title. */
+export function errorMessage(e: unknown): string {
+  return e instanceof ApiError ? e.detail || e.title : e instanceof Error ? e.message : String(e);
 }
 
 /** A short-lived signed link (spec ADR-0006) to a rendition, fetched lazily and cached briefly - a fresh one is asked

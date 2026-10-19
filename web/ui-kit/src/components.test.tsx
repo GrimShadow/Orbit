@@ -430,6 +430,50 @@ describe('accessibility (axe)', () => {
       expect(screen.getByRole('button', { name: 'Actions' })).toHaveFocus();
     });
 
+    it('portals the open menu out of the card so overflow/transform on the tile cannot clip it', async () => {
+      render(
+        <main>
+          <ThumbnailGrid items={[{ id: 'a1', title: 'Hero' }]} label="Assets" cardActions={() => actions(() => {})} />
+        </main>,
+      );
+      const card = screen.getByRole('listitem');
+      const trigger = screen.getByRole('button', { name: 'Actions for Hero' });
+      await userEvent.click(trigger);
+      const menu = screen.getByRole('menu', { name: 'Actions for Hero' });
+      expect(card).not.toContainElement(menu);
+      expect(menu.closest('.dam-popover')?.parentElement).toBe(screen.getByRole('main')); // a landmark, not <body>, yet outside the card
+      expect(trigger).toHaveAttribute('aria-controls', menu.closest('.dam-popover')?.id);
+      // Pressing the trigger again toggles it closed (the outside-click listener must not fire first and re-open it).
+      await userEvent.click(trigger);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('ignores scroll events that move nothing (they closed the menu the instant it opened) but closes when the page really scrolls', async () => {
+      render(
+        <main>
+          <ThumbnailGrid items={[{ id: 'a1', title: 'Hero' }]} label="Assets" cardActions={() => actions(() => {})} />
+        </main>,
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Actions for Hero' }));
+      expect(screen.getByRole('menu', { name: 'Actions for Hero' })).toBeInTheDocument();
+      // browsers emit scroll events for focus() inside a just-mounted fixed menu, scroll anchoring, etc.
+      act(() => {
+        document.dispatchEvent(new Event('scroll'));
+        window.dispatchEvent(new Event('scroll'));
+      });
+      expect(screen.getByRole('menu', { name: 'Actions for Hero' })).toBeInTheDocument();
+      // a genuine scroll (the trigger's position changes) dismisses it
+      const trigger = screen.getByRole('button', { name: 'Actions for Hero' });
+      const rect = trigger.getBoundingClientRect();
+      trigger.getBoundingClientRect = () =>
+        ({ ...rect, top: rect.top - 120, bottom: rect.bottom - 120, y: rect.y - 120 }) as DOMRect;
+      act(() => {
+        document.dispatchEvent(new Event('scroll'));
+      });
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+
     it('renders nothing when there are no actions', () => {
       const { container } = render(<CardMenu label="Actions" actions={[]} />);
       expect(container).toBeEmptyDOMElement();

@@ -1,0 +1,11 @@
+{
+  "shell": {
+    "sidebar": "साइडबार",
+    "mobileNav": "अनुभाग",
+    "collapse": "साइडबार छोटा करें",
+    "expand": "साइडबार बड़ा करें",
+    "search.label": "सब कुछ खोजें",
+    "search.placeholder": "एसेट, टैग, फ़ोल्डर खोजें…",
+    "shortcuts.search_focus": "खोज बॉक्स पर फ़ोकस करें"
+  }
+}

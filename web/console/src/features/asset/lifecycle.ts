@@ -19,3 +19,12 @@ export function availableActions(status: string): string[] {
   if (WITHDRAWABLE_FROM.has(status)) actions.push('withdraw');
   return actions;
 }
+
+/** The single most likely next step for the page's prominent button: only the stages where there is an obvious forward
+ * move (a draft is submitted, a reviewed asset approved, an approved one published). Later stages have none - their
+ * actions (expire, archive, withdraw) live in the overflow menu. */
+const PRIMARY: Record<string, string> = { draft: 'submit', in_review: 'approve', approved: 'publish' };
+
+export function primaryAction(status: string): string | null {
+  return PRIMARY[status] ?? null;
+}

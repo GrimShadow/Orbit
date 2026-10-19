@@ -1,5 +1,6 @@
+import { X } from '@phosphor-icons/react';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
-import { Button } from './Button';
+import { IconButton } from './IconButton';
 
 interface DialogProps {
   open: boolean;
@@ -38,9 +39,9 @@ export function Dialog({ open, onClose, title, children, closeLabel = 'Close', v
         <h2 id={titleId} className="dam-dialog__title">
           {title}
         </h2>
-        <Button variant="ghost" size="sm" onClick={onClose} aria-label={closeLabel}>
-          ✕
-        </Button>
+        <IconButton label={closeLabel} size="sm" onClick={onClose}>
+          <X size={16} weight="bold" aria-hidden="true" />
+        </IconButton>
       </div>
       <div className="dam-dialog__body">{open ? children : null}</div>
     </dialog>

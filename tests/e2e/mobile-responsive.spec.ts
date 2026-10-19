@@ -25,8 +25,9 @@ test('the primary nav and keyboard-shortcuts help stay usable at 390px', async (
   await signIn(page);
   await page.goto('/library');
 
-  await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
-  await page.getByRole('link', { name: 'Search' }).click();
+  const tabBar = page.getByRole('navigation', { name: 'Sections' });
+  await expect(tabBar).toBeVisible();
+  await tabBar.getByRole('link', { name: 'Search' }).click();
   await expect(page.getByRole('heading', { name: 'Search' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Keyboard shortcuts' }).click();

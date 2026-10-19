@@ -2,18 +2,18 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { formatBytes } from '../../lib/format';
-import { Badge, Button, CheckCircle, Input, Select, UploadSimple, XCircle } from '../../ui';
+import { Button, Card, CheckCircle, EmptyState, Info, PageHeader, Select, TagInput, UploadSimple, WarningCircle } from '../../ui';
 import type { Json, Values } from '../asset/MetadataFields';
 import { folderOptions, useFolders } from '../library/folders';
 import { Dropzone } from './Dropzone';
-import { FileThumb, QueueRow } from './QueueRow';
+import { QueueRow } from './QueueRow';
+import { FAILED, ResultRow } from './ResultRow';
 import { TypeDetails } from './TypeDetails';
-import { useUploadBatch, type UploadItemState } from './useUploadBatch';
+import { useUploadBatch } from './useUploadBatch';
 import { addToQueue, compactMetadata, MAX_FILES, revokePreview, withType, type QueueItem } from './uploadQueue';
 import './upload.css';
 
 const FOLDER_KEY = 'dam.upload.folderId';
-const FAILED = new Set(['failed', 'blocked', 'rejected']);
 
 function rememberedFolder(): string {
   try {
@@ -31,59 +31,19 @@ function rememberFolder(id: string) {
   }
 }
 
-function ResultRow({ item }: { item: UploadItemState }) {
-  const { t } = useTranslation();
-  const active = item.status === 'uploading' || item.status === 'finalizing';
-  return (
-    <li className={`dam-queue__row dam-queue__row--${FAILED.has(item.status) ? 'problem' : item.status}`}>
-      <FileThumb type={item.type} previewUrl={item.previewUrl} />
-      <div className="dam-queue__main">
-        <span className="dam-queue__resulttitle">{item.title || item.fileName}</span>
-        <div className="dam-queue__meta">
-          <span className="dam-queue__filename" title={item.fileName}>
-            {item.fileName}
-          </span>
-          <span>{formatBytes(item.size)}</span>
-        </div>
-        {active && (
-          <progress
-            className="dam-queue__progress"
-            value={item.progress}
-            max={1}
-            aria-label={t('upload.progressLabel', { name: item.fileName })}
-          />
-        )}
-        {item.error && (
-          <p className="dam-queue__problem" role="alert">
-            {item.error}
-          </p>
-        )}
-      </div>
-      <div className="dam-queue__status">
-        {item.status === 'ingested' ? (
-          <CheckCircle size={20} weight="fill" className="dam-queue__ok" aria-hidden="true" />
-        ) : FAILED.has(item.status) ? (
-          <XCircle size={20} weight="fill" className="dam-queue__bad" aria-hidden="true" />
-        ) : null}
-        <Badge>{t(`upload.status.${item.status}`)}</Badge>
-        {item.status === 'ingested' && item.assetId && <Link to={`/library/assets/${item.assetId}`}>{t('upload.open')}</Link>}
-        {item.status === 'duplicate' && item.duplicateOfAssetId && (
-          <Link to={`/library/assets/${item.duplicateOfAssetId}`}>{t('upload.viewExisting')}</Link>
-        )}
-      </div>
-    </li>
-  );
-}
-
 export function UploadPage() {
   const { t } = useTranslation();
   const foldersQuery = useFolders();
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [folderChoice, setFolderChoice] = useState(rememberedFolder);
-  const [tagsText, setTagsText] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [metadata, setMetadata] = useState<Record<string, Values>>({});
   const [notice, setNotice] = useState<{ duplicates: number; overLimit: number } | null>(null);
   const { state, start, reset } = useUploadBatch();
+
+  useEffect(() => {
+    document.title = `${t('upload.title')} - ${t('app.name')}`;
+  }, [t]);
 
   // Object URLs for previews are released when the page goes away; individual ones as their file leaves the queue.
   const queueRef = useRef(queue);
@@ -124,10 +84,6 @@ export function UploadPage() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (valid.length === 0) return;
-    const tags = tagsText
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
     const metadataByType: Record<string, Record<string, unknown>> = {};
     for (const [type] of countByType) {
       const doc = compactMetadata(metadata[type] ?? {});
@@ -157,33 +113,38 @@ export function UploadPage() {
   const uploadMore = () => {
     queue.forEach(revokePreview);
     setQueue([]);
-    setTagsText('');
+    setTags([]);
     setMetadata({});
     setNotice(null);
     reset();
   };
 
+  const kinds = ['images', 'video', 'audio', 'documents', 'models', 'bundles'].map((k) => t(`upload.kind.${k}`));
+
   return (
     <div className="dam-page dam-upload">
-      <header className="dam-upload__header">
-        <h1>{t('upload.title')}</h1>
-        <p className="dam-hint">{t('upload.subtitle')}</p>
-      </header>
+      <PageHeader title={t('upload.title')} description={t('upload.subtitle')} />
 
       {state.status === 'idle' ? (
         <form onSubmit={onSubmit} className="dam-upload__formwrap">
           <Dropzone
             compact={queue.length > 0}
-            icon={<UploadSimple size={28} weight="bold" aria-hidden="true" />}
+            icon={<UploadSimple size={queue.length > 0 ? 22 : 32} weight="bold" aria-hidden="true" />}
             label={queue.length > 0 ? t('upload.addMore') : t('upload.dropLabel')}
             hint={queue.length > 0 ? t('upload.dropHintMore') : t('upload.dropHint')}
-            detail={queue.length > 0 ? undefined : t('upload.limits', { max: MAX_FILES })}
+            activeLabel={t('upload.dropActive')}
+            chooseLabel={t('upload.choose')}
+            kinds={kinds}
+            detail={t('upload.limits', { max: MAX_FILES })}
             onFiles={addFiles}
           />
           {notice && (
             <p className="dam-upload__notice" role="status">
-              {notice.duplicates > 0 && <span>{t('upload.skippedDuplicates', { count: notice.duplicates })} </span>}
-              {notice.overLimit > 0 && <span>{t('upload.overLimit', { count: notice.overLimit, max: MAX_FILES })}</span>}
+              <Info size={16} weight="fill" aria-hidden="true" />
+              <span>
+                {notice.duplicates > 0 && <>{t('upload.skippedDuplicates', { count: notice.duplicates })} </>}
+                {notice.overLimit > 0 && t('upload.overLimit', { count: notice.overLimit, max: MAX_FILES })}
+              </span>
             </p>
           )}
 
@@ -192,7 +153,7 @@ export function UploadPage() {
               <section className="dam-upload__files" aria-labelledby="dam-upload-files">
                 <div className="dam-upload__sectionhead">
                   <h2 id="dam-upload-files">{t('upload.filesHeading', { count: queue.length })}</h2>
-                  <Button type="button" variant="ghost" onClick={clearAll}>
+                  <Button type="button" variant="ghost" size="sm" onClick={clearAll}>
                     {t('upload.clearAll')}
                   </Button>
                 </div>
@@ -210,7 +171,7 @@ export function UploadPage() {
               </section>
 
               <aside className="dam-upload__side">
-                <section className="dam-upload__card" aria-labelledby="dam-upload-dest">
+                <Card as="section" aria-labelledby="dam-upload-dest" className="dam-upload__card">
                   <h2 id="dam-upload-dest">{t('upload.destination')}</h2>
                   <Select
                     label={t('upload.folder')}
@@ -218,29 +179,33 @@ export function UploadPage() {
                     onChange={(e) => setFolderChoice(e.target.value)}
                     options={[{ value: '', label: t('upload.noFolder') }, ...(folders ? folderOptions(folders) : [])]}
                   />
-                  <Input
+                  <TagInput
                     label={t('upload.tags')}
                     hint={t('upload.tagsHint')}
-                    value={tagsText}
-                    onChange={(e) => setTagsText(e.target.value)}
+                    value={tags}
+                    onChange={setTags}
+                    removeLabel={(tag) => t('asset.removeTag', { tag })}
+                    listLabel={t('asset.tagList', { field: t('upload.tags') })}
                   />
-                </section>
+                </Card>
                 {countByType.length > 0 && (
-                  <section className="dam-upload__card" aria-labelledby="dam-upload-details">
+                  <Card as="section" aria-labelledby="dam-upload-details" className="dam-upload__card">
                     <h2 id="dam-upload-details">{t('upload.detailsHeading')}</h2>
                     <p className="dam-hint">{t('upload.detailsHint')}</p>
-                    {countByType.map(([type, count]) => (
-                      <TypeDetails
-                        key={type}
-                        type={type}
-                        count={count}
-                        values={metadata[type] ?? {}}
-                        onChange={(name: string, value: Json) =>
-                          setMetadata((m) => ({ ...m, [type]: { ...(m[type] ?? {}), [name]: value } }))
-                        }
-                      />
-                    ))}
-                  </section>
+                    <div className="dam-upload__accordion">
+                      {countByType.map(([type, count]) => (
+                        <TypeDetails
+                          key={type}
+                          type={type}
+                          count={count}
+                          values={metadata[type] ?? {}}
+                          onChange={(name: string, value: Json) =>
+                            setMetadata((m) => ({ ...m, [type]: { ...(m[type] ?? {}), [name]: value } }))
+                          }
+                        />
+                      ))}
+                    </div>
+                  </Card>
                 )}
               </aside>
             </div>
@@ -252,7 +217,10 @@ export function UploadPage() {
                 <strong>{t('upload.summary', { count: valid.length })}</strong>
                 <span className="dam-hint">{formatBytes(totalBytes)}</span>
                 {problems > 0 && (
-                  <span className="dam-upload__problemcount">{t('upload.problemCount', { count: problems })}</span>
+                  <span className="dam-upload__problemcount">
+                    <WarningCircle size={14} weight="fill" aria-hidden="true" />
+                    {t('upload.problemCount', { count: problems })}
+                  </span>
                 )}
               </p>
               <Button type="submit" variant="primary" disabled={valid.length === 0}>
@@ -264,39 +232,57 @@ export function UploadPage() {
         </form>
       ) : (
         <section className="dam-upload__results" aria-label={t('upload.resultsHeading')}>
-          <div className="dam-upload__progresscard" aria-live="polite">
-            {state.status === 'done' ? (
-              <h2>{counts.failed > 0 ? t('upload.doneWithProblems') : t('upload.doneAll')}</h2>
-            ) : (
-              <h2>{t('upload.uploading', { done: counts.settled, total: state.items.length })}</h2>
-            )}
-            <progress value={state.status === 'done' ? 1 : overall} max={1} aria-label={t('upload.overallProgress')} />
-            <p className="dam-hint">
-              {t('upload.resultCounts', { ready: counts.ready, duplicate: counts.duplicate, failed: counts.failed })}
-            </p>
-          </div>
+          {state.status === 'done' ? (
+            <Card className="dam-upload__summarycard">
+              <EmptyState
+                titleAs="h2"
+                icon={counts.failed > 0 ? <WarningCircle weight="fill" /> : <CheckCircle weight="fill" />}
+                title={
+                  counts.failed > 0
+                    ? t('upload.doneWithProblems')
+                    : counts.ready === 0
+                      ? t('upload.doneNothingNew')
+                      : t('upload.doneAll', { count: counts.ready })
+                }
+                description={t('upload.resultCounts', {
+                  ready: counts.ready,
+                  duplicate: counts.duplicate,
+                  failed: counts.failed,
+                })}
+                action={
+                  <>
+                    <Link className="dam-btn dam-btn--primary" to="/library">
+                      {t('upload.viewInLibrary')}
+                    </Link>
+                    {counts.failed > 0 && (
+                      <Button variant="secondary" onClick={reviewFailed}>
+                        {t('upload.reviewFailed', { count: counts.failed })}
+                      </Button>
+                    )}
+                    <Button variant="secondary" onClick={uploadMore}>
+                      {t('upload.uploadMore')}
+                    </Button>
+                  </>
+                }
+              />
+            </Card>
+          ) : (
+            <Card className="dam-upload__progresscard">
+              <div aria-live="polite">
+                <h2>{t('upload.uploading', { done: counts.settled, total: state.items.length })}</h2>
+              </div>
+              <progress value={overall} max={1} aria-label={t('upload.overallProgress')} />
+              <p className="dam-hint">
+                {t('upload.resultCounts', { ready: counts.ready, duplicate: counts.duplicate, failed: counts.failed })}
+              </p>
+            </Card>
+          )}
 
           <ul className="dam-queue" aria-label={t('upload.resultsHeading')}>
             {state.items.map((item) => (
               <ResultRow key={item.queueId} item={item} />
             ))}
           </ul>
-
-          {state.status === 'done' && (
-            <div className="dam-upload__done">
-              <Link className="dam-btn dam-btn--primary" to="/library">
-                {t('upload.goToLibrary')}
-              </Link>
-              {counts.failed > 0 && (
-                <Button variant="secondary" onClick={reviewFailed}>
-                  {t('upload.reviewFailed', { count: counts.failed })}
-                </Button>
-              )}
-              <Button variant="secondary" onClick={uploadMore}>
-                {t('upload.uploadMore')}
-              </Button>
-            </div>
-          )}
         </section>
       )}
     </div>

@@ -1,0 +1,61 @@
+{
+  "home": {
+    "greeting": {
+      "morning": "Good morning, {{name}}",
+      "afternoon": "Good afternoon, {{name}}",
+      "evening": "Good evening, {{name}}"
+    },
+    "subtitle": "Here is where your library stands today.",
+    "quick": {
+      "label": "Quick actions",
+      "upload": { "title": "Upload assets", "body": "Add images, video and documents to the library." },
+      "library": { "title": "Browse the library", "body": "Find, filter and organise everything in one place." },
+      "collection": { "title": "New collection", "body": "Group assets for a campaign or a hand-over." }
+    },
+    "stats": {
+      "label": "Library overview",
+      "total": "Total assets",
+      "review": "In review",
+      "published": "Published",
+      "drafts": "Drafts",
+      "totalHint": "Across all folders",
+      "reviewHint": "Waiting for a decision",
+      "publishedHint": "Live for delivery",
+      "draftsHint": "Still being prepared",
+      "unavailable": "Not available right now"
+    },
+    "recent": {
+      "title": "Recently added",
+      "viewAll": "View all",
+      "emptyTitle": "No assets yet",
+      "emptyBody": "Upload your first files and they will show up here.",
+      "emptyAction": "Upload assets"
+    },
+    "review": {
+      "title": "Waiting for review",
+      "viewAll": "See all in review",
+      "emptyTitle": "Nothing is waiting for review",
+      "emptyBody": "Assets that are sent for approval will appear here."
+    },
+    "collections": {
+      "title": "Collections",
+      "viewAll": "All collections",
+      "emptyTitle": "No collections yet",
+      "emptyBody": "Group assets into a collection to share a set with your team.",
+      "emptyAction": "New collection",
+      "count_one": "{{count}} asset",
+      "count_other": "{{count}} assets",
+      "smart": "Smart collection"
+    },
+    "loadFailed": "This could not be loaded right now.",
+    "retry": "Try again",
+    "open": "Open {{title}}"
+  },
+  "pageTitle": {
+    "home": "Home",
+    "login": "Sign in",
+    "account": "My account",
+    "notFound": "Page not found",
+    "callback": "Signing in"
+  }
+}

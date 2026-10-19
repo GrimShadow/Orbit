@@ -1,0 +1,26 @@
+.dam-filterchips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dam-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dam-filterchips .dam-chip {
+  height: 28px;
+  padding-inline-start: 10px;
+  padding-inline-end: 4px;
+  background: var(--dam-brand-soft);
+}
+.dam-filterchips__key {
+  font-weight: 500;
+  opacity: 0.85;
+}
+.dam-filterchips .dam-chip__remove {
+  width: 20px;
+  height: 20px;
+}
+.dam-filterchips .dam-chip__remove:hover {
+  background: color-mix(in srgb, var(--dam-brand-soft-text) 16%, transparent);
+}

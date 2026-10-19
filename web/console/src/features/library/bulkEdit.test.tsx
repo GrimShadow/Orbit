@@ -137,8 +137,10 @@ describe('bulk edit', () => {
     await userEvent.click(screen.getByLabelText('Select all 2 assets on this page'));
     expect(await screen.findByRole('region', { name: '2 assets selected' })).toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText('Tags'), 'campaign');
-    await userEvent.click(screen.getByRole('button', { name: 'Add tags' }));
+    const bar = screen.getByRole('region', { name: '2 assets selected' });
+    await userEvent.click(within(bar).getByRole('button', { name: 'Tags' })); // opens the tags panel
+    await userEvent.type(within(bar).getByLabelText('Tags'), 'campaign{Enter}'); // Enter turns the text into a chip
+    await userEvent.click(within(bar).getByRole('button', { name: 'Add tags' }));
 
     await waitFor(() => expect(patches).toHaveLength(2));
     expect(patches.find((p) => p.id === 'a1')?.tags.sort()).toEqual(['campaign', 'existing']);
@@ -168,6 +170,7 @@ describe('bulk edit', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Hero shot' }));
     await screen.findByRole('region', { name: '1 asset selected' });
 
+    await userEvent.click(screen.getByRole('button', { name: 'Move to…' })); // opens the move panel
     expect(screen.getByRole('button', { name: 'Move' })).toBeDisabled();
     await userEvent.selectOptions(screen.getByLabelText('Move to folder'), 'Brand');
     expect(screen.getByRole('button', { name: 'Move' })).toBeEnabled();

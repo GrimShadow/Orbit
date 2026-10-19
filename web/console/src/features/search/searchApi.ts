@@ -1,5 +1,5 @@
 import { unwrap, type components } from '@dam/sdk-js';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useApiClient } from '../../api/apiClient';
 
 export type SearchHitDto = components['schemas']['SearchHitDto'];
@@ -20,6 +20,19 @@ export function useSearch(query: SearchRequestBody, enabled: boolean) {
     queryKey: ['search', query],
     queryFn: async () => unwrap(await api.POST('/api/v1/search', { body: query })),
     enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** The Search screen's accumulating variant: "Load more" appends the next page of hits (the first page also carries the
+ * facet counts and the total). `query.cursor` is ignored - the page param owns it. */
+export function useSearchInfinite(query: Omit<SearchRequestBody, 'cursor'>) {
+  const api = useApiClient();
+  return useInfiniteQuery({
+    queryKey: ['search', 'infinite', query],
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }) => unwrap(await api.POST('/api/v1/search', { body: { ...query, cursor: pageParam } })),
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
     placeholderData: keepPreviousData,
   });
 }

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { MetadataFields, type Json, type Values } from '../asset/MetadataFields';
 import { useSchema } from '../asset/assetApi';
-import { Skeleton } from '../../ui';
+import { CaretDown, FileTypeIcon, Skeleton } from '../../ui';
 import { compactMetadata } from './uploadQueue';
 
 interface TypeDetailsProps {
@@ -26,13 +26,17 @@ export function TypeDetails({ type, count, values, onChange }: TypeDetailsProps)
   return (
     <details className="dam-upload__details">
       <summary>
-        <span>{t('upload.details.title', { type: t(`library.type.${type}`) })}</span>
-        <span className="dam-hint">
-          {t('upload.details.files', { count })}
-          {filled > 0 && ` · ${t('upload.details.filled', { count: filled })}`}
+        <FileTypeIcon type={type} size={18} weight="duotone" aria-hidden="true" />
+        <span className="dam-upload__details-title">
+          <span>{t('upload.details.title', { type: t(`library.type.${type}`) })}</span>
+          <span className="dam-hint">
+            {t('upload.details.files', { count })}
+            {filled > 0 && ` · ${t('upload.details.filled', { count: filled })}`}
+          </span>
         </span>
+        <CaretDown size={14} weight="bold" aria-hidden="true" className="dam-upload__details-caret" />
       </summary>
-      <div className="dam-stack dam-upload__details-body">
+      <div className="dam-stack dam-stack--fill dam-upload__details-body">
         {hasRequired && <p className="dam-hint">{t('upload.details.requiredLater')}</p>}
         <MetadataFields fields={schemaQuery.data.fields} values={values} onChange={onChange} />
       </div>

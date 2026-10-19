@@ -9,7 +9,11 @@ import { CollectionsPage } from './features/collections/CollectionsPage';
 import { LibraryPage } from './features/library/LibraryPage';
 import { SearchPage } from './features/search/SearchPage';
 import { UploadPage } from './features/upload/UploadPage';
-import { CallbackPage, HomePage, LoginPage, MePage, NotFoundPage } from './pages/Pages';
+import { CallbackPage } from './pages/CallbackPage';
+import { HomePage } from './pages/HomePage';
+import { LoginPage } from './pages/LoginPage';
+import { MePage } from './pages/MePage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { ErrorBoundary } from './shell/ErrorBoundary';
 import { Shell } from './shell/Shell';
 

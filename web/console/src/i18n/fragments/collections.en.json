@@ -1,0 +1,33 @@
+{
+  "collections": {
+    "new": "New collection",
+    "newTitle": "New collection",
+    "newDescription": "Create an empty collection. You can also save a selection from the library as a collection.",
+    "create": "Create",
+    "created": "Collection “{{name}}” created",
+    "count_one": "{{count}} collection",
+    "count_other": "{{count}} collections",
+    "assetCount_one": "{{count}} asset",
+    "assetCount_other": "{{count}} assets",
+    "smartHint": "Updates automatically",
+    "updatedRelative": "Updated {{time}}",
+    "cardActions": "Actions for {{name}}",
+    "open": "Open",
+    "deleteItem": "Delete…",
+    "empty.title": "No collections yet",
+    "empty.description": "Group the assets you use together - a campaign, a shoot, a review - so they are easy to find again.",
+    "loading": "Loading collections",
+    "loadFailedHint": "Check your connection and try again.",
+    "renameCollection": "Rename collection",
+    "renamed": "Collection renamed",
+    "moreActions": "More actions",
+    "smartDescription": "A smart collection runs its saved search each time you open it.",
+    "contentsEmptyStatic.title": "This collection is empty",
+    "contentsEmptyStatic.description": "Select assets in the library and choose Save as collection to make one with them.",
+    "contentsEmptySmart.title": "Nothing matches this saved search right now",
+    "contentsEmptySmart.description": "Assets appear here as soon as they match.",
+    "goToLibrary": "Go to the library",
+    "cancelRename": "Cancel",
+    "deleted": "Collection deleted"
+  }
+}

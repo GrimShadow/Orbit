@@ -1,0 +1,29 @@
+{
+  "search": {
+    "queryPlaceholder": "Search by title, tag or type",
+    "clearAll": "Clear all",
+    "queryChip": "Search",
+    "resultCount_one": "{{count}} result",
+    "resultCount_other": "{{count}} results",
+    "resultCountFor_one": "{{count}} result for “{{query}}”",
+    "resultCountFor_other": "{{count}} results for “{{query}}”",
+    "browseAll": "Browsing all assets",
+    "noResults.title": "No assets match this search",
+    "noResults.description": "Check the spelling, try a more general term, or remove some filters.",
+    "clearSearch": "Clear search",
+    "emptyLibrary.title": "Nothing to search yet",
+    "emptyLibrary.description": "Assets you upload appear here, ready to find.",
+    "filtersButton": "Filters",
+    "filtersButtonCount": "Filters ({{count}})",
+    "done": "Done",
+    "loading": "Searching",
+    "failedHint": "Check your connection and try again.",
+    "noFacets": "Filters appear once there are results.",
+    "showingMore_one": "Showing {{count}} result",
+    "showingMore_other": "Showing {{count}} results",
+    "showingAll_one": "Showing all {{count}} result",
+    "showingAll_other": "Showing all {{count}} results",
+    "closeFilters": "Close filters",
+    "clearField": "Clear the search field"
+  }
+}

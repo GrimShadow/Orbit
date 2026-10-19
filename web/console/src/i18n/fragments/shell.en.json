@@ -1,0 +1,11 @@
+{
+  "shell": {
+    "sidebar": "Sidebar",
+    "mobileNav": "Sections",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "search.label": "Search everything",
+    "search.placeholder": "Search assets, tags, folders…",
+    "shortcuts.search_focus": "Focus the search box"
+  }
+}

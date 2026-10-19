@@ -1,4 +1,5 @@
 import { unwrap } from '@dam/sdk-js';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { useApiClient } from '../../api/apiClient';
 import { uploadFile } from './uploadOrchestrator';
@@ -49,6 +50,7 @@ function patchItem(state: UploadBatchState, index: number, patch: Partial<Upload
  * transfer, several at a time. */
 export function useUploadBatch() {
   const api = useApiClient();
+  const queryClient = useQueryClient();
   const [state, setState] = useState<UploadBatchState>({ status: 'idle', items: [] });
 
   const start = useCallback(
@@ -131,8 +133,12 @@ export function useUploadBatch() {
       };
       await Promise.all(Array.from({ length: Math.min(CONCURRENCY, work.length) }, worker));
       setState((s) => ({ ...s, status: 'done' }));
+      // New assets exist now: any grid, search or home snapshot cached before this batch is out of date.
+      void queryClient.invalidateQueries({
+        predicate: (q) => ['assets', 'search', 'collections', 'home'].includes(String(q.queryKey[0])),
+      });
     },
-    [api],
+    [api, queryClient],
   );
 
   const reset = useCallback(() => setState({ status: 'idle', items: [] }), []);

@@ -1,6 +1,6 @@
 import { DotsThree } from '@phosphor-icons/react';
-import { useEffect, useId, useRef, useState } from 'react';
-import { MenuList, type MenuItem } from './Menu';
+import { useCallback, useId, useState } from 'react';
+import { PopoverMenu, type MenuItem } from './Menu';
 
 /** Kept as an alias: a card's action is just a menu item. */
 export type CardAction = MenuItem;
@@ -14,28 +14,21 @@ interface CardMenuProps {
 }
 
 /** A "..." trigger that opens the same menu a right-click does (ARIA menu-button pattern): the trigger toggles it,
- * Escape (or a click elsewhere) closes it and returns focus to the trigger. */
+ * Escape (or a click elsewhere) closes it and returns focus to the trigger. The menu itself is portalled to <body>
+ * (see `PopoverMenu`) so the card's `overflow: hidden` and hover transform can neither clip nor stack above it. */
 export function CardMenu({ label, actions, onOpen }: CardMenuProps) {
   const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
+  // The trigger element is state (callback ref) because the portalled menu needs it during render to anchor itself.
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
   const menuId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('pointerdown', onPointer);
-    return () => document.removeEventListener('pointerdown', onPointer);
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
 
   if (actions.length === 0) return null;
 
   return (
-    <div className="dam-cardmenu" ref={root}>
+    <div className="dam-cardmenu">
       <button
-        ref={trigger}
+        ref={setTrigger}
         type="button"
         className="dam-cardmenu__trigger"
         aria-label={label}
@@ -49,19 +42,7 @@ export function CardMenu({ label, actions, onOpen }: CardMenuProps) {
       >
         <DotsThree size={18} weight="bold" aria-hidden="true" />
       </button>
-      {open && (
-        <div id={menuId} className="dam-cardmenu__list">
-          <MenuList
-            items={actions}
-            label={label}
-            focusFirst
-            onClose={(returnFocus) => {
-              setOpen(false);
-              if (returnFocus) trigger.current?.focus();
-            }}
-          />
-        </div>
-      )}
+      {open && <PopoverMenu id={menuId} anchor={trigger} label={label} items={actions} onClose={close} />}
     </div>
   );
 }

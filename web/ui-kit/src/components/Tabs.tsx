@@ -1,4 +1,5 @@
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useIndicator } from './useIndicator';
 
 export interface TabItem {
   id: string;
@@ -10,6 +11,8 @@ export function Tabs({ tabs, initialId, label }: { tabs: TabItem[]; initialId?: 
   const base = useId();
   const [active, setActive] = useState(initialId ?? tabs[0]?.id);
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const list = useRef<HTMLDivElement>(null);
+  const underline = useIndicator(list, active);
 
   const move = (i: number) => {
     const t = tabs[(i + tabs.length) % tabs.length];
@@ -27,7 +30,7 @@ export function Tabs({ tabs, initialId, label }: { tabs: TabItem[]; initialId?: 
 
   return (
     <div>
-      <div role="tablist" aria-label={label} className="dam-tablist">
+      <div ref={list} role="tablist" aria-label={label} className="dam-tablist">
         {tabs.map((t, i) => (
           <button
             key={t.id}
@@ -38,6 +41,7 @@ export function Tabs({ tabs, initialId, label }: { tabs: TabItem[]; initialId?: 
             type="button"
             className="dam-tab"
             id={`${base}-tab-${t.id}`}
+            data-indicator-key={t.id}
             aria-controls={`${base}-panel-${t.id}`}
             aria-selected={active === t.id}
             tabIndex={active === t.id ? 0 : -1}
@@ -47,6 +51,7 @@ export function Tabs({ tabs, initialId, label }: { tabs: TabItem[]; initialId?: 
             {t.label}
           </button>
         ))}
+        <span className="dam-tablist__indicator" aria-hidden="true" style={underline.style} />
       </div>
       {tabs.map((t) => (
         <div

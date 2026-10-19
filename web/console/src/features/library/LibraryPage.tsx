@@ -1,268 +1,364 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Breadcrumb,
   Button,
-  LoadingRegion,
-  Rows,
-  Select,
-  Skeleton,
+  CaretDown,
+  EmptyState,
   FolderPlus,
+  FolderSimple,
+  Images,
+  MagnifyingGlass,
+  PageHeader,
+  Rows,
+  SegmentedControl,
+  Select,
   SquaresFour,
-  Table,
   ThumbnailGrid,
-  Tree,
-  type Column,
-  type TreeNode,
+  ThumbnailGridSkeleton,
+  UploadSimple,
 } from '../../ui';
-import { useThumbnailLinks } from '../asset/assetApi';
-import { useItemActions } from './itemActions';
-import { toAssetThumb } from './assetThumb';
-import { useAssets, type AssetDto } from './assets';
 import { BulkEditBar } from './BulkEditBar';
-import { buildFolderTree, folderBreadcrumb, useFolders } from './folders';
+import { FilterChips, type FilterChip } from './FilterChips';
+import { FolderPanel } from './FolderPanel';
+import { LibraryList } from './LibraryList';
+import { toAssetThumb } from './assetThumb';
+import { useAssetsInfinite, useThumbnailMap, type AssetDto } from './assets';
+import { folderBreadcrumb, useFolders } from './folders';
+import { useItemActions } from './itemActions';
+import { STATUSES, TYPES, useLibraryParams } from './useLibraryParams';
+import { useDocumentTitle } from './useDocumentTitle';
 import './library.css';
 
-const STATUSES = ['draft', 'in_review', 'approved', 'published', 'expired', 'archived', 'deleted'];
-const TYPES = ['image', 'video', 'audio', 'document', 'manual', '3d', 'html5', 'other'];
+const PAGE_SIZE = 50;
 
-function FolderSidebar({
-  selectedId,
-  onSelect,
-  actions,
+/** A checkbox row that can show the "some selected" state - the library's "select all" control. */
+function SelectAll({
+  checked,
+  indeterminate,
+  label,
+  onChange,
 }: {
-  selectedId?: string;
-  onSelect: (id: string | undefined) => void;
-  actions: ReturnType<typeof useItemActions>;
+  checked: boolean;
+  indeterminate: boolean;
+  label: string;
+  onChange: (on: boolean) => void;
 }) {
-  const { t } = useTranslation();
-  const { data, error, isPending, refetch } = useFolders();
-
-  if (isPending)
-    return (
-      <LoadingRegion>
-        <Skeleton height={20} width={160} />
-        <Skeleton height={20} width={140} />
-        <Skeleton height={20} width={150} />
-      </LoadingRegion>
-    );
-  if (error)
-    return (
-      <div role="alert" className="dam-stack">
-        <p>{t('library.foldersFailed')}</p>
-        <Button onClick={() => void refetch()}>{t('library.retry')}</Button>
-      </div>
-    );
-
-  const tree: TreeNode[] = buildFolderTree(data);
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
   return (
-    <div className="dam-stack">
-      <button type="button" className="dam-btn dam-btn--ghost" aria-pressed={!selectedId} onClick={() => onSelect(undefined)}>
-        {t('library.allFolders')}
-      </button>
-      <Tree
-        nodes={tree}
-        label={t('library.folders')}
-        selectedId={selectedId}
-        onSelect={onSelect}
-        nodeActions={actions.folderMenu}
-        menuLabel={(name) => t('item.actionsForFolder', { name })}
-        onMenuOpen={actions.prefetchFolder}
+    <label className="dam-check dam-library__selectall">
+      <input
+        ref={ref}
+        type="checkbox"
+        className="dam-check__input"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
       />
-      <button
-        type="button"
-        className="dam-btn dam-btn--secondary dam-btn--sm"
-        onClick={() => actions.newFolder(selectedId ?? null)}
-      >
-        <FolderPlus size={16} weight="bold" aria-hidden="true" />
-        {t('item.newFolder')}
-      </button>
-    </div>
+      <span className="dam-check__label">{label}</span>
+    </label>
   );
 }
 
 export function LibraryPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  useDocumentTitle(t('library.title'));
   const foldersQuery = useFolders();
-  const [folderId, setFolderId] = useState<string | undefined>();
-  const [status, setStatus] = useState('');
-  const [type, setType] = useState('');
-  const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [cursor, setCursor] = useState<string | undefined>();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { folder: folderId, status, type, view, update } = useLibraryParams();
+  const [foldersOpen, setFoldersOpen] = useState(false);
 
-  const setFilter = (apply: () => void) => {
-    setCursor(undefined);
-    setSelected(new Set());
-    apply();
-  };
+  // Selection belongs to one view of the library: any change of folder/status/type starts from nothing selected.
+  const filterKey = `${folderId ?? ''}|${status}|${type}`;
+  const [selection, setSelection] = useState<{ key: string; ids: string[] }>({ key: filterKey, ids: [] });
+  const selectedIds = selection.key === filterKey ? selection.ids : [];
+  const setSelectedIds = (ids: string[]) => setSelection({ key: filterKey, ids });
+  const toggleSelect = (id: string, on: boolean) =>
+    setSelectedIds(on ? [...new Set([...selectedIds, id])] : selectedIds.filter((x) => x !== id));
 
-  const toggleSelect = (id: string, isSelected: boolean) =>
-    setSelected((s) => {
-      const next = new Set(s);
-      if (isSelected) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-
-  const assetsQuery = useAssets({
+  const assetsQuery = useAssetsInfinite({
     folderId,
     includeSubfolders: true,
     status: status || undefined,
     type: type || undefined,
-    cursor,
-    limit: 50,
+    limit: PAGE_SIZE,
   });
-  // Only the grid view shows images; skip the batch link request entirely while viewing the list/table.
+  const assets: AssetDto[] = useMemo(() => assetsQuery.data?.pages.flatMap((p) => p.items) ?? [], [assetsQuery.data]);
+  const hasMore = assetsQuery.hasNextPage;
+  // The "All folders" row's count is the unfiltered library; it is the same query (and cache entry) as the root view.
+  const rootQuery = useAssetsInfinite({
+    folderId: undefined,
+    includeSubfolders: true,
+    status: undefined,
+    type: undefined,
+    limit: PAGE_SIZE,
+  });
+  const rootCount = rootQuery.data
+    ? `${rootQuery.data.pages.reduce((n, p) => n + p.items.length, 0)}${rootQuery.hasNextPage ? '+' : ''}`
+    : undefined;
+  const thumbnails = useThumbnailMap(assets.map((a) => a.id));
+
   const itemActions = useItemActions({
-    onOpenFolder: (id) => setFilter(() => setFolderId(id)),
+    onOpenFolder: (id) => update({ folder: id }),
     // Deleting the folder you are looking at would leave an empty view of nothing - go back to everything.
     onFolderDeleted: (id) => {
-      if (id === folderId) setFilter(() => setFolderId(undefined));
+      if (id === folderId) update({ folder: undefined });
     },
   });
-  const assetById = (id: string) => assetsQuery.data?.items.find((a) => a.id === id);
-  const thumbnailLinks = useThumbnailLinks(view === 'grid' ? (assetsQuery.data?.items.map((a) => a.id) ?? []) : []);
+  const assetById = (id: string) => assets.find((a) => a.id === id);
 
-  const columns: Column<AssetDto>[] = [
-    { key: 'title', header: t('library.columnTitle'), render: (a) => <Link to={`/library/assets/${a.id}`}>{a.title}</Link> },
-    { key: 'type', header: t('library.columnType'), render: (a) => t(`library.type.${a.type}`) },
-    { key: 'status', header: t('library.columnStatus'), render: (a) => t(`library.status.${a.status}`) },
-    { key: 'updatedAt', header: t('library.columnUpdated'), render: (a) => new Date(a.updatedAt).toLocaleString() },
+  const crumbs = foldersQuery.data ? folderBreadcrumb(foldersQuery.data, folderId) : [];
+  const currentFolderName = crumbs.at(-1)?.label;
+  const hasFilters = status !== '' || type !== '';
+  const chips: FilterChip[] = [
+    ...(status
+      ? [
+          {
+            id: 'status',
+            group: t('library.status'),
+            label: t(`library.status.${status}`),
+            onRemove: () => update({ status: '' }),
+          },
+        ]
+      : []),
+    ...(type
+      ? [{ id: 'type', group: t('library.type'), label: t(`library.type.${type}`), onRemove: () => update({ type: '' }) }]
+      : []),
   ];
+  const clearFilters = () => update({ status: '', type: '' });
+
+  const loaded = assets.length;
+  const description = assetsQuery.isPending
+    ? undefined
+    : hasMore
+      ? t('library.countMore', { count: loaded })
+      : t('library.count', { count: loaded });
+  const showSelecting = selectedIds.length > 0;
+  const busy = assetsQuery.isPlaceholderData;
+
+  const empty =
+    assetsQuery.isSuccess && loaded === 0 ? (
+      hasFilters ? (
+        <EmptyState
+          icon={<MagnifyingGlass size={28} />}
+          title={t('library.noMatches.title')}
+          description={t('library.noMatches.description')}
+          action={
+            <Button variant="secondary" onClick={clearFilters}>
+              {t('library.clearFilters')}
+            </Button>
+          }
+          titleAs="h2"
+        />
+      ) : (
+        <EmptyState
+          icon={<Images size={28} />}
+          title={folderId ? t('library.emptyFolder.title') : t('library.emptyLibrary.title')}
+          description={folderId ? t('library.emptyFolder.description') : t('library.emptyLibrary.description')}
+          action={
+            <Link to="/upload" className="dam-btn dam-btn--primary">
+              <UploadSimple size={16} weight="bold" aria-hidden="true" />
+              {t('library.upload')}
+            </Link>
+          }
+          titleAs="h2"
+        />
+      )
+    ) : null;
 
   return (
-    <div className="dam-page dam-library">
-      <h1>{t('library.title')}</h1>
+    <div className={`dam-page dam-library${showSelecting ? ' dam-library--selecting' : ''}`}>
+      <PageHeader
+        title={t('library.title')}
+        description={description}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => itemActions.newFolder(folderId ?? null)}>
+              <FolderPlus size={16} weight="bold" aria-hidden="true" />
+              {t('item.newFolder')}
+            </Button>
+            <Link to="/upload" className="dam-btn dam-btn--primary">
+              <UploadSimple size={16} weight="bold" aria-hidden="true" />
+              {t('library.upload')}
+            </Link>
+          </>
+        }
+      />
+
+      <button
+        type="button"
+        className="dam-library__foldertoggle"
+        aria-expanded={foldersOpen}
+        aria-controls="library-folders"
+        onClick={() => setFoldersOpen((o) => !o)}
+      >
+        <FolderSimple size={16} aria-hidden="true" />
+        <span className="dam-library__foldertoggletext">
+          {t('library.folders')}
+          <span className="dam-library__foldertogglecurrent">{currentFolderName ?? t('library.allFolders')}</span>
+        </span>
+        <CaretDown size={14} weight="bold" aria-hidden="true" className="dam-library__foldertogglecaret" />
+      </button>
+
       <div className="dam-library__layout">
-        <aside className="dam-library__sidebar" aria-label={t('library.folders')}>
-          <FolderSidebar selectedId={folderId} onSelect={(id) => setFilter(() => setFolderId(id))} actions={itemActions} />
+        <aside
+          id="library-folders"
+          className={`dam-library__sidebar${foldersOpen ? ' dam-library__sidebar--open' : ''}`}
+          aria-label={t('library.folders')}
+        >
+          <h2 className="dam-library__sidehead">{t('library.folders')}</h2>
+          <FolderPanel
+            selectedId={folderId}
+            onSelect={(id) => {
+              update({ folder: id });
+              setFoldersOpen(false);
+            }}
+            actions={itemActions}
+            total={rootCount}
+          />
         </aside>
+
         <div className="dam-library__main">
-          {foldersQuery.data && (
+          {foldersQuery.data && crumbs.length > 0 && (
             <Breadcrumb
               label={t('library.folders')}
               rootLabel={t('library.allFolders')}
-              items={folderBreadcrumb(foldersQuery.data, folderId)}
-              onNavigate={(id) => setFilter(() => setFolderId(id))}
+              items={crumbs}
+              onNavigate={(id) => update({ folder: id })}
             />
           )}
+
           <div className="dam-library__toolbar">
-            <Select
-              label={t('library.status')}
-              value={status}
-              onChange={(e) => setFilter(() => setStatus(e.target.value))}
-              options={[
-                { value: '', label: t('library.any') },
-                ...STATUSES.map((s) => ({ value: s, label: t(`library.status.${s}`) })),
-              ]}
-            />
-            <Select
-              label={t('library.type')}
-              value={type}
-              onChange={(e) => setFilter(() => setType(e.target.value))}
-              options={[
-                { value: '', label: t('library.any') },
-                ...TYPES.map((x) => ({ value: x, label: t(`library.type.${x}`) })),
-              ]}
-            />
-            <div className="dam-library__viewToggle" role="group" aria-label={t('library.view')}>
-              <button
-                type="button"
-                aria-pressed={view === 'grid'}
-                className="dam-btn dam-btn--ghost"
-                onClick={() => setView('grid')}
-              >
-                <SquaresFour size={16} weight="bold" aria-hidden="true" />
-                {t('library.viewGrid')}
-              </button>
-              <button
-                type="button"
-                aria-pressed={view === 'list'}
-                className="dam-btn dam-btn--ghost"
-                onClick={() => setView('list')}
-              >
-                <Rows size={16} weight="bold" aria-hidden="true" />
-                {t('library.viewList')}
-              </button>
+            <div className="dam-library__filters">
+              <div className="dam-library__filter">
+                <Select
+                  label={t('library.status')}
+                  value={status}
+                  onChange={(e) => update({ status: e.target.value })}
+                  options={[
+                    { value: '', label: t('library.anyStatus') },
+                    ...STATUSES.map((s) => ({ value: s, label: t(`library.status.${s}`) })),
+                  ]}
+                />
+              </div>
+              <div className="dam-library__filter">
+                <Select
+                  label={t('library.type')}
+                  value={type}
+                  onChange={(e) => update({ type: e.target.value })}
+                  options={[
+                    { value: '', label: t('library.anyType') },
+                    ...TYPES.map((x) => ({ value: x, label: t(`library.type.${x}`) })),
+                  ]}
+                />
+              </div>
             </div>
+            <SegmentedControl
+              label={t('library.view')}
+              value={view}
+              onChange={(v) => update({ view: v as 'grid' | 'list' }, { replace: true })}
+              options={[
+                { value: 'grid', label: t('library.viewGrid'), icon: <SquaresFour size={16} weight="bold" aria-hidden="true" /> },
+                { value: 'list', label: t('library.viewList'), icon: <Rows size={16} weight="bold" aria-hidden="true" /> },
+              ]}
+            />
           </div>
 
+          <FilterChips chips={chips} onClear={clearFilters} />
+
           {assetsQuery.isPending ? (
-            <LoadingRegion>
-              <Skeleton height={160} />
-            </LoadingRegion>
+            view === 'grid' ? (
+              <ThumbnailGridSkeleton count={10} label={t('library.loading')} />
+            ) : (
+              <LibraryList
+                assets={[]}
+                thumbnails={{}}
+                loading
+                selectedIds={[]}
+                onToggleSelect={() => {}}
+                actions={itemActions}
+                emptyMessage=""
+              />
+            )
           ) : assetsQuery.error ? (
-            <div role="alert" className="dam-stack">
-              <p>{t('library.assetsFailed')}</p>
-              <Button onClick={() => void assetsQuery.refetch()}>{t('library.retry')}</Button>
+            <div role="alert" className="dam-library__error">
+              <EmptyState
+                title={t('library.assetsFailed')}
+                description={t('library.assetsFailedHint')}
+                action={<Button onClick={() => void assetsQuery.refetch()}>{t('library.retry')}</Button>}
+                titleAs="h2"
+              />
             </div>
           ) : (
-            <>
-              {assetsQuery.data.items.length > 0 && (
-                <label className="dam-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={assetsQuery.data.items.every((a) => selected.has(a.id))}
-                    onChange={(e) => setSelected(e.target.checked ? new Set(assetsQuery.data.items.map((a) => a.id)) : new Set())}
+            <div className={`dam-library__results${busy ? ' dam-library__results--busy' : ''}`} aria-busy={busy || undefined}>
+              {loaded > 0 && (
+                <div className="dam-library__resultsbar">
+                  <SelectAll
+                    checked={selectedIds.length > 0 && assets.every((a) => selectedIds.includes(a.id))}
+                    indeterminate={selectedIds.length > 0 && !assets.every((a) => selectedIds.includes(a.id))}
+                    label={t('library.selectAllOnPage', { count: loaded })}
+                    onChange={(on) => setSelectedIds(on ? assets.map((a) => a.id) : [])}
                   />
-                  {t('library.selectAllOnPage', { count: assetsQuery.data.items.length })}
-                </label>
+                </div>
               )}
 
-              {selected.size > 0 && (
-                <BulkEditBar assets={assetsQuery.data.items} selectedIds={[...selected]} onClear={() => setSelected(new Set())} />
-              )}
+              {empty}
 
-              {view === 'grid' ? (
-                <ThumbnailGrid
-                  items={assetsQuery.data.items.map((a) => toAssetThumb(t, i18n.language, a, thumbnailLinks.data?.[a.id]))}
-                  label={t('library.assetsLabel')}
-                  onOpen={(id) => navigate(`/library/assets/${id}`)}
-                  selectedIds={[...selected]}
-                  onToggleSelect={toggleSelect}
-                  selectLabel={(title) => t('library.selectAsset', { title })}
-                  cardActions={(id) => {
-                    const asset = assetById(id);
-                    return asset ? itemActions.assetMenu(asset) : [];
-                  }}
-                  onMenuOpen={(id) => {
-                    const asset = assetById(id);
-                    if (asset) itemActions.prefetchAsset(asset);
-                  }}
-                  menuLabel={(title) => t('library.card.actionsFor', { title })}
-                />
-              ) : (
-                <Table
-                  columns={columns}
-                  rows={assetsQuery.data.items}
-                  getRowId={(a) => a.id}
-                  caption={t('library.assetsLabel')}
-                  emptyMessage={t('library.empty')}
-                  selectedIds={[...selected]}
-                  onToggleSelect={toggleSelect}
-                  selectLabel={(a) => t('library.selectAsset', { title: a.title })}
-                />
+              {loaded > 0 &&
+                (view === 'grid' ? (
+                  <ThumbnailGrid
+                    items={assets.map((a) => toAssetThumb(t, i18n.language, a, thumbnails[a.id]))}
+                    label={t('library.assetsLabel')}
+                    onOpen={(id) => navigate(`/library/assets/${id}`)}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    selectLabel={(title) => t('library.selectAsset', { title })}
+                    cardActions={(id) => {
+                      const asset = assetById(id);
+                      return asset ? itemActions.assetMenu(asset) : [];
+                    }}
+                    onMenuOpen={(id) => {
+                      const asset = assetById(id);
+                      if (asset) itemActions.prefetchAsset(asset);
+                    }}
+                    menuLabel={(title) => t('library.card.actionsFor', { title })}
+                  />
+                ) : (
+                  <LibraryList
+                    assets={assets}
+                    thumbnails={thumbnails}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    actions={itemActions}
+                    emptyMessage={t('library.noMatches.title')}
+                  />
+                ))}
+
+              {loaded > 0 && (
+                <div className="dam-library__more">
+                  <span className="dam-hint" role="status">
+                    {hasMore ? t('library.showingMore', { count: loaded }) : t('library.showingAll', { count: loaded })}
+                  </span>
+                  {hasMore && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => void assetsQuery.fetchNextPage()}
+                      loading={assetsQuery.isFetchingNextPage}
+                    >
+                      {t('library.loadMore')}
+                    </Button>
+                  )}
+                </div>
               )}
-              {assetsQuery.data.items.length === 0 && view === 'grid' && <p className="dam-empty">{t('library.empty')}</p>}
-              {assetsQuery.data.nextCursor && (
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setSelected(new Set());
-                    setCursor(assetsQuery.data.nextCursor!);
-                  }}
-                  loading={assetsQuery.isFetching}
-                >
-                  {t('library.next')}
-                </Button>
-              )}
-            </>
+            </div>
           )}
         </div>
       </div>
+
+      {showSelecting && <BulkEditBar assets={assets} selectedIds={selectedIds} onClear={() => setSelectedIds([])} />}
       {itemActions.dialogs}
     </div>
   );

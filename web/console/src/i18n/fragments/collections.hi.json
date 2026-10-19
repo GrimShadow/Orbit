@@ -1,0 +1,33 @@
+{
+  "collections": {
+    "new": "नया संग्रह",
+    "newTitle": "नया संग्रह",
+    "newDescription": "एक खाली संग्रह बनाएँ। आप लाइब्रेरी में चुने हुए एसेट को भी संग्रह के रूप में सहेज सकते हैं।",
+    "create": "बनाएँ",
+    "created": "संग्रह “{{name}}” बनाया गया",
+    "count_one": "{{count}} संग्रह",
+    "count_other": "{{count}} संग्रह",
+    "assetCount_one": "{{count}} एसेट",
+    "assetCount_other": "{{count}} एसेट",
+    "smartHint": "अपने आप अपडेट होता है",
+    "updatedRelative": "अपडेट किया गया {{time}}",
+    "cardActions": "{{name}} के लिए कार्रवाइयाँ",
+    "open": "खोलें",
+    "deleteItem": "हटाएँ…",
+    "empty.title": "अभी कोई संग्रह नहीं है",
+    "empty.description": "साथ में उपयोग होने वाले एसेट - कोई अभियान, शूट, समीक्षा - एक जगह रखें ताकि उन्हें दोबारा ढूँढना आसान हो।",
+    "loading": "संग्रह लोड हो रहे हैं",
+    "loadFailedHint": "अपना कनेक्शन जाँचें और फिर कोशिश करें।",
+    "renameCollection": "संग्रह का नाम बदलें",
+    "renamed": "संग्रह का नाम बदला गया",
+    "moreActions": "और कार्रवाइयाँ",
+    "smartDescription": "स्मार्ट संग्रह हर बार खुलने पर अपनी सहेजी हुई खोज चलाता है।",
+    "contentsEmptyStatic.title": "यह संग्रह खाली है",
+    "contentsEmptyStatic.description": "लाइब्रेरी में एसेट चुनें और संग्रह के रूप में सहेजें चुनकर उनसे एक संग्रह बनाएँ।",
+    "contentsEmptySmart.title": "इस सहेजी हुई खोज से अभी कुछ मेल नहीं खाता",
+    "contentsEmptySmart.description": "एसेट मेल खाते ही यहाँ दिखने लगेंगे।",
+    "goToLibrary": "लाइब्रेरी में जाएँ",
+    "cancelRename": "रद्द करें",
+    "deleted": "संग्रह हटाया गया"
+  }
+}
