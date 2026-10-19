@@ -14,6 +14,7 @@ import {
   Select,
   ShareNetwork,
   Trash,
+  UploadSimple,
   useToast,
   type MenuItem,
 } from '../../ui';
@@ -240,6 +241,12 @@ export function useItemActions({ onOpenFolder, onFolderDeleted }: Options = {}) 
             },
           ]
         : []),
+      {
+        key: 'uploadHere',
+        label: t('item.uploadHere'),
+        icon: <UploadSimple size={16} weight="bold" />,
+        onSelect: () => navigate(`/upload?folder=${folder.id}`),
+      },
       {
         key: 'newSub',
         label: t('item.newSubfolder'),

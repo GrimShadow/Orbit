@@ -159,7 +159,7 @@ export function LibraryPage() {
           title={folderId ? t('library.emptyFolder.title') : t('library.emptyLibrary.title')}
           description={folderId ? t('library.emptyFolder.description') : t('library.emptyLibrary.description')}
           action={
-            <Link to="/upload" className="dam-btn dam-btn--primary">
+            <Link to={folderId ? `/upload?folder=${folderId}` : '/upload'} className="dam-btn dam-btn--primary">
               <UploadSimple size={16} weight="bold" aria-hidden="true" />
               {t('library.upload')}
             </Link>
@@ -180,7 +180,7 @@ export function LibraryPage() {
               <FolderPlus size={16} weight="bold" aria-hidden="true" />
               {t('item.newFolder')}
             </Button>
-            <Link to="/upload" className="dam-btn dam-btn--primary">
+            <Link to={folderId ? `/upload?folder=${folderId}` : '/upload'} className="dam-btn dam-btn--primary">
               <UploadSimple size={16} weight="bold" aria-hidden="true" />
               {t('library.upload')}
             </Link>

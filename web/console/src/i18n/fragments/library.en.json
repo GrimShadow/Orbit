@@ -31,5 +31,8 @@
     "bulk.tagsChosen": "Tags to apply",
     "bulk.removeTagChip": "Remove tag {{tag}}",
     "bulk.tagsPlaceholder": "Type a tag and press Enter"
+  },
+  "item": {
+    "uploadHere": "Upload files here"
   }
 }

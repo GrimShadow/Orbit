@@ -320,4 +320,75 @@ describe('UploadPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'No new assets' })).toBeInTheDocument();
   });
+
+  describe('choosing the destination folder', () => {
+    const FOLDERS = [
+      {
+        id: 'f1',
+        parentId: null,
+        path: 'brand',
+        label: 'brand',
+        name: 'Brand assets',
+        inheritedMetadata: {},
+        defaultWorkflowId: null,
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'f2',
+        parentId: 'f1',
+        path: 'brand.trail',
+        label: 'trail',
+        name: 'Trail',
+        inheritedMetadata: {},
+        defaultWorkflowId: null,
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+    ];
+    const withFolders = (extra: (call: Call) => Response | Promise<Response | undefined> | undefined = () => undefined) =>
+      mockApi((call) => (call.pathname === '/api/v1/folders' ? json(FOLDERS) : extra(call)));
+
+    beforeEach(() => localStorage.clear());
+
+    it('shows the folder choice before any file is added, with the folder tree to pick from', async () => {
+      withFolders();
+      renderAt('/upload');
+      const folder = await screen.findByLabelText('Folder');
+      await waitFor(() => expect(within(folder).getAllByRole('option')).toHaveLength(3));
+      expect(
+        within(folder)
+          .getAllByRole('option')
+          .map((o) => o.textContent),
+      ).toEqual(['No folder', 'Brand assets', '— Trail']);
+      expect(screen.getByText('No folder: files go to the top level of the library.')).toBeInTheDocument();
+    });
+
+    it('preselects the folder named in the link and sends it with the batch', async () => {
+      let sent: { folderId?: string | null } | undefined;
+      withFolders(async (call) => {
+        if (call.pathname === '/api/v1/assets/bulk-upload') {
+          sent = (await call.json()) as typeof sent;
+          return bulk([okItem(1, 'a.jpg')]);
+        }
+        if (call.pathname === '/api/v1/uploads/u1/complete')
+          return json({ id: 'u1', assetId: 'a1', status: 'ingested', error: '' });
+        return undefined;
+      });
+      renderAt('/upload?folder=f2');
+      await waitFor(() => expect(screen.getByLabelText('Folder')).toHaveValue('f2'));
+      expect(screen.getByText('Saved to Brand assets / Trail')).toBeInTheDocument();
+      await choose(file('a.jpg'));
+      expect(screen.getByText('to Trail')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Upload 1 file' }));
+      await waitFor(() => expect(sent?.folderId).toBe('f2'));
+      expect(await screen.findByRole('link', { name: 'View in Trail' })).toHaveAttribute('href', '/library?folder=f2');
+    });
+
+    it('lets the folder be changed after files are added', async () => {
+      withFolders();
+      renderAt('/upload');
+      await choose(file('a.jpg'));
+      await userEvent.selectOptions(await screen.findByLabelText('Folder'), 'f1');
+      expect(screen.getByText('to Brand assets')).toBeInTheDocument();
+    });
+  });
 });

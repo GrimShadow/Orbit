@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { formatBytes } from '../../lib/format';
 import { Button, Card, CheckCircle, EmptyState, Info, PageHeader, Select, TagInput, UploadSimple, WarningCircle } from '../../ui';
 import type { Json, Values } from '../asset/MetadataFields';
-import { folderOptions, useFolders } from '../library/folders';
+import { folderBreadcrumb, folderOptions, useFolders } from '../library/folders';
 import { Dropzone } from './Dropzone';
 import { QueueRow } from './QueueRow';
 import { FAILED, ResultRow } from './ResultRow';
@@ -34,8 +34,11 @@ function rememberFolder(id: string) {
 export function UploadPage() {
   const { t } = useTranslation();
   const foldersQuery = useFolders();
+  const [params] = useSearchParams();
   const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [folderChoice, setFolderChoice] = useState(rememberedFolder);
+  // `?folder=` (from the library, a folder's menu) wins over the folder used last time.
+  const [folderChoice, setFolderChoice] = useState(() => params.get('folder') ?? rememberedFolder());
+  const [uploadedTo, setUploadedTo] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
   const [metadata, setMetadata] = useState<Record<string, Values>>({});
   const [notice, setNotice] = useState<{ duplicates: number; overLimit: number } | null>(null);
@@ -90,6 +93,7 @@ export function UploadPage() {
       if (doc) metadataByType[type] = doc;
     }
     rememberFolder(folderId);
+    setUploadedTo(folderId);
     void start(valid, { folderId: folderId || undefined, tags, metadataByType });
   };
 
@@ -119,7 +123,48 @@ export function UploadPage() {
     reset();
   };
 
+  const folderPath = folders
+    ? folderBreadcrumb(folders, folderId || undefined)
+        .map((c) => c.label)
+        .join(' / ')
+    : '';
+  const folderName = folderPath.split(' / ').pop() ?? '';
+  const uploadedName = folders?.find((f) => f.id === uploadedTo)?.name ?? '';
   const kinds = ['images', 'video', 'audio', 'documents', 'models', 'bundles'].map((k) => t(`upload.kind.${k}`));
+
+  const dropzoneNode = (
+    <Dropzone
+      compact={queue.length > 0}
+      icon={<UploadSimple size={queue.length > 0 ? 22 : 32} weight="bold" aria-hidden="true" />}
+      label={queue.length > 0 ? t('upload.addMore') : t('upload.dropLabel')}
+      hint={queue.length > 0 ? t('upload.dropHintMore') : t('upload.dropHint')}
+      activeLabel={t('upload.dropActive')}
+      chooseLabel={t('upload.choose')}
+      kinds={kinds}
+      detail={t('upload.limits', { max: MAX_FILES })}
+      onFiles={addFiles}
+    />
+  );
+  const destinationNode = (
+    <Card as="section" aria-labelledby="dam-upload-dest" className="dam-upload__card">
+      <h2 id="dam-upload-dest">{t('upload.destination')}</h2>
+      <Select
+        label={t('upload.folder')}
+        value={folderId}
+        onChange={(e) => setFolderChoice(e.target.value)}
+        hint={folderId ? t('upload.folderHint', { path: folderPath }) : t('upload.folderHintRoot')}
+        options={[{ value: '', label: t('upload.noFolder') }, ...(folders ? folderOptions(folders) : [])]}
+      />
+      <TagInput
+        label={t('upload.tags')}
+        hint={t('upload.tagsHint')}
+        value={tags}
+        onChange={setTags}
+        removeLabel={(tag) => t('asset.removeTag', { tag })}
+        listLabel={t('asset.tagList', { field: t('upload.tags') })}
+      />
+    </Card>
+  );
 
   return (
     <div className="dam-page dam-upload">
@@ -127,17 +172,13 @@ export function UploadPage() {
 
       {state.status === 'idle' ? (
         <form onSubmit={onSubmit} className="dam-upload__formwrap">
-          <Dropzone
-            compact={queue.length > 0}
-            icon={<UploadSimple size={queue.length > 0 ? 22 : 32} weight="bold" aria-hidden="true" />}
-            label={queue.length > 0 ? t('upload.addMore') : t('upload.dropLabel')}
-            hint={queue.length > 0 ? t('upload.dropHintMore') : t('upload.dropHint')}
-            activeLabel={t('upload.dropActive')}
-            chooseLabel={t('upload.choose')}
-            kinds={kinds}
-            detail={t('upload.limits', { max: MAX_FILES })}
-            onFiles={addFiles}
-          />
+          {queue.length > 0 && dropzoneNode}
+          {queue.length === 0 && (
+            <div className="dam-upload__layout dam-upload__layout--empty">
+              {dropzoneNode}
+              <aside className="dam-upload__side">{destinationNode}</aside>
+            </div>
+          )}
           {notice && (
             <p className="dam-upload__notice" role="status">
               <Info size={16} weight="fill" aria-hidden="true" />
@@ -171,23 +212,7 @@ export function UploadPage() {
               </section>
 
               <aside className="dam-upload__side">
-                <Card as="section" aria-labelledby="dam-upload-dest" className="dam-upload__card">
-                  <h2 id="dam-upload-dest">{t('upload.destination')}</h2>
-                  <Select
-                    label={t('upload.folder')}
-                    value={folderId}
-                    onChange={(e) => setFolderChoice(e.target.value)}
-                    options={[{ value: '', label: t('upload.noFolder') }, ...(folders ? folderOptions(folders) : [])]}
-                  />
-                  <TagInput
-                    label={t('upload.tags')}
-                    hint={t('upload.tagsHint')}
-                    value={tags}
-                    onChange={setTags}
-                    removeLabel={(tag) => t('asset.removeTag', { tag })}
-                    listLabel={t('asset.tagList', { field: t('upload.tags') })}
-                  />
-                </Card>
+                {destinationNode}
                 {countByType.length > 0 && (
                   <Card as="section" aria-labelledby="dam-upload-details" className="dam-upload__card">
                     <h2 id="dam-upload-details">{t('upload.detailsHeading')}</h2>
@@ -216,6 +241,9 @@ export function UploadPage() {
               <p className="dam-upload__summary" aria-live="polite">
                 <strong>{t('upload.summary', { count: valid.length })}</strong>
                 <span className="dam-hint">{formatBytes(totalBytes)}</span>
+                <span className="dam-upload__dest">
+                  {folderId ? t('upload.toFolder', { folder: folderName }) : t('upload.toRoot')}
+                </span>
                 {problems > 0 && (
                   <span className="dam-upload__problemcount">
                     <WarningCircle size={14} weight="fill" aria-hidden="true" />
@@ -251,8 +279,8 @@ export function UploadPage() {
                 })}
                 action={
                   <>
-                    <Link className="dam-btn dam-btn--primary" to="/library">
-                      {t('upload.viewInLibrary')}
+                    <Link className="dam-btn dam-btn--primary" to={uploadedTo ? `/library?folder=${uploadedTo}` : '/library'}>
+                      {uploadedTo ? t('upload.viewInFolder', { folder: uploadedName }) : t('upload.viewInLibrary')}
                     </Link>
                     {counts.failed > 0 && (
                       <Button variant="secondary" onClick={reviewFailed}>

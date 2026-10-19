@@ -45,3 +45,9 @@ asset a title other than its file name, and a file the server would refuse was o
 - `docs/api/openapi.json` and `@dam/sdk-js` regenerated; three integration assertions cover per-file type, title and
   per-type metadata (`UploadTests`); the page has unit tests for queue rules and each flow, and the e2e suite's upload
   steps were updated to the new button.
+
+## Addendum: destination folder up front
+The folder choice already existed but only appeared after files were queued, so it was easy to miss. The Destination card (folder
+and batch tags) now shows beside the drop zone from the start, with the folder's full path as a hint; the sticky action bar
+says "to <folder>" and the results link to that folder. `/upload?folder=<id>` preselects a folder (it wins over the remembered
+one); the library's Upload buttons pass the open folder and a folder's context menu has "Upload files here". No API change.

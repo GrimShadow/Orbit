@@ -409,3 +409,13 @@
     bottom: calc(60px + env(safe-area-inset-bottom) + var(--dam-space-3));
   }
 }
+
+/* Before any file is added the Destination card sits beside the drop zone, so where files will go is never hidden. */
+.dam-upload__layout--empty {
+  align-items: stretch;
+}
+.dam-upload__dest {
+  color: var(--dam-brand-soft-text);
+  font-weight: 600;
+  font-size: var(--dam-text-sm);
+}
