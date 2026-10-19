@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
   <style>
-    .o { stroke: #15803d; }
-    .f { fill: #15803d; }
-    @media (prefers-color-scheme: dark) { .o { stroke: #4ade80; } .f { fill: #4ade80; } }
+    .o { stroke: #235c46; }
+    .f { fill: #235c46; }
+    @media (prefers-color-scheme: dark) { .o { stroke: #74c49a; } .f { fill: #74c49a; } }
   </style>
   <path class="o" d="M4.74 22.5A13 6 -30 0 1 27.26 9.5" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/>
   <circle class="f" cx="16" cy="16" r="5.5"/>

@@ -22,49 +22,49 @@
  * in both themes; re-run the contrast check before changing any of them.
  * ------------------------------------------------------------------------------------------------------------- */
 :root {
-  --dam-bg: #f6f7fb;
+  --dam-bg: #f6f5f1;
   --dam-surface: #ffffff;
-  --dam-surface-2: #eef0f7;
+  --dam-surface-2: #eceae3;
   /* Cards and panels that sit above --dam-surface. Light: the same white, lifted by shadow rather than colour. */
   --dam-surface-raised: #ffffff;
-  --dam-text: #111827;
-  --dam-muted: #4b5563;
-  --dam-border: #c9ced9;
+  --dam-text: #17201b;
+  --dam-muted: #525c55;
+  --dam-border: #c8ccc3;
   /* Hairline dividers inside components (table rows, menu separators, indent guides). */
-  --dam-border-subtle: #e4e7ef;
-  /* Forest green - a considered, non-default accent (indigo/purple is the most common AI-design tell). */
-  --dam-brand: #15803d;
-  --dam-brand-hover: #166534;
+  --dam-border-subtle: #e4e5dd;
+  /* Pine green - a muted, considered, non-default accent (indigo/purple is the most common AI-design tell). */
+  --dam-brand: #235c46;
+  --dam-brand-hover: #1b4a39;
   --dam-on-brand: #ffffff;
   /* Brand tint for selected nav items, chips and selected rows; --dam-brand-soft-text is AA (6.49:1) on it. */
-  --dam-brand-soft: #dcfce7;
-  --dam-brand-soft-text: #166534;
+  --dam-brand-soft: #e5eee8;
+  --dam-brand-soft-text: #1b4a39;
   --dam-danger: #b91c1c;
   /* Teal, deliberately distinct from --dam-brand's forest green so status and identity never blur together. */
-  --dam-success: #0d9488;
+  --dam-success: #0f766e;
   --dam-warning: #92400e;
   /* The focus ring takes the brand colour; the 2px offset keeps it readable on brand-filled controls too. */
-  --dam-focus: #15803d;
+  --dam-focus: #235c46;
   /* Semantic tones for badges, stat cards and toasts. Text on background: info 7.15, success 6.73, warning 6.37,
    * danger 6.80, neutral 9.05 (light). */
   --dam-tone-info-bg: #dbeafe;
   --dam-tone-info-text: #1e40af;
-  --dam-tone-success-bg: #ccfbf1;
-  --dam-tone-success-text: #115e59;
+  --dam-tone-success-bg: #d4ece7;
+  --dam-tone-success-text: #0f5650;
   --dam-tone-warning-bg: #fef3c7;
   --dam-tone-warning-text: #92400e;
   --dam-tone-danger-bg: #fee2e2;
   --dam-tone-danger-text: #991b1b;
-  --dam-tone-neutral-bg: #eef0f7;
-  --dam-tone-neutral-text: #374151;
+  --dam-tone-neutral-bg: #eceae3;
+  --dam-tone-neutral-text: #3a443d;
   --dam-radius-sm: 6px;
   --dam-radius: 10px;
   --dam-radius-lg: 16px;
   --dam-radius-xl: 20px;
-  /* Shadows carry the navy hue of the text colour rather than plain black so they read as ambient light. */
-  --dam-shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
-  --dam-shadow: 0 1px 2px rgb(16 24 40 / 0.08), 0 4px 12px rgb(16 24 40 / 0.08);
-  --dam-shadow-lg: 0 1px 2px rgb(16 24 40 / 0.05), 0 12px 32px -6px rgb(16 24 40 / 0.16), 0 28px 56px -16px rgb(16 24 40 / 0.12);
+  /* Shadows carry the green-black hue of the text colour rather than plain black so they read as ambient light. */
+  --dam-shadow-sm: 0 1px 2px rgb(18 28 22 / 0.06);
+  --dam-shadow: 0 1px 2px rgb(18 28 22 / 0.08), 0 4px 12px rgb(18 28 22 / 0.08);
+  --dam-shadow-lg: 0 1px 2px rgb(18 28 22 / 0.05), 0 12px 32px -6px rgb(18 28 22 / 0.16), 0 28px 56px -16px rgb(18 28 22 / 0.12);
   --dam-space-1: 4px;
   --dam-space-2: 8px;
   --dam-space-3: 12px;
@@ -97,36 +97,36 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --dam-bg: #0b1020;
-    --dam-surface: #131a2e;
-    --dam-surface-2: #1b2440;
-    --dam-surface-raised: #182038;
-    --dam-text: #e8ecf5;
-    --dam-muted: #aab4c8;
-    --dam-border: #33405f;
-    --dam-border-subtle: #24304d;
-    --dam-brand: #4ade80;
-    --dam-brand-hover: #86efac;
-    --dam-on-brand: #0b1020;
-    --dam-brand-soft: #1b3539;
-    --dam-brand-soft-text: #86efac;
+    --dam-bg: #0e1411;
+    --dam-surface: #141c18;
+    --dam-surface-2: #1b2520;
+    --dam-surface-raised: #18211d;
+    --dam-text: #e7ede8;
+    --dam-muted: #a6b2aa;
+    --dam-border: #36443d;
+    --dam-border-subtle: #26322c;
+    --dam-brand: #74c49a;
+    --dam-brand-hover: #94d4b3;
+    --dam-on-brand: #0b1a12;
+    --dam-brand-soft: #1e3328;
+    --dam-brand-soft-text: #a9dcc1;
     --dam-danger: #fca5a5;
-    --dam-success: #2dd4bf;
+    --dam-success: #3fd0bd;
     --dam-warning: #fcd34d;
-    --dam-focus: #4ade80;
+    --dam-focus: #74c49a;
     --dam-tone-info-bg: #1b2d57;
     --dam-tone-info-text: #a9c8fd;
-    --dam-tone-success-bg: #0f3a38;
+    --dam-tone-success-bg: #123a35;
     --dam-tone-success-text: #7ae9d8;
     --dam-tone-warning-bg: #42300f;
     --dam-tone-warning-text: #fcd34d;
     --dam-tone-danger-bg: #4a1d22;
     --dam-tone-danger-text: #fda4a4;
-    --dam-tone-neutral-bg: #1f2944;
-    --dam-tone-neutral-text: #c9d1e3;
-    --dam-shadow-sm: 0 1px 2px rgb(0 4 16 / 0.4);
-    --dam-shadow: 0 1px 2px rgb(0 4 16 / 0.4), 0 4px 14px rgb(0 4 16 / 0.45);
-    --dam-shadow-lg: 0 1px 2px rgb(0 4 16 / 0.4), 0 12px 32px -6px rgb(0 4 16 / 0.6), 0 28px 56px -16px rgb(0 4 16 / 0.5);
+    --dam-tone-neutral-bg: #202b25;
+    --dam-tone-neutral-text: #cbd6cf;
+    --dam-shadow-sm: 0 1px 2px rgb(0 6 3 / 0.4);
+    --dam-shadow: 0 1px 2px rgb(0 6 3 / 0.4), 0 4px 14px rgb(0 6 3 / 0.45);
+    --dam-shadow-lg: 0 1px 2px rgb(0 6 3 / 0.4), 0 12px 32px -6px rgb(0 6 3 / 0.6), 0 28px 56px -16px rgb(0 6 3 / 0.5);
   }
 }
 :root[data-theme='light'] {
@@ -134,36 +134,36 @@
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --dam-bg: #0b1020;
-  --dam-surface: #131a2e;
-  --dam-surface-2: #1b2440;
-  --dam-surface-raised: #182038;
-  --dam-text: #e8ecf5;
-  --dam-muted: #aab4c8;
-  --dam-border: #33405f;
-  --dam-border-subtle: #24304d;
-  --dam-brand: #4ade80;
-  --dam-brand-hover: #86efac;
-  --dam-on-brand: #0b1020;
-  --dam-brand-soft: #1b3539;
-  --dam-brand-soft-text: #86efac;
+  --dam-bg: #0e1411;
+  --dam-surface: #141c18;
+  --dam-surface-2: #1b2520;
+  --dam-surface-raised: #18211d;
+  --dam-text: #e7ede8;
+  --dam-muted: #a6b2aa;
+  --dam-border: #36443d;
+  --dam-border-subtle: #26322c;
+  --dam-brand: #74c49a;
+  --dam-brand-hover: #94d4b3;
+  --dam-on-brand: #0b1a12;
+  --dam-brand-soft: #1e3328;
+  --dam-brand-soft-text: #a9dcc1;
   --dam-danger: #fca5a5;
-  --dam-success: #2dd4bf;
+  --dam-success: #3fd0bd;
   --dam-warning: #fcd34d;
-  --dam-focus: #4ade80;
+  --dam-focus: #74c49a;
   --dam-tone-info-bg: #1b2d57;
   --dam-tone-info-text: #a9c8fd;
-  --dam-tone-success-bg: #0f3a38;
+  --dam-tone-success-bg: #123a35;
   --dam-tone-success-text: #7ae9d8;
   --dam-tone-warning-bg: #42300f;
   --dam-tone-warning-text: #fcd34d;
   --dam-tone-danger-bg: #4a1d22;
   --dam-tone-danger-text: #fda4a4;
-  --dam-tone-neutral-bg: #1f2944;
-  --dam-tone-neutral-text: #c9d1e3;
-  --dam-shadow-sm: 0 1px 2px rgb(0 4 16 / 0.4);
-  --dam-shadow: 0 1px 2px rgb(0 4 16 / 0.4), 0 4px 14px rgb(0 4 16 / 0.45);
-  --dam-shadow-lg: 0 1px 2px rgb(0 4 16 / 0.4), 0 12px 32px -6px rgb(0 4 16 / 0.6), 0 28px 56px -16px rgb(0 4 16 / 0.5);
+  --dam-tone-neutral-bg: #202b25;
+  --dam-tone-neutral-text: #cbd6cf;
+  --dam-shadow-sm: 0 1px 2px rgb(0 6 3 / 0.4);
+  --dam-shadow: 0 1px 2px rgb(0 6 3 / 0.4), 0 4px 14px rgb(0 6 3 / 0.45);
+  --dam-shadow-lg: 0 1px 2px rgb(0 6 3 / 0.4), 0 12px 32px -6px rgb(0 6 3 / 0.6), 0 28px 56px -16px rgb(0 6 3 / 0.5);
 }
 
 /* ---------------------------------------------------------------------------------------------------------------

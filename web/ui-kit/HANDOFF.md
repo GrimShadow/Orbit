@@ -11,7 +11,7 @@ styling lives in `web/ui-kit/src/styles.css` on `--dam-*` tokens and works in li
 | `--dam-shadow-lg` | navy-tinted, diffused | deeper | menus, dialogs, toasts |
 | `--dam-surface-raised` | `#ffffff` | `#182038` | cards/panels above `--dam-surface` |
 | `--dam-border-subtle` | `#e4e7ef` | `#24304d` | hairline dividers (table rows, menu separators, tree guides) |
-| `--dam-brand-soft` / `--dam-brand-soft-text` | `#dcfce7` / `#166534` (6.49:1) | `#1b3539` / `#86efac` (9.26:1) | selected nav/rows/tree node, chips, brand badge |
+| `--dam-brand-soft` / `--dam-brand-soft-text` | `#e5eee8` / `#1b4a39` (6.49:1) | `#1e3328` / `#a9dcc1` (9.26:1) | selected nav/rows/tree node, chips, brand badge |
 | `--dam-tone-info-bg/-text` | `#dbeafe` / `#1e40af` (7.15:1) | `#1b2d57` / `#a9c8fd` (7.93:1) | |
 | `--dam-tone-success-bg/-text` | `#ccfbf1` / `#115e59` (6.73:1) | `#0f3a38` / `#7ae9d8` (8.60:1) | |
 | `--dam-tone-warning-bg/-text` | `#fef3c7` / `#92400e` (6.37:1) | `#42300f` / `#fcd34d` (8.77:1) | |

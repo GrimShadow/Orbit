@@ -74,3 +74,12 @@ when its anchor really moved (browsers emit spurious `scroll` events when a fixe
   1440px/390px) ended with zero axe violations, console errors or failed requests; the script itself was not kept
   (it needs the seeded dev library).
 - Hindi strings for the new areas are machine-first drafts and want a native review.
+
+## Addendum: pine and sage palette
+The first pass kept the original saturated "forest" green (#15803d, #4ade80 in dark) over cool blue-grey neutrals and a navy
+dark theme; the neon dark-mode green and mint selected pills read as default-Tailwind rather than a designed product.
+The palette was retuned to one family: pine brand (#235c46, hover #1b4a39) with sage tints (#e5eee8), warm paper-like light
+neutrals (#f6f5f1 canvas, #17201b ink), and a green-black dark theme (#0e1411 canvas) with a muted mint brand (#74c49a)
+instead of the navy. Success status stays a distinct teal so identity and status don't blur. Only token values changed
+(plus the logo, favicon and `theme-color` metas); no component CSS was touched. Every text pair is >= 5.4:1 in both themes
+and axe reported zero violations on Login, Home, Library and Search in light and dark.
