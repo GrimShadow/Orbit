@@ -116,7 +116,8 @@ public sealed class ListAssetsHandler(IRepository<Asset> assets, IRepository<Fol
         var pathById = allFolders.ToDictionary(f => f.Id, f => f.Path);
         var query = assets.Query();
         if (r.Type is not null) query = query.Where(a => a.Type == r.Type);
-        if (r.Status is not null) query = query.Where(a => a.Status == r.Status);
+        // Deleted assets are a trash: hidden from the default listing, and shown only when asked for by status.
+        query = r.Status is not null ? query.Where(a => a.Status == r.Status) : query.Where(a => a.Status != AssetStatuses.Deleted);
         if (r.FolderId is { } fid)
         {
             var ids = r.IncludeSubfolders && pathById.TryGetValue(fid, out var root)
