@@ -1,5 +1,5 @@
-import { CheckCircle, Clock, HardDrives, Lightning, NotePencil, Stack } from '@phosphor-icons/react';
-import type { ReactNode } from 'react';
+import { CheckCircle, Clock, HardDrives, Lightning, NotePencil, PaperPlaneTilt, Stack } from '@phosphor-icons/react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -8,6 +8,7 @@ import {
   DistributionBar,
   EmptyState,
   FileTypeIcon,
+  SegmentedControl,
   Skeleton,
   Sparkline,
   StatCard,
@@ -18,9 +19,12 @@ import { isForbidden, useOverview, type AnalyticsOverview } from '../../features
 import { UnusedAssetsPanel } from '../../features/analytics/UnusedAssets';
 import { formatBytes } from '../../lib/format';
 import { facetCount, useLibrarySnapshot } from './homeData';
-import { SectionNote } from './HomeSections';
+import { useThumbnailLinks } from '../../features/asset/assetApi';
+import { useAssets } from '../../features/library/assets';
+import { ListSkeleton, ReviewList, SectionEmpty, SectionNote } from './HomeSections';
 
 export const USAGE_DAYS = 30;
+const REVIEW_COUNT = 5;
 
 /** Percentage change, or null when there is no earlier figure to compare against. */
 export function percentChange(now: number, before: number): number | null {
@@ -188,34 +192,37 @@ export function UsageCard() {
   const o = query.data;
   const empty = o && o.usage.total === 0;
   return (
-    <Card as="section" className="dam-insight" aria-labelledby="insight-usage">
+    <Card as="section" className="dam-insight dam-home__usage" aria-labelledby="insight-usage">
       <CardHead id="insight-usage" title={t('analytics.insights.usageTitle')} hint={t('analytics.insights.usageDesc')} />
-      {query.error ? (
-        <SectionNote onRetry={() => void query.refetch()} />
-      ) : !o ? (
-        <Skeleton width="100%" height={176} />
-      ) : empty ? (
-        <EmptyState
-          titleAs="p"
-          icon={<Lightning />}
-          title={t('analytics.insights.usageEmpty')}
-          description={t('analytics.insights.usageEmptyHint')}
-        />
-      ) : (
-        <>
-          <BarChart
-            data={usageSeries(o, i18n.language)}
-            label={t('analytics.insights.usageChart', { days: o.periodDays })}
-            height={160}
+      <div className="dam-insight__body dam-insight__body--chart">
+        {query.error ? (
+          <SectionNote onRetry={() => void query.refetch()} />
+        ) : !o ? (
+          <Skeleton width="100%" height={176} />
+        ) : empty ? (
+          <EmptyState
+            titleAs="p"
+            icon={<Lightning />}
+            title={t('analytics.insights.usageEmpty')}
+            description={t('analytics.insights.usageEmptyHint')}
           />
-          {o.usage.byChannel.length > 0 && (
-            <DistributionBar
-              label={t('analytics.insights.usageTitle')}
-              segments={o.usage.byChannel.map((c, i) => ({ label: c.channel, value: c.count, series: i }))}
+        ) : (
+          <>
+            <BarChart
+              data={usageSeries(o, i18n.language)}
+              label={t('analytics.insights.usageChart', { days: o.periodDays })}
+              fill
             />
-          )}
-        </>
-      )}
+            {o.usage.byChannel.length > 0 && (
+              <DistributionBar
+                compact
+                label={t('analytics.insights.usageTitle')}
+                segments={o.usage.byChannel.map((c, i) => ({ label: c.channel, value: c.count, series: i }))}
+              />
+            )}
+          </>
+        )}
+      </div>
     </Card>
   );
 }
@@ -223,7 +230,6 @@ export function UsageCard() {
 export function HealthCard() {
   const { t } = useTranslation();
   const snapshot = useLibrarySnapshot();
-  const overview = useOverview(USAGE_DAYS);
   const facets = snapshot.data?.facets;
   const statusSegments: DistributionSegment[] = STATUS_ORDER.map((s) => ({
     label: t(`library.status.${s.value}`),
@@ -237,83 +243,122 @@ export function HealthCard() {
     value: facetCount(facets, 'type', x),
     series: i,
   }));
-  const storage = overview.data?.storage.byType ?? [];
-  const storageSegments: DistributionSegment[] = storage.map((s, i) => ({
-    label: t(`library.type.${s.type}`, { defaultValue: s.type }),
-    value: s.bytes,
-    display: formatBytes(s.bytes),
-    series: i,
-  }));
   return (
-    <Card as="section" className="dam-insight" aria-labelledby="insight-health">
+    <Card as="section" className="dam-insight dam-home__health" aria-labelledby="insight-health">
       <CardHead id="insight-health" title={t('analytics.insights.healthTitle')} />
-      {snapshot.isPending ? (
-        <Skeleton width="100%" height={176} />
-      ) : snapshot.error ? (
-        <SectionNote onRetry={() => void snapshot.refetch()} />
-      ) : (
-        <div className="dam-insight__stack">
-          <div>
-            <h3 className="dam-insight__sub">{t('analytics.insights.byStatus')}</h3>
-            <DistributionBar label={t('analytics.insights.byStatus')} segments={statusSegments} />
-          </div>
-          <div>
-            <h3 className="dam-insight__sub">{t('analytics.insights.byType')}</h3>
-            <DistributionBar label={t('analytics.insights.byType')} segments={typeSegments.filter((s) => s.value > 0)} />
-          </div>
-          {storageSegments.length > 0 && (
+      <div className="dam-insight__body">
+        {snapshot.isPending ? (
+          <Skeleton width="100%" height={176} />
+        ) : snapshot.error ? (
+          <SectionNote onRetry={() => void snapshot.refetch()} />
+        ) : (
+          <div className="dam-insight__stack">
             <div>
-              <h3 className="dam-insight__sub">{t('analytics.insights.storageByType')}</h3>
-              <DistributionBar label={t('analytics.insights.storageByType')} segments={storageSegments} />
+              <h3 className="dam-insight__sub">{t('analytics.insights.byStatus')}</h3>
+              <DistributionBar compact label={t('analytics.insights.byStatus')} segments={statusSegments} />
             </div>
-          )}
-        </div>
-      )}
+            <div>
+              <h3 className="dam-insight__sub">{t('analytics.insights.byType')}</h3>
+              <DistributionBar
+                compact
+                label={t('analytics.insights.byType')}
+                segments={typeSegments.filter((s) => s.value > 0)}
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </Card>
   );
 }
 
-export function TopUsedCard() {
+function TopUsedList() {
   const { t } = useTranslation();
   const query = useOverview(USAGE_DAYS);
-  if (isForbidden(query.error)) return null;
   const top = query.data?.topAssets ?? [];
+  if (!query.data) return <Skeleton width="100%" height={160} />;
+  if (top.length === 0)
+    return (
+      <EmptyState
+        titleAs="p"
+        icon={<Lightning />}
+        title={t('analytics.insights.topEmpty')}
+        description={t('analytics.insights.topEmptyBody')}
+      />
+    );
   return (
-    <section className="dam-home__section" aria-labelledby="insight-top">
-      <div className="dam-home__sectionhead">
-        <h2 id="insight-top" className="dam-home__h2">
-          {t('analytics.insights.topTitle')}
+    <ol className="dam-toplist" aria-label={t('analytics.insights.topTitle')}>
+      {top.map((a, i) => (
+        <li key={a.assetId}>
+          <Link to={`/library/assets/${a.assetId}`} className="dam-toplist__row">
+            <span className="dam-toplist__rank" aria-hidden="true">
+              {i + 1}
+            </span>
+            <span className="dam-toplist__icon" aria-hidden="true">
+              <FileTypeIcon type={a.type} size={18} />
+            </span>
+            <span className="dam-toplist__title">{a.title}</span>
+            <span className="dam-toplist__count">{t('analytics.insights.uses', { count: a.count })}</span>
+          </Link>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ReviewQueue({ locale }: { locale: string }) {
+  const { t } = useTranslation();
+  const query = useAssets({ status: 'in_review', limit: REVIEW_COUNT });
+  const assets = query.data?.items.slice(0, REVIEW_COUNT) ?? [];
+  const thumbs = useThumbnailLinks(assets.map((a) => a.id));
+  if (query.isPending) return <ListSkeleton />;
+  if (query.error) return <SectionNote onRetry={() => void query.refetch()} />;
+  if (assets.length === 0)
+    return (
+      <SectionEmpty icon={<PaperPlaneTilt />} title={t('home.review.emptyTitle')} description={t('home.review.emptyBody')} />
+    );
+  return <ReviewList assets={assets} thumbs={thumbs.data} locale={locale} />;
+}
+
+/** One card, two lists: what is most used and what is waiting for a decision. A role without analytics sees only the
+ * review queue. */
+export function ActivityCard({ locale }: { locale: string }) {
+  const { t } = useTranslation();
+  const overview = useOverview(USAGE_DAYS);
+  const snapshot = useLibrarySnapshot();
+  const analytics = !isForbidden(overview.error);
+  const [tab, setTab] = useState<'top' | 'review'>('top');
+  const active = analytics ? tab : 'review';
+  const waiting = snapshot.data ? facetCount(snapshot.data.facets, 'status', 'in_review') : null;
+  return (
+    <Card as="section" className="dam-insight dam-home__activity" aria-labelledby="insight-activity">
+      <div className="dam-insight__head">
+        <h2 id="insight-activity" className="dam-home__h2">
+          {active === 'top' ? t('analytics.insights.topTitle') : t('home.review.title')}
         </h2>
-        <span className="dam-insight__hint">{t('analytics.insights.topDesc', { days: USAGE_DAYS })}</span>
+        {analytics ? (
+          <SegmentedControl
+            label={t('analytics.insights.activityView')}
+            value={active}
+            onChange={(v) => setTab(v as 'top' | 'review')}
+            options={[
+              { value: 'top', label: t('analytics.insights.topTitle') },
+              {
+                value: 'review',
+                label: waiting
+                  ? t('analytics.insights.needsReviewCount', { count: waiting })
+                  : t('analytics.insights.needsReview'),
+              },
+            ]}
+          />
+        ) : (
+          <Link to="/library?status=in_review" className="dam-home__more">
+            {t('home.review.viewAll')}
+          </Link>
+        )}
       </div>
-      {!query.data ? (
-        <Skeleton width="100%" height={160} />
-      ) : top.length === 0 ? (
-        <EmptyState
-          titleAs="p"
-          icon={<Lightning />}
-          title={t('analytics.insights.topEmpty')}
-          description={t('analytics.insights.topEmptyBody')}
-        />
-      ) : (
-        <ol className="dam-toplist">
-          {top.map((a, i) => (
-            <li key={a.assetId}>
-              <Link to={`/library/assets/${a.assetId}`} className="dam-toplist__row">
-                <span className="dam-toplist__rank" aria-hidden="true">
-                  {i + 1}
-                </span>
-                <span className="dam-toplist__icon" aria-hidden="true">
-                  <FileTypeIcon type={a.type} size={18} />
-                </span>
-                <span className="dam-toplist__title">{a.title}</span>
-                <span className="dam-toplist__count">{t('analytics.insights.uses', { count: a.count })}</span>
-              </Link>
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
+      <div className="dam-insight__body">{active === 'top' ? <TopUsedList /> : <ReviewQueue locale={locale} />}</div>
+    </Card>
   );
 }
 
@@ -322,7 +367,7 @@ export function UnusedCard() {
   const overview = useOverview(USAGE_DAYS);
   if (isForbidden(overview.error)) return null;
   return (
-    <Card as="div" className="dam-insight dam-insight--wide">
+    <Card as="div" className="dam-insight dam-home__unused">
       <UnusedAssetsPanel compact />
     </Card>
   );

@@ -1977,6 +1977,17 @@ th[aria-sort='descending'] .dam-sort__icon {
   height: var(--dam-bars-h, 140px);
   border-bottom: 1px solid var(--dam-border-subtle);
 }
+.dam-bars--fill {
+  height: 100%;
+}
+.dam-bars--fill .dam-bars__plot {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 96px;
+}
+.dam-bars--fill {
+  min-height: 132px;
+}
 .dam-bars__col {
   flex: 1 1 0;
   min-width: 0;
@@ -2066,4 +2077,23 @@ th[aria-sort='descending'] .dam-sort__icon {
   color: var(--dam-muted);
   font-variant-numeric: tabular-nums;
   font-size: var(--dam-text-xs);
+}
+
+.dam-dist--compact {
+  gap: var(--dam-space-2);
+}
+.dam-dist--compact .dam-dist__bar {
+  height: 10px;
+}
+.dam-dist--compact .dam-dist__legend {
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 2px var(--dam-space-3);
+}
+.dam-dist--compact .dam-dist__item {
+  font-size: var(--dam-text-xs);
+}
+/* The last axis label ends at the plot's right edge instead of running past it. */
+.dam-bars__tick:last-child {
+  display: flex;
+  justify-content: flex-end;
 }

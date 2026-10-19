@@ -67,15 +67,17 @@ export interface BarChartProps {
   labelEvery?: number;
   /** Colour index into the chart palette. */
   series?: number;
+  /** Grow to fill the parent's height (the parent must have one) instead of using `height`; never shorter than 96px. */
+  fill?: boolean;
 }
 
 /** Vertical bars scaled to the largest value; empty (zero) bars keep a hairline so the time axis stays readable. */
-export function BarChart({ data, label, height = 140, labelEvery, series = 0 }: BarChartProps) {
+export function BarChart({ data, label, height = 140, labelEvery, series = 0, fill = false }: BarChartProps) {
   const max = Math.max(...data.map((d) => d.value), 1);
   const every = labelEvery ?? Math.max(1, Math.ceil(data.length / 6));
   return (
     <div
-      className="dam-bars"
+      className={`dam-bars${fill ? ' dam-bars--fill' : ''}`}
       role="img"
       aria-label={label}
       style={{ ['--dam-bars-h' as string]: `${height}px`, ['--dam-bar' as string]: seriesVar(series) }}
@@ -114,14 +116,16 @@ export interface DistributionBarProps {
   segments: DistributionSegment[];
   /** Accessible name for the group. */
   label: string;
+  /** A tighter legend: name and value only, flowing in a row - for dense dashboards. */
+  compact?: boolean;
 }
 
 /** One proportional bar with a legend underneath - status pipeline, type mix, storage split. */
-export function DistributionBar({ segments, label }: DistributionBarProps) {
+export function DistributionBar({ segments, label, compact = false }: DistributionBarProps) {
   const shown = segments.filter((s) => s.value > 0);
   const total = shown.reduce((n, s) => n + s.value, 0);
   return (
-    <div className="dam-dist" role="group" aria-label={label}>
+    <div className={`dam-dist${compact ? ' dam-dist--compact' : ''}`} role="group" aria-label={label}>
       <div className="dam-dist__bar" aria-hidden="true">
         {total === 0 ? (
           <span className="dam-dist__seg dam-dist__seg--empty" style={{ flexGrow: 1 }} />
@@ -142,7 +146,7 @@ export function DistributionBar({ segments, label }: DistributionBarProps) {
             <span className="dam-dist__dot" aria-hidden="true" style={{ background: seriesVar(s.series ?? i) }} />
             <span className="dam-dist__name">{s.label}</span>
             <span className="dam-dist__val">{s.display ?? s.value}</span>
-            {total > 0 && <span className="dam-dist__pct">{Math.round((s.value / total) * 100)}%</span>}
+            {total > 0 && !compact && <span className="dam-dist__pct">{Math.round((s.value / total) * 100)}%</span>}
           </li>
         ))}
       </ul>

@@ -110,7 +110,10 @@
       "topEmpty": "Nothing has been used yet",
       "topEmptyBody": "The most used assets appear here once downloads and shares are recorded.",
       "uses_one": "{{count}} use",
-      "uses_other": "{{count}} uses"
+      "uses_other": "{{count}} uses",
+      "activityView": "Activity view",
+      "needsReview": "Needs review",
+      "needsReviewCount": "Needs review ({{count}})"
     }
   }
 }

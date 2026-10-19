@@ -110,7 +110,10 @@ hand. No cleanup code in the purge path was needed.
 - **What the console records.** "Open original" and "Copy link" on the asset page post a `download` / `share` event
   (channel `console`), and only when the link is to the real file; watermarked draft previews, posters, thumbnails and
   browsing never count. The beacon is fire-and-forget so a failure cannot get in the way of the action.
-- **Dashboard.** Home is now an analytics dashboard: headline cards (total with a 12-week upload trend, published, uses in
+- **Dashboard.** Home is now a one-screen analytics dashboard (no page scrolling at 1100px wide and 640px tall or more;
+  below that it is an ordinary scrolling page). Recently added and Collections were removed from it - the library and
+  collections pages already cover them. Layout: headline cards, then a 2x2 grid (usage, library breakdown, not used, and
+  an Activity card toggling Most used / Needs review) whose cards scroll inside themselves. Contents: headline cards (total with a 12-week upload trend, published, uses in
   the last 30 days with a trend against the previous 30, storage), a daily usage chart with a by-channel split, "Library at a
   glance" (status, type and storage by type as distribution bars), a "Not used" tracker, most-used assets, then review queue,
   recent and collections. Charts are dependency-free CSS/SVG in `@dam/ui-kit` (`BarChart`, `DistributionBar`, `Sparkline`,

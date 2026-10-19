@@ -287,44 +287,45 @@ describe('home', () => {
     expect(screen.getByRole('link', { name: 'Acme old banner' })).toHaveAttribute('href', '/library/assets/a9');
     expect(screen.getByText('Never used')).toBeInTheDocument();
 
-    const recent = await screen.findByRole('list', { name: 'Recently added' });
-    expect(within(recent).getByRole('link', { name: /Acme spring hero/ })).toHaveAttribute('href', '/library/assets/a1');
-    await waitFor(() => expect(recent.querySelector('img')).toHaveAttribute('src', 'https://cdn.example/a1.jpg'));
-
+    // The review queue lives behind the Activity card's second tab.
+    await userEvent.click(screen.getByRole('button', { name: /Needs review/ }));
     const review = await screen.findByRole('list', { name: 'Waiting for review' });
     expect(within(review).getByRole('link', { name: 'Open Acme brochure' })).toHaveAttribute('href', '/library/assets/a2');
-    const collections = await screen.findByRole('list', { name: 'Collections' });
-    expect(within(collections).getByRole('link', { name: /Acme campaign/ })).toHaveAttribute('href', '/collections/c1');
-    expect(within(collections).getByText('2 assets')).toBeInTheDocument();
 
-    const main = within(screen.getByRole('main'));
-    expect(main.getByRole('link', { name: 'New collection' })).toHaveAttribute('href', '/collections');
+    // One screen, no scrolling: Recently added and Collections are not on the dashboard.
+    expect(screen.queryByText('Recently added')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Collections' })).not.toBeInTheDocument();
+
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'New collection' })).toHaveAttribute(
+      'href',
+      '/collections',
+    );
     expect(f).toHaveBeenCalled();
     expect(document.title).toBe('Home - Orbit');
   });
 
-  it('offers a next step in every empty section', async () => {
+  it('says so plainly when nothing is waiting for review or has been used', async () => {
     homeFetch({
       '/api/v1/assets': () => json({ items: [], nextCursor: null }),
-      '/api/v1/collections': () => json([]),
       '/api/v1/search': () => json({ ...SNAPSHOT, total: 0, facets: [] }),
+      '/api/v1/analytics/overview': () => json({ ...OVERVIEW, usage: { ...OVERVIEW.usage, total: 0 }, topAssets: [] }),
     });
     renderAt('/', signedIn);
-    expect(await screen.findByText('No assets yet')).toBeInTheDocument();
-    expect(screen.getByText('Nothing is waiting for review')).toBeInTheDocument();
-    expect(screen.getByText('No collections yet')).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'Upload assets' }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('link', { name: 'New collection' }).length).toBeGreaterThan(0);
+    expect(await screen.findByText('No usage recorded in this period yet.')).toBeInTheDocument();
+    expect(await screen.findByText('Nothing has been used yet')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Needs review' }));
+    expect(await screen.findByText('Nothing is waiting for review')).toBeInTheDocument();
   });
 
-  it('degrades quietly when one request fails: that section says so, the rest still render', async () => {
-    homeFetch({ '/api/v1/collections': () => json({ title: 'Boom', status: 500 }, 500) });
+  it('degrades quietly when one request fails: that card says so, the rest still render', async () => {
+    homeFetch({ '/api/v1/assets': () => json({ title: 'Boom', status: 500 }, 500) });
     renderAt('/', signedIn);
-    expect(await screen.findByRole('link', { name: /Acme spring hero/ })).toBeInTheDocument();
-    expect(await screen.findByText('This could not be loaded right now.', undefined, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText('Acme old banner')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Needs review/ }));
+    expect(await screen.findByText('This could not be loaded right now.', undefined, { timeout: 8000 })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it('shows unavailable counts instead of an error when the overview cannot be loaded', async () => {
     homeFetch({ '/api/v1/search': () => json({ title: 'Forbidden', status: 403 }, 403) });
