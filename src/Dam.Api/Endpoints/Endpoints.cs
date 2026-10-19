@@ -30,6 +30,7 @@ public static class ApiEndpoints
         v1.MapCollectionEndpoints();
         v1.MapAnalyticsEndpoints();
         v1.MapWorkflowEndpoints();
+        v1.MapCommentEndpoints();
         v1.MapNotificationEndpoints();
         v1.MapWebhookEndpoints();
         v1.MapAuditEndpoints();

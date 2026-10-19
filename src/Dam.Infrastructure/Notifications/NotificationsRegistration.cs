@@ -47,6 +47,7 @@ public static class NotificationsRegistration
     {
         services.AddScoped<Dam.Application.Workflow.WorkflowTaskAccess>();
         services.AddScoped<Dam.Application.Notifications.UserProfiles>();
+        services.AddScoped<Dam.Application.Comments.AssetReaders>();
         services.AddScoped<Dam.Application.Notifications.NotificationPlanner>();
         services.AddSingleton<WebhookDispatcher>();
         services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<WebhookDispatcher>());

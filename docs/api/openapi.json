@@ -184,6 +184,254 @@
         }
       }
     },
+    "/api/v1/assets/{id}/comments": {
+      "get": {
+        "tags": [
+          "Comments"
+        ],
+        "summary": "Comment threads on an asset, oldest thread first, each with its replies oldest first, plus open/resolved/annotation counts for the version. versionId narrows to one version; state=open|resolved|all (default); kind=annotation|comment|all (default). Needs assets.read on the asset",
+        "operationId": "ListComments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "versionId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentThreadsDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Comments"
+        ],
+        "summary": "Adds a comment (on the current version unless versionId is given) or, with parentId, a reply to the first comment of a thread. A first comment may carry an anchor: a normalised region or pin on an image or page, or a timecode on video or audio. Needs comments.write and assets.read. Problems are 422 keyed by field (body, parentId, versionId, anchor.x ...)",
+        "operationId": "AddComment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCommentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/comments/{id}": {
+      "patch": {
+        "tags": [
+          "Comments"
+        ],
+        "summary": "Edits the text (author only) and/or resolves (resolved=true) or reopens (false) a thread; a null field is left alone, and only a thread\u0027s first comment can be resolved. Needs comments.write",
+        "operationId": "UpdateComment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCommentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Comments"
+        ],
+        "summary": "Deletes a comment (its author, or anyone who may update the asset). The text is erased; a first comment that still has replies stays as a \u0027[deleted]\u0027 placeholder",
+        "operationId": "DeleteComment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/activity": {
+      "get": {
+        "tags": [
+          "Comments"
+        ],
+        "summary": "A curated, newest-first feed of what happened to an asset: comments, replies, thread resolutions, versions, status changes, edits, approvals. Not the audit log (no before/after, no IPs). Needs assets.read; limit up to 200, cursor from nextCursor",
+        "operationId": "ListAssetActivity",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOfActivityItemDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/mentionable": {
+      "get": {
+        "tags": [
+          "Comments"
+        ],
+        "summary": "Up to 10 active people who can read the asset and match q by name or email, for the @mention picker. Needs comments.write and assets.read, so it cannot be used to list a tenant",
+        "operationId": "ListMentionableUsers",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MentionableUserDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tenants/current": {
       "get": {
         "tags": [
@@ -4751,6 +4999,86 @@
           }
         }
       },
+      "ActivityItemDto": {
+        "required": [
+          "id",
+          "kind",
+          "occurredAt",
+          "actorId",
+          "actorName",
+          "summary",
+          "commentId",
+          "versionNo",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actorId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "actorName": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "commentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "versionNo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AddCommentInput": {
+        "required": [
+          "body",
+          "versionId",
+          "parentId",
+          "anchor"
+        ],
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "nullable": true
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "anchor": {
+            "$ref": "#/components/schemas/AnchorDto"
+          }
+        }
+      },
       "AnalyticsOverviewDto": {
         "required": [
           "generatedAt",
@@ -4789,6 +5117,60 @@
             "$ref": "#/components/schemas/StorageSummaryDto"
           }
         }
+      },
+      "AnchorDto": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "x": {
+            "type": "number",
+            "format": "double",
+            "default": null,
+            "nullable": true
+          },
+          "y": {
+            "type": "number",
+            "format": "double",
+            "default": null,
+            "nullable": true
+          },
+          "w": {
+            "type": "number",
+            "format": "double",
+            "default": null,
+            "nullable": true
+          },
+          "h": {
+            "type": "number",
+            "format": "double",
+            "default": null,
+            "nullable": true
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32",
+            "default": null,
+            "nullable": true
+          },
+          "startMs": {
+            "type": "integer",
+            "format": "int64",
+            "default": null,
+            "nullable": true
+          },
+          "endMs": {
+            "type": "integer",
+            "format": "int64",
+            "default": null,
+            "nullable": true
+          }
+        },
+        "nullable": true
       },
       "AssetDto": {
         "required": [
@@ -5339,6 +5721,163 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "CommentCountsDto": {
+        "required": [
+          "open",
+          "resolved",
+          "annotations"
+        ],
+        "type": "object",
+        "properties": {
+          "open": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "resolved": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "annotations": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "CommentDto": {
+        "required": [
+          "id",
+          "assetId",
+          "versionId",
+          "versionNo",
+          "parentId",
+          "authorId",
+          "authorName",
+          "body",
+          "mentions",
+          "anchor",
+          "resolved",
+          "resolvedBy",
+          "resolvedByName",
+          "resolvedAt",
+          "edited",
+          "editedAt",
+          "deleted",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "versionNo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorName": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "mentions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MentionDto"
+            }
+          },
+          "anchor": {
+            "$ref": "#/components/schemas/AnchorDto"
+          },
+          "resolved": {
+            "type": "boolean"
+          },
+          "resolvedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "resolvedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "resolvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "edited": {
+            "type": "boolean"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CommentThreadDto": {
+        "required": [
+          "root",
+          "replies"
+        ],
+        "type": "object",
+        "properties": {
+          "root": {
+            "$ref": "#/components/schemas/CommentDto"
+          },
+          "replies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommentDto"
+            }
+          }
+        }
+      },
+      "CommentThreadsDto": {
+        "required": [
+          "threads",
+          "counts"
+        ],
+        "type": "object",
+        "properties": {
+          "threads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommentThreadDto"
+            }
+          },
+          "counts": {
+            "$ref": "#/components/schemas/CommentCountsDto"
           }
         }
       },
@@ -6085,6 +6624,42 @@
           }
         }
       },
+      "MentionableUserDto": {
+        "required": [
+          "id",
+          "displayName",
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "MentionDto": {
+        "required": [
+          "userId",
+          "displayName"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        }
+      },
       "MoveAssetRequest": {
         "required": [
           "folderId"
@@ -6326,6 +6901,25 @@
       },
       "NullableOfJsonElement": {
         "nullable": true
+      },
+      "PageOfActivityItemDto": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivityItemDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
       },
       "PageOfAssetDto": {
         "required": [
@@ -7762,6 +8356,23 @@
           }
         }
       },
+      "UpdateCommentInput": {
+        "required": [
+          "body",
+          "resolved"
+        ],
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "nullable": true
+          },
+          "resolved": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
       "UpdateFolderRequest": {
         "required": [
           "name",
@@ -9110,6 +9721,9 @@
     },
     {
       "name": "Workflow"
+    },
+    {
+      "name": "Comments"
     },
     {
       "name": "Tenant"

@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace Dam.Domain.Webhooks;
 
-/// <param name="Category">asset, collection, workflow or webhook.</param>
+/// <param name="Category">asset, collection, workflow, comment or webhook.</param>
 /// <param name="Derived">Not raised by the domain itself: produced from another event for subscribers (see <see cref="EventCatalogue.Expand"/>).</param>
 public sealed record EventTypeInfo(string Name, string Category, string Description, bool Derived = false);
 
@@ -39,6 +39,9 @@ public static class EventCatalogue
         new("workflow.task.created", "workflow", "An approval task was opened for an asset."),
         new("workflow.task.completed", "workflow", "An approval task was approved or rejected."),
         new("workflow.sla.breached", "workflow", "An approval task passed its deadline and was escalated."),
+        new("comment.added", "comment", "A comment or reply was added to an asset (the payload names the people mentioned; it never carries the text)."),
+        new("comment.resolved", "comment", "A comment thread was marked resolved."),
+        new("comment.reopened", "comment", "A resolved comment thread was reopened."),
         new(Ping, "webhook", "A test event sent by the Ping button; never raised by the system itself."),
     ];
 

@@ -106,6 +106,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assets/{id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Comment threads on an asset, oldest thread first, each with its replies oldest first, plus open/resolved/annotation counts for the version. versionId narrows to one version; state=open|resolved|all (default); kind=annotation|comment|all (default). Needs assets.read on the asset */
+        get: operations["ListComments"];
+        put?: never;
+        /** Adds a comment (on the current version unless versionId is given) or, with parentId, a reply to the first comment of a thread. A first comment may carry an anchor: a normalised region or pin on an image or page, or a timecode on video or audio. Needs comments.write and assets.read. Problems are 422 keyed by field (body, parentId, versionId, anchor.x ...) */
+        post: operations["AddComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/comments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Deletes a comment (its author, or anyone who may update the asset). The text is erased; a first comment that still has replies stays as a '[deleted]' placeholder */
+        delete: operations["DeleteComment"];
+        options?: never;
+        head?: never;
+        /** Edits the text (author only) and/or resolves (resolved=true) or reopens (false) a thread; a null field is left alone, and only a thread's first comment can be resolved. Needs comments.write */
+        patch: operations["UpdateComment"];
+        trace?: never;
+    };
+    "/api/v1/assets/{id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A curated, newest-first feed of what happened to an asset: comments, replies, thread resolutions, versions, status changes, edits, approvals. Not the audit log (no before/after, no IPs). Needs assets.read; limit up to 200, cursor from nextCursor */
+        get: operations["ListAssetActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{id}/mentionable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Up to 10 active people who can read the asset and match q by name or email, for the @mention picker. Needs comments.write and assets.read, so it cannot be used to list a tenant */
+        get: operations["ListMentionableUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/current": {
         parameters: {
             query?: never;
@@ -1573,6 +1643,30 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        ActivityItemDto: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: date-time */
+            occurredAt: string;
+            /** Format: uuid */
+            actorId: string | null;
+            actorName: string;
+            summary: string;
+            /** Format: uuid */
+            commentId: string | null;
+            /** Format: int32 */
+            versionNo: number | null;
+            detail: string | null;
+        };
+        AddCommentInput: {
+            body: string | null;
+            /** Format: uuid */
+            versionId: string | null;
+            /** Format: uuid */
+            parentId: string | null;
+            anchor: components["schemas"]["AnchorDto"];
+        };
         AnalyticsOverviewDto: {
             /** Format: date-time */
             generatedAt: string;
@@ -1583,6 +1677,44 @@ export interface components {
             uploads: components["schemas"]["UploadWeekDto"][];
             storage: components["schemas"]["StorageSummaryDto"];
         };
+        AnchorDto: {
+            type: string;
+            /**
+             * Format: double
+             * @default null
+             */
+            x: number | null;
+            /**
+             * Format: double
+             * @default null
+             */
+            y: number | null;
+            /**
+             * Format: double
+             * @default null
+             */
+            w: number | null;
+            /**
+             * Format: double
+             * @default null
+             */
+            h: number | null;
+            /**
+             * Format: int32
+             * @default null
+             */
+            page: number | null;
+            /**
+             * Format: int64
+             * @default null
+             */
+            startMs: number | null;
+            /**
+             * Format: int64
+             * @default null
+             */
+            endMs: number | null;
+        } | null;
         AssetDto: {
             /** Format: uuid */
             id: string;
@@ -1744,6 +1876,52 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        CommentCountsDto: {
+            /** Format: int32 */
+            open: number;
+            /** Format: int32 */
+            resolved: number;
+            /** Format: int32 */
+            annotations: number;
+        };
+        CommentDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            assetId: string;
+            /** Format: uuid */
+            versionId: string | null;
+            /** Format: int32 */
+            versionNo: number | null;
+            /** Format: uuid */
+            parentId: string | null;
+            /** Format: uuid */
+            authorId: string;
+            authorName: string;
+            body: string;
+            mentions: components["schemas"]["MentionDto"][];
+            anchor: components["schemas"]["AnchorDto"];
+            resolved: boolean;
+            /** Format: uuid */
+            resolvedBy: string | null;
+            resolvedByName: string | null;
+            /** Format: date-time */
+            resolvedAt: string | null;
+            edited: boolean;
+            /** Format: date-time */
+            editedAt: string | null;
+            deleted: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CommentThreadDto: {
+            root: components["schemas"]["CommentDto"];
+            replies: components["schemas"]["CommentDto"][];
+        };
+        CommentThreadsDto: {
+            threads: components["schemas"]["CommentThreadDto"][];
+            counts: components["schemas"]["CommentCountsDto"];
         };
         CompleteUploadRequest: {
             /** @default null */
@@ -1943,6 +2121,17 @@ export interface components {
             accessRuleCount: number;
             inactiveRoles: string[];
         };
+        MentionableUserDto: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
+            email: string;
+        };
+        MentionDto: {
+            /** Format: uuid */
+            userId: string;
+            displayName: string;
+        };
         MoveAssetRequest: {
             /** Format: uuid */
             folderId: string | null;
@@ -2010,6 +2199,10 @@ export interface components {
             emailAvailable: boolean;
         };
         NullableOfJsonElement: unknown;
+        PageOfActivityItemDto: {
+            items: components["schemas"]["ActivityItemDto"][];
+            nextCursor: string | null;
+        };
         PageOfAssetDto: {
             items: components["schemas"]["AssetDto"][];
             nextCursor: string | null;
@@ -2430,6 +2623,10 @@ export interface components {
             title: string | null;
             metadata: components["schemas"]["NullableOfJsonElement"];
             tags: string[] | null;
+        };
+        UpdateCommentInput: {
+            body: string | null;
+            resolved: boolean | null;
         };
         UpdateFolderRequest: {
             name: string | null;
@@ -2947,6 +3144,153 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssetWorkflowDto"];
+                };
+            };
+        };
+    };
+    ListComments: {
+        parameters: {
+            query?: {
+                versionId?: string;
+                state?: string;
+                kind?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentThreadsDto"];
+                };
+            };
+        };
+    };
+    AddComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddCommentInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentDto"];
+                };
+            };
+        };
+    };
+    DeleteComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UpdateComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCommentInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentDto"];
+                };
+            };
+        };
+    };
+    ListAssetActivity: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfActivityItemDto"];
+                };
+            };
+        };
+    };
+    ListMentionableUsers: {
+        parameters: {
+            query?: {
+                q?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MentionableUserDto"][];
                 };
             };
         };

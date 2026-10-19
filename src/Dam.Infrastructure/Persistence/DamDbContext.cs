@@ -2,6 +2,7 @@ using Dam.Application.Abstractions;
 using System.Text.Json;
 using Dam.Domain.Authorization;
 using Dam.Domain.Assets;
+using Dam.Domain.Comments;
 using Dam.Domain.Common;
 using Dam.Domain.Content;
 using Dam.Domain.Identity;
@@ -51,6 +52,8 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<NotificationChannel> NotificationChannels => Set<NotificationChannel>();
     public DbSet<NotificationDelivery> NotificationDeliveries => Set<NotificationDelivery>();
     public DbSet<SiemCursor> SiemCursors => Set<SiemCursor>();
+    public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<CommentMention> CommentMentions => Set<CommentMention>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -93,6 +96,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureUsage(b);
         ConfigureWorkflow(b);
         ConfigureNotifications(b);
+        ConfigureComments(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -482,6 +486,34 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.ToTable("siem_cursors");
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.TenantId).IsUnique();
+        });
+    }
+
+    private static void ConfigureComments(ModelBuilder b)
+    {
+        b.Entity<Comment>(e =>
+        {
+            e.ToTable("comments", t => t.HasCheckConstraint("ck_comments_anchor_type", "anchor_type IS NULL OR anchor_type IN ('region','point','timecode')"));
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.Body).HasColumnType("text");
+            e.Property(x => x.AnchorJson).HasColumnName("anchor").HasColumnType("jsonb");
+            e.Property(x => x.AnchorType).HasMaxLength(16);
+            // Comments go with their asset if it is ever hard-deleted (the app soft-deletes, so this is a safety net); a version can never be removed.
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<AssetVersion>().WithMany().HasForeignKey(x => x.VersionId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Comment>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.TenantId, x.AssetId, x.CreatedAt });
+            e.HasIndex(x => new { x.TenantId, x.AssetId, x.Resolved });
+            e.HasIndex(x => new { x.TenantId, x.AssetId, x.AnchorType }).HasFilter("anchor_type IS NOT NULL");
+            e.HasIndex(x => x.ParentId).HasFilter("parent_id IS NOT NULL");
+        });
+        b.Entity<CommentMention>(e =>
+        {
+            e.ToTable("comment_mentions");
+            e.HasKey(x => new { x.CommentId, x.UserId });
+            e.HasOne<Comment>().WithMany().HasForeignKey(x => x.CommentId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.TenantId, x.UserId });
         });
     }
 

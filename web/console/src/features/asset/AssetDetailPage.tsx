@@ -1,6 +1,10 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { CommentsProvider, useCommentsUi } from '../comments/CommentsContext';
+import { useThreads } from '../comments/commentsApi';
+import { ActivityTab } from '../comments/panel/ActivityTab';
+import { CommentsTab } from '../comments/panel/CommentsTab';
 import { Card, EmptyState, LoadingRegion, Skeleton, Tabs, WarningCircle } from '../../ui';
 import { AssetHeader } from './AssetHeader';
 import { AssetPreview } from './AssetPreview';
@@ -12,9 +16,42 @@ import { useAsset, type AssetDto } from './assetApi';
 import { useAssetDraft } from './useAssetDraft';
 import './asset.css';
 
-function AssetDetail({ asset }: { asset: AssetDto }) {
+const TAB_IDS = ['details', 'metadata', 'comments', 'activity', 'versions'] as const;
+type TabId = (typeof TAB_IDS)[number];
+
+function AssetDetailBody({ asset }: { asset: AssetDto }) {
   const { t } = useTranslation();
   const draft = useAssetDraft(asset);
+  const ui = useCommentsUi();
+  const [params, setParams] = useSearchParams();
+  // The tab lives in the URL (`?tab=`), so a link can open the Comments tab; `?comment=` implies it.
+  const requested = params.get('tab');
+  const tab: TabId = TAB_IDS.includes(requested as TabId) ? (requested as TabId) : params.has('comment') ? 'comments' : 'details';
+  const setTab = useCallback(
+    (id: string) =>
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (id === 'details') next.delete('tab');
+          else next.set('tab', id);
+          return next;
+        },
+        { replace: true },
+      ),
+    [setParams],
+  );
+  // The preview asks for the composer after a region is drawn or a time captured: show the Comments tab and focus it.
+  const [focusRequest, setFocusRequest] = useState(0);
+  const { registerFocusComposer } = ui;
+  useEffect(() => {
+    registerFocusComposer(() => {
+      setTab('comments');
+      setFocusRequest((n) => n + 1);
+    });
+    return () => registerFocusComposer(null);
+  }, [registerFocusComposer, setTab]);
+  const handled = useCallback(() => setFocusRequest(0), []);
+  const open = useThreads(asset.id, { versionId: asset.currentVersionId ?? undefined }).data?.counts.open ?? 0;
 
   useEffect(() => {
     document.title = `${asset.title} - ${t('app.name')}`;
@@ -30,6 +67,8 @@ function AssetDetail({ asset }: { asset: AssetDto }) {
         <div className="dam-asset-layout__side">
           <Tabs
             label={t('asset.tabs')}
+            value={tab}
+            onChange={setTab}
             tabs={[
               { id: 'details', label: t('asset.detailsTab'), content: <DetailsPanel asset={asset} draft={draft} /> },
               {
@@ -37,6 +76,12 @@ function AssetDetail({ asset }: { asset: AssetDto }) {
                 label: t('asset.metadataTab'),
                 content: <MetadataForm assetType={asset.type} draft={draft} />,
               },
+              {
+                id: 'comments',
+                label: open > 0 ? t('comments.tabWithCount', { count: open }) : t('comments.tab'),
+                content: <CommentsTab assetId={asset.id} focusRequest={focusRequest} onFocusHandled={handled} />,
+              },
+              { id: 'activity', label: t('comments.activityTab'), content: <ActivityTab assetId={asset.id} /> },
               { id: 'versions', label: t('asset.versionsTab'), content: <VersionsPanel assetId={asset.id} /> },
             ]}
           />
@@ -44,6 +89,14 @@ function AssetDetail({ asset }: { asset: AssetDto }) {
       </div>
       {draft.dirty && <SaveBar saving={draft.saving} onSave={draft.save} onDiscard={draft.discard} />}
     </div>
+  );
+}
+
+function AssetDetail({ asset }: { asset: AssetDto }) {
+  return (
+    <CommentsProvider assetId={asset.id} assetType={asset.type} versionId={asset.currentVersionId}>
+      <AssetDetailBody asset={asset} />
+    </CommentsProvider>
   );
 }
 

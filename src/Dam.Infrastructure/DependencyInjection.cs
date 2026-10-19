@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IOutbox, EfOutbox>();
         services.AddScoped<IUsageStore, EfUsageStore>();
         services.AddScoped<IWorkflowStore, EfWorkflowStore>();
+        services.AddScoped<IAssetActivityReader, EfAssetActivityReader>();
         return services;
     }
 }

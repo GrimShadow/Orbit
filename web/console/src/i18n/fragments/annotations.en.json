@@ -1,0 +1,17 @@
+{
+  "annotations": {
+    "annotate": "Annotate",
+    "annotateHint": "Draw on the image to comment on a spot (A)",
+    "show": "Show annotations ({{count}})",
+    "item": "Annotation {{n}}: {{text}}",
+    "itemResolved": "Annotation {{n}} (resolved): {{text}}",
+    "timeline": "Comments on the timeline",
+    "marker": "Annotation {{n}} at {{time}}: {{text}}",
+    "markerResolved": "Annotation {{n}} at {{time}} (resolved): {{text}}",
+    "commentAt": "Comment at {{time}}",
+    "captureHint": "Pause and comment at this moment (M)",
+    "endTime": "End at {{time}}",
+    "endHint": "Play on, then set the end of the range after the start",
+    "needsPlayback": "Video comments need the published video, which can be played."
+  }
+}

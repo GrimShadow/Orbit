@@ -179,13 +179,16 @@ public sealed class WebhookTests
     public void The_catalogue_has_the_events_the_spec_names_and_every_source_event_is_listed_once()
     {
         foreach (var name in new[] { "asset.created", "asset.published", "asset.expired", "asset.archived", "asset.deleted", "asset.version.added", "rendition.ready",
-                     "workflow.task.created", "workflow.task.completed", "workflow.sla.breached", "collection.updated", "webhook.ping" })
+                     "workflow.task.created", "workflow.task.completed", "workflow.sla.breached", "collection.updated", "comment.added", "comment.resolved", "comment.reopened", "webhook.ping" })
             Assert.True(EventCatalogue.IsKnown(name), name);
         Assert.Equal(EventCatalogue.All.Count, EventCatalogue.All.Select(e => e.Name).Distinct().Count());
         Assert.DoesNotContain("asset.published", EventCatalogue.SourceEvents);   // derived
         Assert.DoesNotContain("webhook.ping", EventCatalogue.SourceEvents);      // synthetic
         Assert.Contains("asset.status.changed", EventCatalogue.SourceEvents);
         Assert.False(EventCatalogue.IsKnown("upload.completed"));                // internal events are never public
+        Assert.False(EventCatalogue.IsKnown("comment.edited"));                  // audit and notification only
+        Assert.False(EventCatalogue.IsKnown("comment.deleted"));
+        Assert.All(new[] { "comment.added", "comment.resolved", "comment.reopened" }, n => Assert.Contains(n, EventCatalogue.SourceEvents));
     }
 
     private static string Payload(Guid id, string to = "published") =>

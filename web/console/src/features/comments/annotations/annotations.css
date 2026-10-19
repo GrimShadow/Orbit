@@ -1,0 +1,327 @@
+/* Annotation layer on the preview stage, and the video timeline markers. Tokens only; all positions are percentages. */
+
+/* The stage canvas is the offset parent the overlay is measured against (and it scrolls, so overlays scroll with the image). */
+.dam-stage__canvas {
+  position: relative;
+}
+
+/* ---- Layer over a picture ------------------------------------------------------------------------------------------ */
+.dam-annot {
+  position: absolute;
+  isolation: isolate;
+  pointer-events: none;
+  --annot-ink: var(--dam-brand);
+  --annot-on-ink: var(--dam-on-brand);
+}
+.dam-annot[data-annotating] {
+  pointer-events: auto;
+  cursor: crosshair;
+  touch-action: none; /* a touch drag draws instead of scrolling the canvas */
+  outline: 2px dashed color-mix(in srgb, var(--dam-brand) 55%, transparent);
+  outline-offset: 0;
+}
+.dam-annot__shape {
+  position: absolute;
+  z-index: var(--annot-z, 1);
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  color: var(--annot-on-ink);
+  background: color-mix(in srgb, var(--annot-ink) 9%, transparent);
+  border: 2px solid var(--annot-ink);
+  /* A pale outer line keeps the stroke readable over dark pictures as well as light ones. */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #fff 70%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 45%, transparent);
+  border-radius: 3px;
+  transition:
+    background var(--dam-duration, 150ms),
+    box-shadow var(--dam-duration, 150ms);
+}
+.dam-annot[data-annotating] .dam-annot__shape {
+  pointer-events: none;
+}
+.dam-annot__shape--pin {
+  width: 26px;
+  height: 26px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--annot-ink);
+}
+.dam-annot__badge {
+  position: absolute;
+  inset-block-start: -1px;
+  inset-inline-start: -1px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 3px 0 5px 0;
+  background: var(--annot-ink);
+  color: var(--annot-on-ink);
+  font-size: var(--dam-text-xs);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.dam-annot__shape--pin .dam-annot__badge {
+  inset: 0;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+.dam-annot__shape[data-resolved] {
+  --annot-ink: var(--dam-chart-6);
+  --annot-on-ink: #fff;
+  border-style: dashed;
+  opacity: 0.8;
+}
+.dam-annot__shape--pin[data-resolved] {
+  background: var(--annot-ink);
+}
+.dam-annot__shape--region[data-hovered],
+.dam-annot__shape--region:hover {
+  background: color-mix(in srgb, var(--annot-ink) 22%, transparent);
+}
+.dam-annot__shape--pin[data-hovered],
+.dam-annot__shape--pin:hover {
+  transform: translate(-50%, -50%) scale(1.12);
+}
+.dam-annot__shape[data-selected] {
+  --annot-z: 1000;
+  z-index: 1000;
+  border-width: 3px;
+  background: color-mix(in srgb, var(--annot-ink) 16%, transparent);
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 6px color-mix(in srgb, var(--annot-ink) 45%, transparent),
+    0 4px 14px color-mix(in srgb, var(--annot-ink) 40%, transparent);
+  opacity: 1;
+}
+.dam-annot__shape--pin[data-selected] {
+  background: var(--annot-ink);
+  transform: translate(-50%, -50%) scale(1.15);
+}
+.dam-annot__shape:focus-visible {
+  outline: 2px solid var(--dam-focus);
+  outline-offset: 3px;
+}
+
+/* The unposted region or pin: dashed, no number. */
+.dam-annot__pending {
+  position: absolute;
+  z-index: 999;
+  box-sizing: border-box;
+  border: 2px dashed var(--dam-brand);
+  background: color-mix(in srgb, var(--dam-brand) 12%, transparent);
+  /* A white line on both sides of the dashes keeps them readable over any picture. */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #fff 85%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 85%, transparent);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.dam-annot__pending[data-live] {
+  background: color-mix(in srgb, var(--dam-brand) 18%, transparent);
+}
+.dam-annot__pending--pin {
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+/* ---- Caption over the video ---------------------------------------------------------------------------------------- */
+.dam-annot--caption {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--dam-space-3);
+}
+.dam-caption-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-1);
+  max-width: 100%;
+}
+.dam-caption {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+  max-width: 100%;
+  padding: 3px var(--dam-space-3) 3px 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dam-surface-raised) 92%, transparent);
+  color: var(--dam-text);
+  box-shadow: var(--dam-shadow);
+  font-size: var(--dam-text-sm);
+}
+.dam-caption__badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--dam-brand);
+  color: var(--dam-on-brand);
+  font-size: var(--dam-text-xs);
+  font-weight: 700;
+}
+.dam-caption__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Timeline markers under the player ----------------------------------------------------------------------------- */
+.dam-timeline {
+  flex: none;
+  padding: var(--dam-space-2) var(--dam-space-5) 0;
+}
+.dam-timeline__track {
+  position: relative;
+  border-radius: 999px;
+  /* The rail the markers sit on. */
+  background: linear-gradient(var(--dam-border-subtle), var(--dam-border-subtle)) 0 11px / 100% 4px no-repeat;
+}
+.dam-timeline__playhead {
+  position: absolute;
+  inset-block: 0;
+  width: 2px;
+  translate: -50% 0;
+  background: color-mix(in srgb, var(--dam-text) 55%, transparent);
+  pointer-events: none;
+}
+.dam-timeline__marker {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 22px;
+  min-width: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dam-brand) 30%, var(--dam-surface-raised));
+  color: var(--dam-on-brand);
+  font: inherit;
+  cursor: pointer;
+  --marker-ink: var(--dam-brand);
+}
+.dam-timeline__marker[data-kind='point'] {
+  width: 22px;
+  translate: -50% 0;
+  background: transparent;
+}
+.dam-timeline__marker[data-kind='range'] {
+  border: 2px solid var(--marker-ink);
+}
+.dam-timeline__badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--marker-ink);
+  color: var(--dam-on-brand);
+  font-size: var(--dam-text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--dam-surface-2);
+}
+.dam-timeline__marker[data-kind='range'] .dam-timeline__badge {
+  margin: -2px;
+}
+.dam-timeline__marker[data-resolved] {
+  --marker-ink: var(--dam-chart-6);
+  background: color-mix(in srgb, var(--dam-chart-6) 22%, var(--dam-surface-raised));
+  opacity: 0.85;
+}
+.dam-timeline__marker[data-resolved][data-kind='point'] {
+  background: transparent;
+}
+.dam-timeline__marker[data-resolved] .dam-timeline__badge {
+  color: #fff;
+}
+.dam-timeline__marker[data-hovered],
+.dam-timeline__marker:hover {
+  filter: brightness(1.08);
+  transform: scale(1.08);
+}
+.dam-timeline__marker[data-selected] {
+  --marker-ink: var(--dam-brand-hover);
+  box-shadow:
+    0 0 0 2px var(--dam-surface-2),
+    0 0 0 4px var(--dam-brand);
+  opacity: 1;
+}
+.dam-timeline__marker:focus-visible {
+  outline: 2px solid var(--dam-focus);
+  outline-offset: 3px;
+}
+.dam-timeline__pending {
+  position: absolute;
+  top: 3px;
+  height: 16px;
+  min-width: 16px;
+  box-sizing: border-box;
+  translate: -50% 0;
+  border: 2px dashed var(--dam-brand);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dam-brand) 14%, transparent);
+  pointer-events: none;
+}
+.dam-timeline__pending[data-kind='range'] {
+  translate: none;
+}
+/* Time runs from the start edge to the end edge, so the centring offsets flip in right-to-left layouts. */
+[dir='rtl'] .dam-timeline__playhead,
+[dir='rtl'] .dam-timeline__marker[data-kind='point'],
+[dir='rtl'] .dam-timeline__pending[data-kind='point'] {
+  translate: 50% 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dam-annot__shape,
+  .dam-timeline__marker {
+    transition: none;
+  }
+}
+
+/* ---- A stage whose toolbar sits below the picture and timeline instead of floating over it (video) ----------------- */
+.dam-stage[data-docked] .dam-stage__canvas {
+  padding-bottom: var(--dam-space-3);
+}
+/* The player sits just above its timeline instead of floating in the middle with a gap before the markers. */
+.dam-stage[data-docked] .dam-stage__video {
+  align-self: end;
+}
+.dam-stage[data-docked] .dam-stage__toolbar {
+  position: static;
+  flex: none;
+  margin: var(--dam-space-2) auto var(--dam-space-3);
+}
+@media (max-width: 640px) {
+  .dam-stage[data-docked] .dam-stage__canvas {
+    padding-bottom: var(--dam-space-3);
+  }
+}
+
+/* On a phone the toolbar is tight: the Annotate button keeps its icon and its accessible name, and drops the visible word. */
+@media (max-width: 480px) {
+  .dam-annot__tool-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

@@ -28,6 +28,8 @@ public static class DependencyInjection
         services.AddScoped<Notifications.UserProfiles>();
         services.AddScoped<Notifications.NotificationPlanner>();
         services.AddScoped<Audit.AuditExporter>();
+        services.AddScoped<Comments.AssetReaders>();
+        services.AddScoped<Comments.CommentMapper>();
         services.AddValidatorsFromAssembly(asm, includeInternalTypes: true);
 
         foreach (var t in asm.GetTypes().Where(t => t is { IsAbstract: false, IsInterface: false }))

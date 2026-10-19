@@ -1,8 +1,16 @@
 import { useRecordUsage } from '../analytics/analyticsApi';
 import { ArrowSquareOut, CaretLeft, CaretRight, Copy, Play } from '@phosphor-icons/react';
-import { useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { relativeTime } from '../../lib/relativeTime';
+import { useCommentsUi } from '../comments/CommentsContext';
+import { AnnotationLayer } from '../comments/annotations/AnnotationLayer';
+import { AnnotationTools } from '../comments/annotations/AnnotationTools';
+import { TimecodeTools } from '../comments/annotations/TimecodeTools';
+import { TimelineMarkers } from '../comments/annotations/TimelineMarkers';
+import { VideoCaption } from '../comments/annotations/VideoCaption';
+import { useImageAnnotations } from '../comments/annotations/useImageAnnotations';
+import { useTimecodeAnnotations } from '../comments/annotations/useTimecodeAnnotations';
 import {
   EmptyState,
   FileTypeIcon,
@@ -58,21 +66,33 @@ function Stage({
   note,
   zoom,
   onKeyDown,
+  onStageKeyDown,
+  below,
+  docked,
 }: {
   children: ReactNode;
   toolbar?: ReactNode;
   note?: string;
   zoom?: Zoom;
+  /** Keys pressed on the canvas itself (paging). */
   onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void;
+  /** Keys pressed anywhere in the stage, toolbar included (annotation shortcuts, Escape). */
+  onStageKeyDown?: (e: KeyboardEvent<HTMLElement>) => void;
+  /** A strip under the canvas (the video timeline markers). */
+  below?: ReactNode;
+  /** The toolbar sits under the canvas and strip rather than floating over the picture. */
+  docked?: boolean;
 }) {
   const { t } = useTranslation();
   return (
-    <div className="dam-stage" data-zoom={zoom}>
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- shortcuts for the focus inside the stage; every action also has a button
+    <div className="dam-stage" data-zoom={zoom} data-docked={docked || undefined} onKeyDown={onStageKeyDown}>
       {/* The canvas scrolls at 100%, so it is a focusable region (keyboard users can pan it with the arrow keys). */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- a scrollable region must be focusable (axe: scrollable-region-focusable) */}
       <div className="dam-stage__canvas" role="region" aria-label={t('asset.stage.label')} tabIndex={0} onKeyDown={onKeyDown}>
         {children}
       </div>
+      {below}
       {note && (
         <p className="dam-stage__note" role="note">
           <Info size={16} weight="fill" aria-hidden="true" />
@@ -209,6 +229,9 @@ function ImageStage({
   const linkQuery = useDeliveryLink(assetId, published ? ['preview', 'original'] : ['preview'], true);
   const [zoom, setZoom] = useState<Zoom>('fit');
   const [broken, setBroken] = useState(false);
+  // A document shown as a single image (a draft, or no page rasters) is page 1.
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const ann = useImageAnnotations({ assetId, img, page: page ? 1 : undefined, zoom });
 
   if (linkQuery.isPending) return <StageSkeleton />;
   const links = linkQuery.data?.links;
@@ -219,8 +242,10 @@ function ImageStage({
     <Stage
       zoom={zoom}
       note={note}
+      onStageKeyDown={ann.onStageKeyDown}
       toolbar={
         <>
+          <AnnotationTools ann={ann} />
           <ZoomTool zoom={zoom} onChange={setZoom} />
           <LinkTools
             assetId={assetId}
@@ -232,11 +257,13 @@ function ImageStage({
       }
     >
       <img
+        ref={setImg}
         className={`dam-stage__img ${page ? 'dam-stage__img--page' : 'dam-stage__img--checker'}`}
         src={src}
         alt={title}
         onError={() => setBroken(true)}
       />
+      <AnnotationLayer ann={ann} />
     </Stage>
   );
 }
@@ -248,6 +275,8 @@ function VideoStage({ assetId, title, published }: { assetId: string; title: str
   // `mobile` is the full-length 720p transcode; `preview` is capped at a few seconds and only the fallback.
   const linkQuery = useDeliveryLink(assetId, published ? ['mobile', 'preview', 'poster', 'original'] : ['poster'], true);
   const [broken, setBroken] = useState(false);
+  const [video, setVideo] = useState<HTMLVideoElement | null>(null);
+  const tc = useTimecodeAnnotations(assetId, video);
 
   if (linkQuery.isPending) return <StageSkeleton />;
   const links = linkQuery.data?.links;
@@ -257,19 +286,26 @@ function VideoStage({ assetId, title, published }: { assetId: string; title: str
   if (published && src && !linkQuery.error)
     return (
       <Stage
+        docked
+        onStageKeyDown={tc.onStageKeyDown}
+        below={<TimelineMarkers tc={tc} />}
         toolbar={
-          <LinkTools
-            assetId={assetId}
-            href={links?.original ?? src}
-            expiresAt={linkQuery.data?.expiresAt}
-            isOriginal={Boolean(links?.original)}
-          />
+          <>
+            <TimecodeTools tc={tc} />
+            <LinkTools
+              assetId={assetId}
+              href={links?.original ?? src}
+              expiresAt={linkQuery.data?.expiresAt}
+              isOriginal={Boolean(links?.original)}
+            />
+          </>
         }
       >
         {/* eslint-disable-next-line jsx-a11y/media-has-caption -- generated renditions carry no caption track (yet) */}
-        <video className="dam-stage__video" src={src} poster={poster} controls preload="metadata">
+        <video ref={setVideo} className="dam-stage__video" src={src} poster={poster} controls preload="metadata">
           {t('asset.previewNoVideo')}
         </video>
+        <VideoCaption tc={tc} />
       </Stage>
     );
 
@@ -281,7 +317,13 @@ function VideoStage({ assetId, title, published }: { assetId: string; title: str
   return (
     <Stage
       note={t('asset.stage.videoDraft')}
-      toolbar={<LinkTools assetId={assetId} href={poster} expiresAt={linkQuery.data?.expiresAt} isOriginal={false} />}
+      toolbar={
+        <>
+          {/* Video comments are timecodes, which need a player: say why the button is off. */}
+          <TimecodeTools tc={tc} unavailable={t('annotations.needsPlayback')} />
+          <LinkTools assetId={assetId} href={poster} expiresAt={linkQuery.data?.expiresAt} isOriginal={false} />
+        </>
+      }
     >
       <img className="dam-stage__img" src={poster} alt={title} onError={() => setBroken(true)} />
       <span className="dam-stage__play" aria-hidden="true">
@@ -331,6 +373,26 @@ function PdfStage({ assetId, title, pages }: { assetId: string; title: string; p
     setBroken(false);
     setIndex(Math.min(Math.max(next, 0), pages.length - 1));
   };
+  const ui = useCommentsUi();
+  const { registerShowPage } = ui;
+  const pagesKey = pages.join(',');
+  const showPage = useCallback(
+    (pageNo: number) => {
+      const i = pagesKey.split(',').map(Number).indexOf(pageNo);
+      if (i >= 0) {
+        setBroken(false);
+        setIndex(i);
+      }
+    },
+    [pagesKey],
+  );
+  // Panel -> stage: a thread card jumps to its page.
+  useEffect(() => {
+    registerShowPage(showPage);
+    return () => registerShowPage(null);
+  }, [registerShowPage, showPage]);
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const ann = useImageAnnotations({ assetId, img, page: pages[index], zoom, onNavigate: showPage });
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
     if (e.key === 'ArrowRight' && zoom === 'fit') go(index + 1);
@@ -365,9 +427,11 @@ function PdfStage({ assetId, title, pages }: { assetId: string; title: string; p
     <Stage
       zoom={zoom}
       onKeyDown={onKeyDown}
+      onStageKeyDown={ann.onStageKeyDown}
       toolbar={
         <>
           {pages.length > 1 && pager}
+          <AnnotationTools ann={ann} />
           <ZoomTool zoom={zoom} onChange={setZoom} />
           <LinkTools
             assetId={assetId}
@@ -379,11 +443,13 @@ function PdfStage({ assetId, title, pages }: { assetId: string; title: string; p
       }
     >
       <img
+        ref={setImg}
         className="dam-stage__img dam-stage__img--page"
         src={src}
         alt={t('asset.stage.pageAlt', { title, page: index + 1 })}
         onError={() => setBroken(true)}
       />
+      <AnnotationLayer ann={ann} />
     </Stage>
   );
 }
