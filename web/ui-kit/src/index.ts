@@ -23,6 +23,7 @@ export * from './components/Card';
 export * from './components/EmptyState';
 export * from './components/PageHeader';
 export * from './components/StatCard';
+export * from './components/Charts';
 export * from './components/Avatar';
 export * from './components/Kbd';
 export * from './components/Logo';

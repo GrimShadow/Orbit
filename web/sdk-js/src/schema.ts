@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/usage/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record uses of assets (1-500 per call): console downloads, proof of play, portals, apps. Resending a clientEventId is a duplicate, not an error; assets that do not exist or cannot be read are rejected */
+        post: operations["RecordUsageEvents"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/current": {
         parameters: {
             query?: never;
@@ -1003,6 +1020,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analytics/unused-assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Assets not used in the last N days (days, default 30) or since a date (before); never-used assets are judged from their creation date. Longest idle first. Needs analytics.read */
+        get: operations["ListUnusedAssets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Usage, top assets, uploads per week and storage for the dashboard. Needs analytics.read */
+        get: operations["GetAnalyticsOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1021,6 +1072,16 @@ export interface components {
             permissions: string[];
             /** Format: date-time */
             createdAt: string;
+        };
+        AnalyticsOverviewDto: {
+            /** Format: date-time */
+            generatedAt: string;
+            /** Format: int32 */
+            periodDays: number;
+            usage: components["schemas"]["UsageSummaryDto"];
+            topAssets: components["schemas"]["TopAssetDto"][];
+            uploads: components["schemas"]["UploadWeekDto"][];
+            storage: components["schemas"]["StorageSummaryDto"];
         };
         AssetDto: {
             /** Format: uuid */
@@ -1361,6 +1422,17 @@ export interface components {
             size: number;
             eTag: string;
         };
+        RecordUsageEventsRequest: {
+            events: components["schemas"]["UsageEventInput"][];
+        };
+        RecordUsageResultDto: {
+            /** Format: int32 */
+            accepted: number;
+            /** Format: int32 */
+            duplicates: number;
+            /** Format: int32 */
+            rejected: number;
+        };
         RenameCollectionRequest: {
             name: string;
         };
@@ -1547,6 +1619,18 @@ export interface components {
             /** Format: int32 */
             distance: number;
         };
+        StorageSummaryDto: {
+            /** Format: int64 */
+            totalBytes: number;
+            byType: components["schemas"]["StorageTypeDto"][];
+        };
+        StorageTypeDto: {
+            type: string;
+            /** Format: int64 */
+            count: number;
+            /** Format: int64 */
+            bytes: number;
+        };
         SuggestionDto: {
             /** Format: uuid */
             id: string;
@@ -1614,6 +1698,14 @@ export interface components {
         ThumbnailLinksBatchRequest: {
             assetIds: string[];
         };
+        TopAssetDto: {
+            /** Format: uuid */
+            assetId: string;
+            title: string;
+            type: string;
+            /** Format: int64 */
+            count: number;
+        };
         TransformRequest: {
             /** Format: int32 */
             w: number | null;
@@ -1627,6 +1719,37 @@ export interface components {
         } | null;
         TransitionAssetRequest: {
             reason: string | null;
+        };
+        UnusedAssetDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            type: string;
+            status: string;
+            /** Format: uuid */
+            folderId: string | null;
+            folderPath: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastUsedAt: string | null;
+            /** Format: int32 */
+            useCount: number;
+            /** Format: date-time */
+            idleSince: string;
+            /** Format: int32 */
+            idleDays: number;
+            /** Format: int64 */
+            sizeBytes: number | null;
+        };
+        UnusedAssetsDto: {
+            items: components["schemas"]["UnusedAssetDto"][];
+            /** Format: int32 */
+            total: number;
+            totalIsExact: boolean;
+            nextCursor: string | null;
+            /** Format: date-time */
+            cutoff: string;
         };
         UpdateAccessRuleRequest: {
             scopeType: string;
@@ -1713,6 +1836,46 @@ export interface components {
             upload: components["schemas"]["UploadDto"];
             parts: components["schemas"]["PartUrlDto"][];
         } | null;
+        UploadWeekDto: {
+            weekStart: string;
+            /** Format: int64 */
+            count: number;
+        };
+        UsageChannelDto: {
+            channel: string;
+            /** Format: int64 */
+            count: number;
+        };
+        UsageDayDto: {
+            date: string;
+            /** Format: int64 */
+            count: number;
+        };
+        UsageEventInput: {
+            clientEventId: string | null;
+            /** Format: uuid */
+            assetId: string;
+            eventType: string;
+            channel: string | null;
+            rendition: string | null;
+            /** Format: date-time */
+            occurredAt: string | null;
+            context: components["schemas"]["NullableOfJsonElement"];
+        };
+        UsageSummaryDto: {
+            /** Format: int64 */
+            total: number;
+            /** Format: int64 */
+            previousTotal: number;
+            byDay: components["schemas"]["UsageDayDto"][];
+            byType: components["schemas"]["UsageTypeDto"][];
+            byChannel: components["schemas"]["UsageChannelDto"][];
+        };
+        UsageTypeDto: {
+            eventType: string;
+            /** Format: int64 */
+            count: number;
+        };
         UserDto: {
             /** Format: uuid */
             id: string;
@@ -1857,6 +2020,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FacetResultDto"][];
+                };
+            };
+        };
+    };
+    RecordUsageEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordUsageEventsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordUsageResultDto"];
                 };
             };
         };
@@ -3910,6 +4097,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CollectionDto"];
+                };
+            };
+        };
+    };
+    ListUnusedAssets: {
+        parameters: {
+            query?: {
+                days?: number;
+                before?: string;
+                status?: string;
+                type?: string;
+                folderId?: string;
+                includeSubfolders?: boolean;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnusedAssetsDto"];
+                };
+            };
+        };
+    };
+    GetAnalyticsOverview: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsOverviewDto"];
                 };
             };
         };

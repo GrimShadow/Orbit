@@ -1,22 +1,13 @@
-import {
-  CheckCircle,
-  Clock,
-  Images,
-  NotePencil,
-  PaperPlaneTilt,
-  Plus,
-  Stack,
-  UploadSimple,
-  FolderSimple,
-} from '@phosphor-icons/react';
+import { Images, PaperPlaneTilt, Plus, UploadSimple, FolderSimple } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { useAssets } from '../features/library/assets';
 import { useCollections } from '../features/collections/collectionsApi';
 import { useThumbnailLinks } from '../features/asset/assetApi';
-import { PageHeader, Skeleton, StatCard } from '@dam/ui-kit';
-import { dayPartOf, facetCount, firstNameOf, useLibrarySnapshot } from './home/homeData';
+import { PageHeader } from '@dam/ui-kit';
+import { dayPartOf, firstNameOf } from './home/homeData';
+import { HealthCard, Kpis, TopUsedCard, UnusedCard, UsageCard } from './home/Insights';
 import {
   CollectionCards,
   CollectionsSkeleton,
@@ -28,97 +19,13 @@ import {
   SectionHead,
   SectionNote,
 } from './home/HomeSections';
+import '../features/analytics/analytics.css';
 import './pages.css';
 import { usePageTitle } from './usePageTitle';
 
 const RECENT_COUNT = 8;
 const REVIEW_COUNT = 5;
 const COLLECTION_COUNT = 4;
-
-function QuickActions() {
-  const { t } = useTranslation();
-  const actions = [
-    { to: '/upload', Icon: UploadSimple, key: 'upload' },
-    { to: '/library', Icon: Images, key: 'library' },
-    { to: '/collections', Icon: Plus, key: 'collection' },
-  ] as const;
-  return (
-    <ul className="dam-home__quickgrid" aria-label={t('home.quick.label')}>
-      {actions.map(({ to, Icon, key }) => (
-        <li key={key}>
-          <Link to={to} className="dam-home__quick">
-            <span className="dam-home__quickicon" aria-hidden="true">
-              <Icon size={22} weight="bold" />
-            </span>
-            <span className="dam-home__quicktext">
-              <span className="dam-home__quicktitle">{t(`home.quick.${key}.title`)}</span>
-              <span className="dam-home__quickbody">{t(`home.quick.${key}.body`)}</span>
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function Stats() {
-  const { t, i18n } = useTranslation();
-  const snapshot = useLibrarySnapshot();
-  const fmt = (n: number) => new Intl.NumberFormat(i18n.language).format(n);
-  const facets = snapshot.data?.facets;
-  const stats = [
-    { key: 'total', to: '/library', icon: <Stack size={20} weight="duotone" />, tone: 'brand', value: snapshot.data?.total },
-    {
-      key: 'review',
-      to: '/library?status=in_review',
-      icon: <Clock size={20} weight="duotone" />,
-      tone: 'info',
-      value: snapshot.data && facetCount(facets, 'status', 'in_review'),
-    },
-    {
-      key: 'published',
-      to: '/library?status=published',
-      icon: <CheckCircle size={20} weight="duotone" />,
-      tone: 'success',
-      value: snapshot.data && facetCount(facets, 'status', 'published'),
-    },
-    {
-      key: 'drafts',
-      to: '/library?status=draft',
-      icon: <NotePencil size={20} weight="duotone" />,
-      tone: 'neutral',
-      value: snapshot.data && facetCount(facets, 'status', 'draft'),
-    },
-  ] as const;
-
-  return (
-    <ul className="dam-home__stats" aria-label={t('home.stats.label')}>
-      {stats.map((s) => (
-        <li key={s.key}>
-          {snapshot.isPending ? (
-            <div className="dam-stat" aria-hidden="true">
-              <Skeleton width={40} height={40} />
-              <div className="dam-stat__body">
-                <Skeleton width={90} height={12} />
-                <Skeleton width={56} height={26} />
-              </div>
-            </div>
-          ) : (
-            <Link to={s.to} className="dam-home__statlink">
-              <StatCard
-                label={t(`home.stats.${s.key}`)}
-                value={typeof s.value === 'number' ? fmt(s.value) : '–'}
-                hint={typeof s.value === 'number' ? t(`home.stats.${s.key}Hint`) : t('home.stats.unavailable')}
-                icon={s.icon}
-                tone={s.tone}
-              />
-            </Link>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 function Recent({ locale }: { locale: string }) {
   const { t } = useTranslation();
@@ -226,14 +133,31 @@ export function HomePage() {
 
   return (
     <div className="dam-page dam-home">
-      <PageHeader eyebrow={date} title={greeting} description={t('home.subtitle')} />
-      <QuickActions />
-      <Stats />
-      <Recent locale={i18n.language} />
-      <div className="dam-home__split">
-        <Review locale={i18n.language} />
-        <Collections />
+      <PageHeader
+        eyebrow={date}
+        title={greeting}
+        description={t('home.subtitle')}
+        actions={
+          <>
+            <Link to="/collections" className="dam-btn dam-btn--secondary">
+              <Plus size={16} weight="bold" aria-hidden="true" />
+              {t('home.quick.collection.title')}
+            </Link>
+          </>
+        }
+      />
+      <Kpis />
+      <div className="dam-home__insights">
+        <UsageCard />
+        <HealthCard />
       </div>
+      <UnusedCard />
+      <div className="dam-home__split dam-home__split--even">
+        <TopUsedCard />
+        <Review locale={i18n.language} />
+      </div>
+      <Recent locale={i18n.language} />
+      <Collections />
     </div>
   );
 }

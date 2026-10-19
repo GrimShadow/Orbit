@@ -121,6 +121,37 @@
         }
       }
     },
+    "/api/v1/usage/events": {
+      "post": {
+        "tags": [
+          "Usage"
+        ],
+        "summary": "Record uses of assets (1-500 per call): console downloads, proof of play, portals, apps. Resending a clientEventId is a duplicate, not an error; assets that do not exist or cannot be read are rejected",
+        "operationId": "RecordUsageEvents",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordUsageEventsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordUsageResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tenants/current": {
       "get": {
         "tags": [
@@ -3143,6 +3174,119 @@
           }
         }
       }
+    },
+    "/api/v1/analytics/unused-assets": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Assets not used in the last N days (days, default 30) or since a date (before); never-used assets are judged from their creation date. Longest idle first. Needs analytics.read",
+        "operationId": "ListUnusedAssets",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "folderId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "includeSubfolders",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnusedAssetsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/overview": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Usage, top assets, uploads per week and storage for the dashboard. Needs analytics.read",
+        "operationId": "GetAnalyticsOverview",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsOverviewDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3196,6 +3340,45 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "AnalyticsOverviewDto": {
+        "required": [
+          "generatedAt",
+          "periodDays",
+          "usage",
+          "topAssets",
+          "uploads",
+          "storage"
+        ],
+        "type": "object",
+        "properties": {
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "periodDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageSummaryDto"
+          },
+          "topAssets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TopAssetDto"
+            }
+          },
+          "uploads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UploadWeekDto"
+            }
+          },
+          "storage": {
+            "$ref": "#/components/schemas/StorageSummaryDto"
           }
         }
       },
@@ -4430,6 +4613,42 @@
           }
         }
       },
+      "RecordUsageEventsRequest": {
+        "required": [
+          "events"
+        ],
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageEventInput"
+            }
+          }
+        }
+      },
+      "RecordUsageResultDto": {
+        "required": [
+          "accepted",
+          "duplicates",
+          "rejected"
+        ],
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "duplicates": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rejected": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "RenameCollectionRequest": {
         "required": [
           "name"
@@ -5041,6 +5260,46 @@
           }
         }
       },
+      "StorageSummaryDto": {
+        "required": [
+          "totalBytes",
+          "byType"
+        ],
+        "type": "object",
+        "properties": {
+          "totalBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "byType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StorageTypeDto"
+            }
+          }
+        }
+      },
+      "StorageTypeDto": {
+        "required": [
+          "type",
+          "count",
+          "bytes"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "SuggestionDto": {
         "required": [
           "id",
@@ -5261,6 +5520,31 @@
           }
         }
       },
+      "TopAssetDto": {
+        "required": [
+          "assetId",
+          "title",
+          "type",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "TransformRequest": {
         "required": [
           "w",
@@ -5311,6 +5595,106 @@
           "reason": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "UnusedAssetDto": {
+        "required": [
+          "id",
+          "title",
+          "type",
+          "status",
+          "folderId",
+          "folderPath",
+          "createdAt",
+          "lastUsedAt",
+          "useCount",
+          "idleSince",
+          "idleDays",
+          "sizeBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "folderId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "folderPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "useCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "idleSince": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "idleDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          }
+        }
+      },
+      "UnusedAssetsDto": {
+        "required": [
+          "items",
+          "total",
+          "totalIsExact",
+          "nextCursor",
+          "cutoff"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnusedAssetDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalIsExact": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "cutoff": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -5647,6 +6031,149 @@
         },
         "nullable": true
       },
+      "UploadWeekDto": {
+        "required": [
+          "weekStart",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "weekStart": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "UsageChannelDto": {
+        "required": [
+          "channel",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "UsageDayDto": {
+        "required": [
+          "date",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "UsageEventInput": {
+        "required": [
+          "clientEventId",
+          "assetId",
+          "eventType",
+          "channel",
+          "rendition",
+          "occurredAt",
+          "context"
+        ],
+        "type": "object",
+        "properties": {
+          "clientEventId": {
+            "type": "string",
+            "nullable": true
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "nullable": true
+          },
+          "rendition": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "context": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          }
+        }
+      },
+      "UsageSummaryDto": {
+        "required": [
+          "total",
+          "previousTotal",
+          "byDay",
+          "byType",
+          "byChannel"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "previousTotal": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "byDay": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageDayDto"
+            }
+          },
+          "byType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageTypeDto"
+            }
+          },
+          "byChannel": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageChannelDto"
+            }
+          }
+        }
+      },
+      "UsageTypeDto": {
+        "required": [
+          "eventType",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "UserDto": {
         "required": [
           "id",
@@ -5836,6 +6363,9 @@
       "name": "Search"
     },
     {
+      "name": "Usage"
+    },
+    {
       "name": "Tenant"
     },
     {
@@ -5873,6 +6403,9 @@
     },
     {
       "name": "Collections"
+    },
+    {
+      "name": "Analytics"
     }
   ]
 }

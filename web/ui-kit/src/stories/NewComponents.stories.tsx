@@ -3,6 +3,10 @@ import { useState } from 'react';
 import {
   Avatar,
   Badge,
+  BarChart,
+  DistributionBar,
+  Sparkline,
+  TrendBadge,
   Button,
   Card,
   CheckboxGroup,
@@ -231,5 +235,29 @@ export const TableWithThumbnails: Story = {
       sort={{ key: 'name', direction: 'asc' }}
       onSortChange={() => {}}
     />
+  ),
+};
+
+export const Charts: Story = {
+  render: () => (
+    <div style={{ display: 'grid', gap: 24, maxWidth: 560 }}>
+      <StatCard
+        label="Uses, last 30 days"
+        value="1,284"
+        hint="Downloads, shares and plays"
+        tone="warning"
+        trend={<TrendBadge change={18} suffix="vs the previous 30 days" />}
+        chart={<Sparkline values={[2, 4, 3, 6, 5, 9, 7, 12]} />}
+      />
+      <BarChart label="Uses per day" data={Array.from({ length: 30 }, (_, i) => ({ label: `D${i + 1}`, value: (i * 7) % 11 }))} />
+      <DistributionBar
+        label="By status"
+        segments={[
+          { label: 'Published', value: 60, series: 0 },
+          { label: 'Draft', value: 30, series: 5 },
+          { label: 'In review', value: 10, series: 3 },
+        ]}
+      />
+    </div>
   ),
 };

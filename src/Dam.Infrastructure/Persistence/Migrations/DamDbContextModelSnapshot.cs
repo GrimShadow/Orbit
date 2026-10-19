@@ -169,6 +169,37 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Dam.Domain.Assets.AssetUsage", b =>
+                {
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<DateTimeOffset>("FirstUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_used_at");
+
+                    b.Property<DateTimeOffset>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("UseCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("use_count");
+
+                    b.HasKey("AssetId")
+                        .HasName("pk_asset_usage");
+
+                    b.HasIndex("TenantId", "LastUsedAt")
+                        .HasDatabaseName("ix_asset_usage_tenant_id_last_used_at");
+
+                    b.ToTable("asset_usage", (string)null);
+                });
+
             modelBuilder.Entity("Dam.Domain.Assets.AssetVersion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -534,6 +565,79 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasFilter("batch_id IS NOT NULL");
 
                     b.ToTable("uploads", (string)null);
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.UsageEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<string>("Channel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("channel");
+
+                    b.Property<string>("ClientEventId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("client_event_id");
+
+                    b.Property<string>("Context")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("context");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("event_type");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("Rendition")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("rendition");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_usage_events");
+
+                    b.HasIndex("AssetId")
+                        .HasDatabaseName("ix_usage_events_asset_id");
+
+                    b.HasIndex("TenantId", "ClientEventId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_usage_events_tenant_id_client_event_id")
+                        .HasFilter("client_event_id IS NOT NULL");
+
+                    b.HasIndex("TenantId", "OccurredAt")
+                        .HasDatabaseName("ix_usage_events_tenant_id_occurred_at");
+
+                    b.HasIndex("TenantId", "AssetId", "OccurredAt")
+                        .IsDescending(false, false, true)
+                        .HasDatabaseName("ix_usage_events_tenant_id_asset_id_occurred_at");
+
+                    b.ToTable("usage_events", (string)null);
                 });
 
             modelBuilder.Entity("Dam.Domain.Content.Collection", b =>
@@ -1312,6 +1416,16 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_assets_retention_policies_retention_policy_id");
                 });
 
+            modelBuilder.Entity("Dam.Domain.Assets.AssetUsage", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_usage_assets_asset_id");
+                });
+
             modelBuilder.Entity("Dam.Domain.Assets.AssetVersion", b =>
                 {
                     b.HasOne("Dam.Domain.Assets.Asset", null)
@@ -1340,6 +1454,16 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_uploads_assets_asset_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.UsageEvent", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_usage_events_assets_asset_id");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,3 +1,4 @@
+import { useRecordUsage } from '../analytics/analyticsApi';
 import { ArrowSquareOut, CaretLeft, CaretRight, Copy, Play } from '@phosphor-icons/react';
 import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -121,14 +122,27 @@ function StageMessage({
 }
 
 /** Open-in-new-tab and copy-link, both pointing at the best delivery link there is (the original once published). */
-function LinkTools({ href, expiresAt }: { href: string | undefined; expiresAt: string | undefined }) {
+function LinkTools({
+  assetId,
+  href,
+  expiresAt,
+  isOriginal,
+}: {
+  assetId: string;
+  href: string | undefined;
+  expiresAt: string | undefined;
+  /** Only a link to the real file counts as use; a watermarked draft preview or poster is just looking. */
+  isOriginal: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const { push } = useToast();
+  const record = useRecordUsage();
   if (!href) return null;
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(href);
+      if (isOriginal) record(assetId, 'share', 'original');
       push({
         title: t('asset.stage.linkCopied'),
         message: expiresAt ? t('asset.stage.linkExpires', { time: relativeTime(expiresAt, i18n.language) }) : undefined,
@@ -146,6 +160,7 @@ function LinkTools({ href, expiresAt }: { href: string | undefined; expiresAt: s
         href={href}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => isOriginal && record(assetId, 'download', 'original')}
         aria-label={t('asset.stage.openNewTab')}
         title={t('asset.stage.openNewTab')}
       >
@@ -207,7 +222,12 @@ function ImageStage({
       toolbar={
         <>
           <ZoomTool zoom={zoom} onChange={setZoom} />
-          <LinkTools href={links?.original ?? src} expiresAt={linkQuery.data?.expiresAt} />
+          <LinkTools
+            assetId={assetId}
+            href={links?.original ?? src}
+            expiresAt={linkQuery.data?.expiresAt}
+            isOriginal={Boolean(links?.original)}
+          />
         </>
       }
     >
@@ -236,7 +256,16 @@ function VideoStage({ assetId, title, published }: { assetId: string; title: str
 
   if (published && src && !linkQuery.error)
     return (
-      <Stage toolbar={<LinkTools href={links?.original ?? src} expiresAt={linkQuery.data?.expiresAt} />}>
+      <Stage
+        toolbar={
+          <LinkTools
+            assetId={assetId}
+            href={links?.original ?? src}
+            expiresAt={linkQuery.data?.expiresAt}
+            isOriginal={Boolean(links?.original)}
+          />
+        }
+      >
         {/* eslint-disable-next-line jsx-a11y/media-has-caption -- generated renditions carry no caption track (yet) */}
         <video className="dam-stage__video" src={src} poster={poster} controls preload="metadata">
           {t('asset.previewNoVideo')}
@@ -250,7 +279,10 @@ function VideoStage({ assetId, title, published }: { assetId: string; title: str
       <StageMessage icon={<WarningCircle />} title={t('asset.previewUnavailable')} description={t('asset.stage.videoDraft')} />
     );
   return (
-    <Stage note={t('asset.stage.videoDraft')} toolbar={<LinkTools href={poster} expiresAt={linkQuery.data?.expiresAt} />}>
+    <Stage
+      note={t('asset.stage.videoDraft')}
+      toolbar={<LinkTools assetId={assetId} href={poster} expiresAt={linkQuery.data?.expiresAt} isOriginal={false} />}
+    >
       <img className="dam-stage__img" src={poster} alt={title} onError={() => setBroken(true)} />
       <span className="dam-stage__play" aria-hidden="true">
         <Play size={28} weight="fill" />
@@ -337,7 +369,12 @@ function PdfStage({ assetId, title, pages }: { assetId: string; title: string; p
         <>
           {pages.length > 1 && pager}
           <ZoomTool zoom={zoom} onChange={setZoom} />
-          <LinkTools href={links?.original ?? src} expiresAt={linkQuery.data?.expiresAt} />
+          <LinkTools
+            assetId={assetId}
+            href={links?.original ?? src}
+            expiresAt={linkQuery.data?.expiresAt}
+            isOriginal={Boolean(links?.original)}
+          />
         </>
       }
     >

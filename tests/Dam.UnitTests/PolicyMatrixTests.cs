@@ -45,9 +45,9 @@ public sealed class PolicyMatrixTests
         [BuiltInRoles.Editor] =
         [
             AssetsRead, AssetsReadUnpublished, AssetsCreate, AssetsUpdate, AssetsSubmit, AssetsWithdraw, AssetsDownloadOriginal,
-            AssetsBulk, CollectionsManage, ShareManage, CommentsWrite,
+            AssetsBulk, CollectionsManage, ShareManage, CommentsWrite, AnalyticsRead,
         ],
-        [BuiltInRoles.Approver] = [AssetsRead, AssetsReadUnpublished, CommentsWrite], // approve/decide only via access rules
+        [BuiltInRoles.Approver] = [AssetsRead, AssetsReadUnpublished, CommentsWrite, AnalyticsRead], // approve/decide only via access rules
         [BuiltInRoles.Contributor] =
         [
             AssetsRead, AssetsCreate, AssetsReadUnpublishedOwn, AssetsUpdateOwn, AssetsSubmitOwn, AssetsWithdrawOwn, CommentsWrite,

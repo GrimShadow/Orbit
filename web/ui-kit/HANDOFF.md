@@ -82,3 +82,9 @@ New curated icon exports: `CaretDown`, `CaretRight`, `DotsThree`, `DownloadSimpl
 4. Use `PageHeader` for page titles and `EmptyState` (with `titleAs`) instead of `.dam-empty` text where a next step
    exists.
 5. Favicon: point `index.html` at a copy of `web/ui-kit/src/logo.svg`.
+
+## Charts (dashboard)
+`BarChart`, `DistributionBar`, `Sparkline`, `TrendBadge` (`components/Charts.tsx`) are dependency-free CSS/SVG. Series colours
+are `--dam-chart-1..6` (pine, sage, ochre, steel, violet, stone; separate light and dark values). `StatCard` takes `trend`
+(a `TrendBadge`) and `chart` (a `Sparkline`). Each chart exposes one accessible summary (`label`); bars and segments are
+presentational with tooltips. `TrendBadge` takes `goodWhen` so a rise can be bad news.

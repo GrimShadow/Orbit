@@ -35,10 +35,10 @@ public static class BuiltInRoles
         [
             Permissions.AssetsRead, Permissions.AssetsReadUnpublished, Permissions.AssetsCreate, Permissions.AssetsUpdate,
             Permissions.AssetsSubmit, Permissions.AssetsWithdraw, Permissions.AssetsDownloadOriginal, Permissions.AssetsBulk,
-            Permissions.CollectionsManage, Permissions.ShareManage, Permissions.CommentsWrite,
+            Permissions.CollectionsManage, Permissions.ShareManage, Permissions.CommentsWrite, Permissions.AnalyticsRead,
         ]),
         new(Approver, "Reviews assets. Approving needs an access rule that assigns the folders.",
-        [Permissions.AssetsRead, Permissions.AssetsReadUnpublished, Permissions.CommentsWrite]),
+        [Permissions.AssetsRead, Permissions.AssetsReadUnpublished, Permissions.CommentsWrite, Permissions.AnalyticsRead]),
         new(Contributor, "Adds assets and works only on their own.",
         [
             Permissions.AssetsRead, Permissions.AssetsCreate, Permissions.AssetsReadUnpublishedOwn, Permissions.AssetsUpdateOwn,

@@ -78,6 +78,14 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--dam-space-4);
 }
+.dam-home__stats > li {
+  display: flex;
+  min-width: 0;
+}
+.dam-home__stats > li > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .dam-home__statlink {
   display: block;
   color: inherit;
@@ -804,9 +812,12 @@ a.dam-home__review:hover {
     gap: var(--dam-space-3);
   }
   .dam-home__stats .dam-stat {
-    flex-direction: column;
-    gap: var(--dam-space-2);
+    grid-template-columns: minmax(0, 1fr) auto;
     padding: var(--dam-space-3);
+  }
+  .dam-home__stats .dam-stat__body {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
   .dam-login__panel::before,
   .dam-login__panel::after {

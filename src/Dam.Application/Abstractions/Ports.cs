@@ -70,6 +70,16 @@ public interface IJobScheduler
     Task<bool> CancelAsync(string scheduleId, CancellationToken ct = default);
 }
 
+/// <summary>Appends usage events and keeps each asset's usage summary (<c>asset_usage</c>) in step, atomically, inside the
+/// caller's transaction. Done in one statement rather than through the change tracker because many requests record events for
+/// the same hot assets at once: counters must be incremented in the database, and a re-sent clientEventId must lose a race
+/// quietly instead of failing the batch.</summary>
+public interface IUsageStore
+{
+    /// <returns>How many of <paramref name="events"/> were stored; the rest repeated an already-recorded clientEventId.</returns>
+    Task<int> AppendAsync(IReadOnlyList<Dam.Domain.Assets.UsageEvent> events, CancellationToken ct);
+}
+
 /// <summary>Generic aggregate access. Handlers query with LINQ and materialise through <see cref="IQueryExecutor"/>.</summary>
 public interface IRepository<T> where T : class
 {

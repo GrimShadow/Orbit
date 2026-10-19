@@ -80,6 +80,44 @@ const SNAPSHOT = {
   ],
 };
 
+const day = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+const OVERVIEW = {
+  generatedAt: new Date().toISOString(),
+  periodDays: 30,
+  usage: {
+    total: 42,
+    previousTotal: 21,
+    byDay: Array.from({ length: 30 }, (_, i) => ({ date: day(29 - i), count: i % 3 })),
+    byType: [{ eventType: 'download', count: 40 }],
+    byChannel: [{ channel: 'console', count: 42 }],
+  },
+  topAssets: [{ assetId: 'a1', title: 'Acme spring hero', type: 'image', count: 9 }],
+  uploads: Array.from({ length: 12 }, (_, i) => ({ weekStart: day(77 - i * 7), count: 1 })),
+  storage: { totalBytes: 5 * 1024 ** 3, byType: [{ type: 'image', count: 10, bytes: 5 * 1024 ** 3 }] },
+};
+const UNUSED = {
+  items: [
+    {
+      id: 'a9',
+      title: 'Acme old banner',
+      type: 'image',
+      status: 'published',
+      folderId: null,
+      folderPath: 'Brand',
+      createdAt: '2024-01-01T00:00:00Z',
+      lastUsedAt: null,
+      useCount: 0,
+      idleSince: '2024-01-01T00:00:00Z',
+      idleDays: 640,
+      sizeBytes: 2048,
+    },
+  ],
+  total: 1,
+  totalIsExact: true,
+  nextCursor: null,
+  cutoff: '2026-04-01T00:00:00Z',
+};
+
 /** Everything Home asks for; `overrides` replaces one endpoint's response (by path) to script empty/failed sections. */
 function homeFetch(overrides: Record<string, () => Response> = {}) {
   return mockFetch((request) => {
@@ -97,7 +135,11 @@ function homeFetch(overrides: Record<string, () => Response> = {}) {
           nextCursor: null,
         });
       case '/api/v1/assets/links/batch':
-        return json({ a1: 'https://cdn.example/a1.jpg', a2: null });
+        return json({ a1: 'https://cdn.example/a1.jpg', a2: null, a9: null });
+      case '/api/v1/analytics/overview':
+        return json(OVERVIEW);
+      case '/api/v1/analytics/unused-assets':
+        return json(UNUSED);
       case '/api/v1/collections':
         return json([
           {
@@ -235,10 +277,15 @@ describe('home', () => {
     expect(await screen.findByRole('heading', { name: GREETING })).toBeInTheDocument();
 
     const stats = await screen.findByRole('list', { name: 'Library overview' });
-    expect(within(stats).getByRole('link', { name: /Total assets.*12/ })).toHaveAttribute('href', '/library');
-    expect(within(stats).getByRole('link', { name: /In review.*3/ })).toHaveAttribute('href', '/library?status=in_review');
-    expect(within(stats).getByRole('link', { name: /Published.*5/ })).toBeInTheDocument();
-    expect(within(stats).getByRole('link', { name: /Drafts.*4/ })).toBeInTheDocument();
+    expect(await within(stats).findByRole('link', { name: /Total assets.*12/ })).toHaveAttribute('href', '/library');
+    expect(within(stats).getByRole('link', { name: /Published.*5/ })).toHaveAttribute('href', '/library?status=published');
+    expect(await within(stats).findByText('5.0 GB')).toBeInTheDocument();
+    expect(within(stats).getByText(/Uses, last 30 days/)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Uses per day over the last 30 days' })).toBeInTheDocument();
+    expect(await screen.findByText('9 uses')).toBeInTheDocument();
+    expect(await screen.findByText(/published asset not used in the last 6 months/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Acme old banner' })).toHaveAttribute('href', '/library/assets/a9');
+    expect(screen.getByText('Never used')).toBeInTheDocument();
 
     const recent = await screen.findByRole('list', { name: 'Recently added' });
     expect(within(recent).getByRole('link', { name: /Acme spring hero/ })).toHaveAttribute('href', '/library/assets/a1');
@@ -250,10 +297,8 @@ describe('home', () => {
     expect(within(collections).getByRole('link', { name: /Acme campaign/ })).toHaveAttribute('href', '/collections/c1');
     expect(within(collections).getByText('2 assets')).toBeInTheDocument();
 
-    const quick = screen.getByRole('list', { name: 'Quick actions' });
-    expect(within(quick).getByRole('link', { name: /Upload assets/ })).toHaveAttribute('href', '/upload');
-    expect(within(quick).getByRole('link', { name: /Browse the library/ })).toHaveAttribute('href', '/library');
-    expect(within(quick).getByRole('link', { name: /New collection/ })).toHaveAttribute('href', '/collections');
+    const main = within(screen.getByRole('main'));
+    expect(main.getByRole('link', { name: 'New collection' })).toHaveAttribute('href', '/collections');
     expect(f).toHaveBeenCalled();
     expect(document.title).toBe('Home - Orbit');
   });
@@ -268,8 +313,8 @@ describe('home', () => {
     expect(await screen.findByText('No assets yet')).toBeInTheDocument();
     expect(screen.getByText('Nothing is waiting for review')).toBeInTheDocument();
     expect(screen.getByText('No collections yet')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Upload assets', description: '' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'New collection', description: '' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Upload assets' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'New collection' }).length).toBeGreaterThan(0);
   });
 
   it('degrades quietly when one request fails: that section says so, the rest still render', async () => {
@@ -285,7 +330,20 @@ describe('home', () => {
     homeFetch({ '/api/v1/search': () => json({ title: 'Forbidden', status: 403 }, 403) });
     renderAt('/', signedIn);
     const stats = await screen.findByRole('list', { name: 'Library overview' });
-    expect(await within(stats).findAllByText('Not available right now')).toHaveLength(4);
+    expect(await within(stats).findAllByText('–', { selector: '.dam-stat__value' })).toHaveLength(2);
+  });
+
+  it('omits the usage panels, and shows review and draft counts instead, for a role without analytics access', async () => {
+    homeFetch({
+      '/api/v1/analytics/overview': () => json({ title: 'Forbidden', status: 403 }, 403),
+      '/api/v1/analytics/unused-assets': () => json({ title: 'Forbidden', status: 403 }, 403),
+    });
+    renderAt('/', signedIn);
+    const stats = await screen.findByRole('list', { name: 'Library overview' });
+    expect(await within(stats).findByRole('link', { name: /In review.*3/ })).toBeInTheDocument();
+    expect(within(stats).getByRole('link', { name: /Drafts.*4/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Not used' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Most used')).not.toBeInTheDocument();
   });
 });
 

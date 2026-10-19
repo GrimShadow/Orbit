@@ -2,6 +2,7 @@ import { ToastProvider } from '@dam/ui-kit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Route, Routes } from 'react-router-dom';
 import { ApiError } from './api/client';
+import { UnusedAssetsPage } from './features/analytics/UnusedAssetsPage';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { AssetDetailPage } from './features/asset/AssetDetailPage';
 import { CollectionDetailPage } from './features/collections/CollectionDetailPage';
@@ -37,6 +38,7 @@ export function App() {
                 <Route path="/search" element={<SearchPage />} />
                 <Route path="/collections" element={<CollectionsPage />} />
                 <Route path="/collections/:id" element={<CollectionDetailPage />} />
+                <Route path="/insights/unused" element={<UnusedAssetsPage />} />
                 <Route path="/upload" element={<UploadPage />} />
                 <Route path="/me" element={<MePage />} />
               </Route>

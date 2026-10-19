@@ -7,10 +7,14 @@ export interface StatCardProps {
   hint?: string;
   icon?: ReactNode;
   tone?: BadgeTone;
+  /** Right-aligned change indicator (a `TrendBadge`). */
+  trend?: ReactNode;
+  /** A decorative chart along the bottom (a `Sparkline`). */
+  chart?: ReactNode;
 }
 
 /** A single figure with its label - for the dashboard's row of counts. */
-export function StatCard({ label, value, hint, icon, tone = 'neutral' }: StatCardProps) {
+export function StatCard({ label, value, hint, icon, tone = 'neutral', trend, chart }: StatCardProps) {
   return (
     <div className={`dam-stat dam-stat--${tone}`}>
       {icon && (
@@ -23,6 +27,8 @@ export function StatCard({ label, value, hint, icon, tone = 'neutral' }: StatCar
         <span className="dam-stat__value">{value}</span>
         {hint && <span className="dam-stat__hint">{hint}</span>}
       </div>
+      {trend && <div className="dam-stat__trend">{trend}</div>}
+      {chart && <div className="dam-stat__chart">{chart}</div>}
     </div>
   );
 }

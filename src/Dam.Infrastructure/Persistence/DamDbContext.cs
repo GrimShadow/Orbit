@@ -35,6 +35,8 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<RetentionPolicy> RetentionPolicies => Set<RetentionPolicy>();
     public DbSet<Rendition> Renditions => Set<Rendition>();
     public DbSet<Collection> Collections => Set<Collection>();
+    public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
+    public DbSet<AssetUsage> AssetUsages => Set<AssetUsage>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -73,6 +75,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureRenditions(b);
         ConfigureRetention(b);
         ConfigureCollections(b);
+        ConfigureUsage(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -291,6 +294,33 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.Property<List<Guid>>("_assetIds").HasColumnName("asset_ids").HasColumnType("uuid[]").UsePropertyAccessMode(PropertyAccessMode.Field);
             e.HasIndex(x => new { x.TenantId, x.Name });
         });
+
+    private static void ConfigureUsage(ModelBuilder b)
+    {
+        b.Entity<UsageEvent>(e =>
+        {
+            e.ToTable("usage_events");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EventType).HasMaxLength(16);
+            e.Property(x => x.Channel).HasMaxLength(UsageRules.MaxChannelLength);
+            e.Property(x => x.Rendition).HasMaxLength(UsageRules.MaxRenditionLength);
+            e.Property(x => x.ClientEventId).HasMaxLength(UsageRules.MaxClientEventIdLength);
+            e.Property(x => x.Context!).AsJson(); // nullable: AsJson<T>'s "class" constraint just needs the ! to compile
+            // Events go with their asset if it is ever hard-deleted (the app soft-deletes, so this is a safety net).
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.TenantId, x.AssetId, x.OccurredAt }).IsDescending(false, false, true);
+            e.HasIndex(x => new { x.TenantId, x.OccurredAt });
+            // A re-sent event is recognised by its reporter-supplied id; events without one are never deduplicated.
+            e.HasIndex(x => new { x.TenantId, x.ClientEventId }).IsUnique().HasFilter("client_event_id IS NOT NULL");
+        });
+        b.Entity<AssetUsage>(e =>
+        {
+            e.ToTable("asset_usage");
+            e.HasKey(x => x.AssetId);
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.TenantId, x.LastUsedAt });
+        });
+    }
 
     private LambdaExpression TenantFilter(Type entityType)
     {

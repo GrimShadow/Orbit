@@ -159,4 +159,10 @@ public static class SecuritySql
     public const string CollectionGrants = """
         GRANT SELECT, INSERT, UPDATE, DELETE ON collections TO dam_app;
         """;
+
+    /// <summary>Usage events are append-only; the per-asset summary is upserted. Neither is ever deleted by the app.</summary>
+    public const string UsageGrants = """
+        GRANT SELECT, INSERT ON usage_events TO dam_app;
+        GRANT SELECT, INSERT, UPDATE ON asset_usage TO dam_app;
+        """;
 }
