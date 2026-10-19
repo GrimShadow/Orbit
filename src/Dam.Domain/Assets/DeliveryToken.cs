@@ -1,14 +1,17 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Dam.Domain.Assets;
 
 /// <summary>What a delivery link allows. It is signed, so a client cannot widen it.</summary>
 /// <param name="Scope">"r:thumb,web" (named renditions) or "t:w=800&amp;fit=cover…" (exactly one transform).</param>
 /// <param name="Ip">When set, only this client address may use the link.</param>
-/// <param name="Watermark">Set when the asset is not published, so the link never yields a clean copy of unreleased content.</param>
-public sealed record DeliveryClaims(Guid TenantId, Guid AssetId, string Scope, DateTimeOffset ExpiresAt, string? Ip, bool Watermark)
+/// <param name="Watermark">Set when the asset is not published or its rights require it, so the link never yields a clean copy of unreleased or restricted content.</param>
+/// <param name="Channel">The consumer's channel the link was issued for (ADR-0033), if it said. Rights are re-checked against it when the link is used, and a delivery log can attribute the fetch.</param>
+/// <param name="Region">The consumer's region the link was issued for, if it said.</param>
+public sealed record DeliveryClaims(Guid TenantId, Guid AssetId, string Scope, DateTimeOffset ExpiresAt, string? Ip, bool Watermark, string? Channel = null, string? Region = null)
 {
     public bool AllowsRendition(string profile) =>
         Scope.StartsWith("r:", StringComparison.Ordinal) && Scope[2..].Split(',').Contains(profile);
@@ -35,7 +38,7 @@ public sealed class DeliveryTokenSigner
 
     public string Sign(DeliveryClaims c)
     {
-        var payload = JsonSerializer.SerializeToUtf8Bytes(new Payload(c.TenantId.ToString("N"), c.AssetId.ToString("N"), c.Scope, c.ExpiresAt.ToUnixTimeSeconds(), c.Ip, c.Watermark ? 1 : 0));
+        var payload = JsonSerializer.SerializeToUtf8Bytes(new Payload(c.TenantId.ToString("N"), c.AssetId.ToString("N"), c.Scope, c.ExpiresAt.ToUnixTimeSeconds(), c.Ip, c.Watermark ? 1 : 0, c.Channel, c.Region));
         var body = Base64Url(payload);
         return body + "." + Base64Url(HMACSHA256.HashData(_keys[0], Encoding.ASCII.GetBytes(body)));
     }
@@ -59,11 +62,14 @@ public sealed class DeliveryTokenSigner
         catch (JsonException) { return (null, TokenFailure.Malformed); }
         if (p is null || !Guid.TryParseExact(p.T, "N", out var tenant) || !Guid.TryParseExact(p.A, "N", out var asset)) return (null, TokenFailure.Malformed);
 
-        var claims = new DeliveryClaims(tenant, asset, p.S, DateTimeOffset.FromUnixTimeSeconds(p.E), p.Ip, p.W == 1);
+        var claims = new DeliveryClaims(tenant, asset, p.S, DateTimeOffset.FromUnixTimeSeconds(p.E), p.Ip, p.W == 1, p.C, p.R);
         return claims.ExpiresAt <= now ? (null, TokenFailure.Expired) : (claims, TokenFailure.None);
     }
 
-    private sealed record Payload(string T, string A, string S, long E, string? Ip, int W);
+    /// <summary>C and R are optional and left out when unset, so tokens signed before they existed still verify and unchanged tokens are byte-identical.</summary>
+    private sealed record Payload(string T, string A, string S, long E, string? Ip, int W,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? C = null,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? R = null);
 
     private static string Base64Url(byte[] b) => Convert.ToBase64String(b).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 

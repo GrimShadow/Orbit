@@ -1,0 +1,172 @@
+{
+  "rightsAsset": {
+    "title": "Rights",
+    "close": "Close",
+    "loading": "Loading rights",
+    "loadFailed": "Could not load this asset's rights.",
+    "retry": "Try again",
+    "empty": {
+      "title": "No rights assigned",
+      "hint": "An asset without rights is not restricted by any licence: it can be published and used wherever its own metadata allows. Assign a rights record to limit where and until when it can be used, or to require watermarked previews."
+    },
+    "facts": {
+      "validity": "Validity",
+      "channels": "Channels",
+      "regions": "Regions",
+      "previews": "Previews",
+      "documents": "Documents",
+      "licensor": "Licensor",
+      "notes": "Notes"
+    },
+    "validity": {
+      "range": "{{from}} to {{to}}",
+      "from": "From {{from}}, no end date",
+      "until": "Until {{to}}",
+      "none": "No start or end date"
+    },
+    "allChannels": "All channels",
+    "worldwide": "Worldwide",
+    "restrictedChannels": "Restricted - not available to any channel",
+    "restrictedRegions": "Restricted - not available in any region",
+    "restrictedHint": "The licence and this asset's own \"make available for\" settings have nothing in common.",
+    "effective": "Effective for this asset: {{list}}",
+    "channelList": "Channels",
+    "regionList": "Regions",
+    "watermark": "Watermarked previews",
+    "watermarkHint": "Only watermarked previews can be shared. The original file, video playback and PDF pages are withheld.",
+    "documents_one": "{{count}} document",
+    "documents_other": "{{count}} documents",
+    "noDocuments": "None",
+    "status": {
+      "valid": "Valid",
+      "expiresToday": "Expires today",
+      "expiresTomorrow": "Expires tomorrow",
+      "expiresIn_one": "Expires in {{count}} day",
+      "expiresIn_other": "Expires in {{count}} days",
+      "expiredOn": "Expired on {{date}}",
+      "startsOn": "Starts on {{date}}"
+    },
+    "licence": {
+      "owned": "Owned",
+      "licensed": "Licensed",
+      "royalty_free": "Royalty free",
+      "rights_managed": "Rights managed",
+      "editorial": "Editorial",
+      "creative_commons": "Creative Commons",
+      "other": "Other"
+    },
+    "actions": {
+      "assign": "Assign rights",
+      "change": "Change",
+      "changeLabel": "Change rights",
+      "remove": "Remove",
+      "removeLabel": "Remove rights",
+      "manage": "Create or edit rights records"
+    },
+    "picker": {
+      "search": "Search rights",
+      "searchPlaceholder": "Name, licensor or type",
+      "list": "Rights records",
+      "loading": "Loading rights records",
+      "failed": "Could not load the rights records.",
+      "none": "There are no rights records yet.",
+      "noMatches": "No rights record matches \"{{q}}\".",
+      "current": "Current",
+      "notInForce": "Not in force, so it cannot be used on a published asset.",
+      "count_one": "{{count}} record",
+      "count_other": "{{count}} records"
+    },
+    "assignDialog": {
+      "assignTitle": "Assign rights",
+      "changeTitle": "Change rights",
+      "intro": "Choose the rights record that applies to this asset. An asset has one rights record.",
+      "submit": "Assign",
+      "submitChange": "Change rights",
+      "cancel": "Cancel",
+      "done": "Rights assigned: {{name}}",
+      "failed": "Could not assign the rights"
+    },
+    "removeDialog": {
+      "title": "Remove rights from this asset?",
+      "body": "\"{{name}}\" will no longer apply. Without rights the asset is not restricted by a licence: it can be published and used on any channel and in any region its own metadata allows, and its previews are no longer forced to carry a watermark.",
+      "confirm": "Remove rights",
+      "cancel": "Cancel",
+      "done": "Rights removed",
+      "failed": "Could not remove the rights"
+    },
+    "check": {
+      "title": "Check availability",
+      "intro": "See whether this asset can be used on a channel and in a region today.",
+      "channel": "Channel",
+      "region": "Region",
+      "anyChannel": "Any channel",
+      "anyRegion": "Any region",
+      "channelHint": "Letters, digits, - and _",
+      "regionHint": "Letters, digits, - and _",
+      "button": "Check availability",
+      "checking": "Checking",
+      "failed": "Could not check availability.",
+      "allowed": "Allowed",
+      "notAllowed": "Not allowed",
+      "result": "Availability result",
+      "context": "Checked for: {{what}}",
+      "contextDatesOnly": "No channel or region chosen, so only the licence dates were checked.",
+      "watermark": "Previews are watermarked and the original file is withheld.",
+      "availableChannels": "Available to channels",
+      "availableRegions": "Available in regions",
+      "all": "All",
+      "none": "None - restricted to nothing"
+    },
+    "header": {
+      "expiresToday": "Licence expires today",
+      "expiresTomorrow": "Licence expires tomorrow",
+      "expiresIn_one": "Licence expires in {{count}} day",
+      "expiresIn_other": "Licence expires in {{count}} days",
+      "expired": "Licence expired",
+      "startsOn": "Licence starts on {{date}}",
+      "hint": "Show this asset's rights"
+    },
+    "publishBlocked": {
+      "expired": "Publishing is blocked: the licence \"{{name}}\" ended on {{date}}.",
+      "not_yet_valid": "Publishing is blocked: the licence \"{{name}}\" does not start until {{date}}.",
+      "review": "Review rights"
+    },
+    "stage": {
+      "title": "This asset's licence doesn't currently allow previews",
+      "generic": "The licence attached to this asset does not currently allow it to be shown.",
+      "loadFailed": "The preview could not be loaded. If the asset's licence has just changed, reload the page.",
+      "videoDraft": "Video playback is withheld: this asset's licence requires watermarked previews.",
+      "pdfDraft": "Only a watermarked first page is previewed: this asset's licence requires watermarked previews.",
+      "noPreviewDraft": "The file cannot be downloaded: this asset's licence requires watermarked previews."
+    },
+    "bulk": {
+      "button": "Assign rights",
+      "title": "Assign rights to selected assets",
+      "count_one": "{{count}} asset selected",
+      "count_other": "{{count}} assets selected",
+      "intro": "Choose the rights record to assign.",
+      "replace": "Replace existing rights",
+      "replaceHint": "Assets that already have a different rights record are skipped unless this is ticked.",
+      "chunked": "Rights can be assigned to 500 assets at a time, so these {{count}} assets will be assigned in {{batches}} batches.",
+      "submit_one": "Assign to {{count}} asset",
+      "submit_other": "Assign to {{count}} assets",
+      "running": "Assigning rights",
+      "resultTitle": "Result",
+      "assigned": "Assigned",
+      "skipped": "Skipped",
+      "failed": "Failed",
+      "details": "Show reasons",
+      "detailsTitle": "Why some assets were not changed",
+      "moreItems_one": "and {{count}} more",
+      "moreItems_other": "and {{count}} more",
+      "done": "Done",
+      "close": "Close",
+      "unknownAsset": "Unknown asset",
+      "noReason": "No reason given",
+      "toastAll_one": "Rights assigned to {{count}} asset",
+      "toastAll_other": "Rights assigned to {{count}} assets",
+      "toastSome": "{{assigned}} assigned, {{skipped}} skipped, {{failed}} failed",
+      "requestFailed": "Could not assign the rights"
+    }
+  }
+}

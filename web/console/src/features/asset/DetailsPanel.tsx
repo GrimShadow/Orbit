@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Badge, Card, Skeleton, TagInput } from '../../ui';
+import { RightsPanel } from '../rights/asset/RightsPanel';
 import { FileInfo } from './FileInfo';
 import { WorkflowPanel } from './WorkflowPanel';
 import { asCodes } from './channels';
@@ -63,6 +64,7 @@ export function DetailsPanel({ asset, draft }: { asset: AssetDto; draft: AssetDr
         </p>
       )}
       <WorkflowPanel assetId={asset.id} status={asset.status} />
+      <RightsPanel asset={asset} />
       <ChannelsCard asset={asset} draft={draft} />
       <Card as="section" padding="md" aria-label={t('asset.tagsTitle')}>
         <TagInput

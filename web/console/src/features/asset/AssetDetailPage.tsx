@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { CommentsProvider, useCommentsUi } from '../comments/CommentsContext';
 import { useThreads } from '../comments/commentsApi';
 import { ActivityTab } from '../comments/panel/ActivityTab';
 import { CommentsTab } from '../comments/panel/CommentsTab';
+import { RIGHTS_TITLE_ID } from '../rights/asset/RightsPanel';
 import { Card, EmptyState, LoadingRegion, Skeleton, Tabs, WarningCircle } from '../../ui';
 import { AssetHeader } from './AssetHeader';
 import { AssetPreview } from './AssetPreview';
@@ -51,6 +52,21 @@ function AssetDetailBody({ asset }: { asset: AssetDto }) {
     return () => registerFocusComposer(null);
   }, [registerFocusComposer, setTab]);
   const handled = useCallback(() => setFocusRequest(0), []);
+  // "Review rights" (the licence chip, a blocked Publish) opens the Details tab and brings the rights panel into view.
+  const [reviewRequest, setReviewRequest] = useState(0);
+  const reviewed = useRef(0);
+  useEffect(() => {
+    if (reviewRequest === reviewed.current || tab !== 'details') return;
+    const heading = document.getElementById(RIGHTS_TITLE_ID);
+    if (!heading) return;
+    reviewed.current = reviewRequest;
+    heading.scrollIntoView?.({ block: 'start' });
+    heading.focus();
+  }, [reviewRequest, tab]);
+  const showRights = useCallback(() => {
+    setTab('details');
+    setReviewRequest((n) => n + 1);
+  }, [setTab]);
   const open = useThreads(asset.id, { versionId: asset.currentVersionId ?? undefined }).data?.counts.open ?? 0;
 
   useEffect(() => {
@@ -59,7 +75,7 @@ function AssetDetailBody({ asset }: { asset: AssetDto }) {
 
   return (
     <div className="dam-page dam-asset">
-      <AssetHeader asset={asset} />
+      <AssetHeader asset={asset} onReviewRights={showRights} />
       <div className="dam-asset-layout">
         <div className="dam-asset-layout__stage">
           <AssetPreview assetId={asset.id} type={asset.type} title={asset.title} status={asset.status} />

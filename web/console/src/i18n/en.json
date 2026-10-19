@@ -15,7 +15,8 @@
     "workflows": "Workflows",
     "webhooks": "Webhooks",
     "audit": "Audit log",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "rights": "Rights"
   },
   "shell": {
     "tenant": "Tenant",

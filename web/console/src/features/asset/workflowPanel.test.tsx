@@ -60,6 +60,7 @@ function handlers(
         fields: [],
       });
     if (c.pathname === '/api/v1/assets/a1/versions') return json([]);
+    if (c.pathname === '/api/v1/assets/a1/rights') return json({ assetId: 'a1', rights: null });
     if (c.pathname === '/api/v1/assets/a1/workflow')
       return workflow === 'error' ? json({ title: 'Boom', status: 500 }, 500) : json({ instance: workflow });
     if (c.pathname === '/api/v1/tasks' && c.method === 'GET') return json(page(mine));

@@ -2,8 +2,9 @@ namespace Dam.Domain.Common;
 
 public enum ErrorType { Validation, Unauthorized, Forbidden, NotFound, Conflict, Failure }
 
+/// <param name="Extensions">Extra members for the problem+json answer (a count, a list of reasons), with their own JSON types. Used by Conflict and Forbidden.</param>
 public sealed record Error(string Code, string Message, ErrorType Type = ErrorType.Failure,
-    IReadOnlyDictionary<string, string[]>? FieldErrors = null)
+    IReadOnlyDictionary<string, string[]>? FieldErrors = null, IReadOnlyDictionary<string, object?>? Extensions = null)
 {
     public static Error Validation(IReadOnlyDictionary<string, string[]> fields) =>
         new("validation_failed", "One or more validation errors occurred.", ErrorType.Validation, fields);

@@ -64,6 +64,11 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("metadata");
 
+                    b.Property<string>("MetadataAttributes")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("metadata_attributes");
+
                     b.Property<int>("MetadataSchemaVersion")
                         .HasColumnType("integer")
                         .HasColumnName("metadata_schema_version");
@@ -84,9 +89,19 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("retention_policy_id");
 
+                    b.PrimitiveCollection<List<string>>("RightsChannels")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("rights_channels");
+
                     b.Property<Guid?>("RightsId")
                         .HasColumnType("uuid")
                         .HasColumnName("rights_id");
+
+                    b.PrimitiveCollection<List<string>>("RightsRegions")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("rights_regions");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -139,6 +154,9 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.HasIndex("RetentionPolicyId")
                         .HasDatabaseName("ix_assets_retention_policy_id");
 
+                    b.HasIndex("RightsId")
+                        .HasDatabaseName("ix_assets_rights_id");
+
                     b.HasIndex("Status", "ExpireAt")
                         .HasDatabaseName("ix_assets_status_expire_at")
                         .HasFilter("expire_at IS NOT NULL");
@@ -157,6 +175,10 @@ namespace Dam.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "FolderId")
                         .HasDatabaseName("ix_assets_tenant_id_folder_id");
+
+                    b.HasIndex("TenantId", "RightsId")
+                        .HasDatabaseName("ix_assets_tenant_id_rights_id")
+                        .HasFilter("rights_id IS NOT NULL");
 
                     b.HasIndex("TenantId", "Status")
                         .HasDatabaseName("ix_assets_tenant_id_status");
@@ -1375,6 +1397,202 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
+            modelBuilder.Entity("Dam.Domain.Licensing.Rights", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.PrimitiveCollection<List<string>>("Channels")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("channels");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("LicenceType")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("licence_type");
+
+                    b.Property<string>("Licensor")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("licensor");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("notes");
+
+                    b.PrimitiveCollection<List<string>>("Regions")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("regions");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateOnly?>("ValidFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_from");
+
+                    b.Property<DateOnly?>("ValidTo")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_to");
+
+                    b.Property<bool>("WatermarkRequired")
+                        .HasColumnType("boolean")
+                        .HasColumnName("watermark_required");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rights");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_rights_tenant_id");
+
+                    b.HasIndex("ValidTo")
+                        .HasDatabaseName("ix_rights_valid_to")
+                        .HasFilter("valid_to IS NOT NULL");
+
+                    b.ToTable("rights", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_rights_licence_type", "licence_type IN ('owned','licensed','royalty_free','rights_managed','editorial','creative_commons','other')");
+                        });
+                });
+
+            modelBuilder.Entity("Dam.Domain.Licensing.RightsAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("RightsId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rights_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("ThresholdDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("threshold_days");
+
+                    b.Property<DateOnly>("ValidTo")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_to");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rights_alerts");
+
+                    b.HasIndex("RightsId")
+                        .HasDatabaseName("ix_rights_alerts_rights_id");
+
+                    b.HasIndex("AssetId", "RightsId", "ThresholdDays", "ValidTo")
+                        .IsUnique()
+                        .HasDatabaseName("ux_rights_alerts_once");
+
+                    b.ToTable("rights_alerts", (string)null);
+                });
+
+            modelBuilder.Entity("Dam.Domain.Licensing.RightsDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Bucket")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bucket");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("RightsId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rights_id");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid?>("UploadedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uploaded_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rights_documents");
+
+                    b.HasIndex("RightsId")
+                        .HasDatabaseName("ix_rights_documents_rights_id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_rights_documents_storage_key");
+
+                    b.HasIndex("TenantId", "RightsId")
+                        .HasDatabaseName("ix_rights_documents_tenant_id_rights_id");
+
+                    b.ToTable("rights_documents", (string)null);
+                });
+
             modelBuilder.Entity("Dam.Domain.Notifications.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2256,6 +2474,12 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasForeignKey("RetentionPolicyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_assets_retention_policies_retention_policy_id");
+
+                    b.HasOne("Dam.Domain.Licensing.Rights", null)
+                        .WithMany()
+                        .HasForeignKey("RightsId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_assets_rights_rights_id");
                 });
 
             modelBuilder.Entity("Dam.Domain.Assets.AssetUsage", b =>
@@ -2338,6 +2562,33 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_comment_mentions_comments_comment_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Licensing.RightsAlert", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_rights_alerts_assets_asset_id");
+
+                    b.HasOne("Dam.Domain.Licensing.Rights", null)
+                        .WithMany()
+                        .HasForeignKey("RightsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_rights_alerts_rights_rights_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Licensing.RightsDocument", b =>
+                {
+                    b.HasOne("Dam.Domain.Licensing.Rights", null)
+                        .WithMany()
+                        .HasForeignKey("RightsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_rights_documents_rights_rights_id");
                 });
 
             modelBuilder.Entity("Dam.Domain.Webhooks.WebhookDelivery", b =>

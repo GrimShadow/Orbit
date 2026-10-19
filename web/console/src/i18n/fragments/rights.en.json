@@ -1,0 +1,200 @@
+{
+  "rights": {
+    "title": "Rights",
+    "description": "Licences and release terms for your assets: where and until when they can be used, and whether they must carry a watermark.",
+    "new": "New rights",
+    "close": "Close",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "loading": "Loading rights",
+    "loadFailed": "We could not load the rights",
+    "loadFailedHint": "Check your connection and try again.",
+    "forbidden": {
+      "title": "You do not have access to rights",
+      "description": "Managing rights needs the rights permission. Ask an administrator if you need it."
+    },
+    "empty": {
+      "title": "No rights yet",
+      "description": "A rights record describes a licence: who it comes from, which channels and regions it covers, when it is valid and whether previews must be watermarked. Assign one to an asset and Orbit enforces it when the asset is published or delivered."
+    },
+    "noMatch": {
+      "title": "No rights match",
+      "description": "Try a different search or status.",
+      "clear": "Clear filters"
+    },
+    "count_one": "{{count}} rights record",
+    "count_other": "{{count}} rights records",
+    "showing": "Showing {{shown}} of {{total}}",
+    "created": "Created “{{name}}”",
+    "saved": "Saved “{{name}}”",
+    "pending_one": "{{count}} assigned asset is still being updated in the background.",
+    "pending_other": "{{count}} assigned assets are still being updated in the background; they follow within the hour.",
+    "duplicateSuffix": "copy",
+    "duplicated": "Created “{{name}}”",
+    "duplicateFailed": "Could not duplicate the rights",
+    "deleted": "Deleted “{{name}}”",
+    "deleteFailed": "Could not delete the rights",
+    "summary": {
+      "label": "Rights summary",
+      "valid": "Valid",
+      "validHint": "In force today",
+      "expiring": "Expiring",
+      "expiringHint": "Within 30 days",
+      "expired": "Expired",
+      "expiredHint": "Past their end date"
+    },
+    "toolbar": {
+      "label": "Filter rights",
+      "search": "Search rights",
+      "searchPlaceholder": "Name or licensor",
+      "status": "Status",
+      "allStatuses": "All statuses"
+    },
+    "statusFilter": {
+      "valid": "Valid",
+      "expiring": "Expiring",
+      "expired": "Expired",
+      "not_yet_valid": "Not yet valid"
+    },
+    "status": {
+      "valid": "Valid",
+      "expiring_one": "Expiring: {{count}} day left",
+      "expiring_other": "Expiring: {{count}} days left",
+      "expiringToday": "Expiring: last day",
+      "expired": "Expired",
+      "not_yet_valid": "Not yet valid"
+    },
+    "licence": {
+      "owned": "Owned",
+      "licensed": "Licensed",
+      "royalty_free": "Royalty free",
+      "rights_managed": "Rights managed",
+      "editorial": "Editorial",
+      "creative_commons": "Creative Commons",
+      "other": "Other"
+    },
+    "validity": {
+      "between": "{{from}} to {{to}}",
+      "from": "Valid from {{from}}, no end date",
+      "until": "Valid until {{to}}",
+      "always": "No start or end date"
+    },
+    "list": {
+      "licensor": "from {{name}}",
+      "channels": "Channels",
+      "regions": "Regions",
+      "allChannels": "All channels",
+      "worldwide": "Worldwide",
+      "moreCodes_one": "and {{count}} more: {{list}}",
+      "moreCodes_other": "and {{count}} more: {{list}}",
+      "assets_one": "{{count}} asset",
+      "assets_other": "{{count}} assets",
+      "documents_one": "{{count}} document",
+      "documents_other": "{{count}} documents",
+      "watermark": "Watermarked"
+    },
+    "menu": {
+      "label": "Actions for {{name}}",
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    },
+    "delete": {
+      "title": "Delete these rights?",
+      "body": "“{{name}}” will be deleted. This cannot be undone.",
+      "documents_one": "Its {{count}} document is deleted with it.",
+      "documents_other": "Its {{count}} documents are deleted with it.",
+      "inUse_one": "Still assigned to {{count}} asset. Reassign it first.",
+      "inUse_other": "Still assigned to {{count}} assets. Reassign them first."
+    },
+    "discard": {
+      "title": "Discard your changes?",
+      "body": "You have unsaved changes to these rights. If you close now they are lost.",
+      "keep": "Keep editing",
+      "confirm": "Discard changes"
+    },
+    "form": {
+      "newTitle": "New rights",
+      "editTitle": "Edit rights",
+      "name": "Name",
+      "namePlaceholder": "Acme stock photography 2026",
+      "nameRequired": "Enter a name.",
+      "licenceType": "Licence type",
+      "licensor": "Licensor",
+      "licensorPlaceholder": "Who grants the licence",
+      "whereTitle": "Where it applies",
+      "whereLead": "Leave a list empty to allow every channel or region. Changing these lists changes who can find the assets that use this licence.",
+      "narrowing_one": "This narrows where the licence applies. It is assigned to {{count}} asset, and any of them left with no allowed channel or region disappears for restricted consumers such as signage players and dealers.",
+      "narrowing_other": "This narrows where the licence applies. It is assigned to {{count}} assets, and any of them left with no allowed channel or region disappear for restricted consumers such as signage players and dealers.",
+      "validityTitle": "Validity",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "validToHint": "The last day the licence is valid, inclusive.",
+      "datesBackwards": "The end date cannot be before the start date.",
+      "statusPreview": "Status today",
+      "watermark": "Watermark required",
+      "watermarkHint": "Previews are always watermarked; the original and video are withheld.",
+      "notes": "Notes",
+      "notesPlaceholder": "Usage conditions, credit lines, contacts",
+      "create": "Create rights",
+      "save": "Save changes",
+      "saveFailed": "The rights could not be saved. Try again."
+    },
+    "scope": {
+      "loading": "Loading {{what}}",
+      "retired": "{{code}} (no longer in the list)",
+      "remove": "Remove {{tag}}",
+      "selected": "{{what}} (selected)",
+      "channel": {
+        "label": "Allowed channels",
+        "hint": "Nothing selected means every channel.",
+        "freeEntry": "Type a code and press Enter; letters, digits, - and _ only.",
+        "placeholder": "web, print"
+      },
+      "region": {
+        "label": "Allowed regions",
+        "hint": "Nothing selected means worldwide.",
+        "freeEntry": "Type a code and press Enter; letters, digits, - and _ only.",
+        "placeholder": "emea, us"
+      }
+    },
+    "documents": {
+      "title": "Documents",
+      "lead": "Release forms and licence files. They are saved as soon as they upload, without pressing Save.",
+      "saveFirst": "Save the rights first, then you can attach release forms and licence files.",
+      "loading": "Loading documents",
+      "loadFailed": "We could not load the documents.",
+      "empty": "No documents attached yet.",
+      "added": "added {{when}}",
+      "addedByYou": "added {{when}} by you",
+      "download": "Download {{name}}",
+      "downloadFailed": "Could not create the download link",
+      "delete": "Delete {{name}}",
+      "deleteTitle": "Delete this document?",
+      "deleteBody": "“{{name}}” is removed from storage and cannot be recovered.",
+      "deleteConfirm": "Delete document",
+      "deleted": "Document deleted",
+      "deleteFailed": "Could not delete the document",
+      "drop": "Drop files here, or",
+      "choose": "Choose files",
+      "inputLabel": "Choose documents to upload",
+      "rules": "PDF, PNG, JPEG, DOCX or TXT, up to {{max}} each. The file extension must match the type.",
+      "notScanned": "Documents are not virus-scanned. Only upload files you trust.",
+      "uploads": "Uploads",
+      "state": {
+        "queued": "Waiting",
+        "uploading": "Uploading"
+      },
+      "uploaded_one": "{{count}} document uploaded",
+      "uploaded_other": "{{count}} documents uploaded",
+      "uploadFailed": "The upload failed",
+      "dismiss": "Dismiss {{name}}",
+      "problem": {
+        "type": "{{name}}: only PDF, PNG, JPEG, DOCX and TXT files are accepted.",
+        "mismatch": "{{name}}: the file extension does not match the file type.",
+        "empty": "{{name}}: the file is empty.",
+        "size": "{{name}}: too large; the limit is {{max}}."
+      }
+    }
+  }
+}

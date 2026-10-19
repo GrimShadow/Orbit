@@ -201,4 +201,20 @@ public static class SecuritySql
         GRANT SELECT, INSERT, UPDATE ON comments TO dam_app;
         GRANT SELECT, INSERT, DELETE ON comment_mentions TO dam_app;
         """;
+
+    /// <summary>Rights records are edited and deleted (never while assigned); documents are added and removed; the alert ledger is append-only
+    /// (its rows go with their rights record or asset through the foreign keys, which need no grant). Names are unique per tenant, ignoring case.</summary>
+    public const string RightsGrants = """
+        GRANT SELECT, INSERT, UPDATE, DELETE ON rights TO dam_app;
+        GRANT SELECT, INSERT, DELETE ON rights_documents TO dam_app;
+        GRANT SELECT, INSERT ON rights_alerts TO dam_app;
+        CREATE UNIQUE INDEX ux_rights_tenant_lower_name ON rights (tenant_id, lower(name));
+        """;
+
+    /// <summary>The rights job (Step 2.5) finds licences ending soon or already ended across every tenant through the system connection, read-only,
+    /// like the other cross-tenant jobs (assets are already readable that way); alerts and expiries are then applied through a tenant-scoped scope.</summary>
+    public const string RightsSystemGrants = """
+        GRANT SELECT ON rights TO dam_system;
+        CREATE POLICY system_read_rights ON rights FOR SELECT TO dam_system USING (true);
+        """;
 }

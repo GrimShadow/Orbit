@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace Dam.Domain.Webhooks;
 
-/// <param name="Category">asset, collection, workflow, comment or webhook.</param>
+/// <param name="Category">asset, collection, workflow, comment, rights or webhook.</param>
 /// <param name="Derived">Not raised by the domain itself: produced from another event for subscribers (see <see cref="EventCatalogue.Expand"/>).</param>
 public sealed record EventTypeInfo(string Name, string Category, string Description, bool Derived = false);
 
@@ -42,6 +42,8 @@ public static class EventCatalogue
         new("comment.added", "comment", "A comment or reply was added to an asset (the payload names the people mentioned; it never carries the text)."),
         new("comment.resolved", "comment", "A comment thread was marked resolved."),
         new("comment.reopened", "comment", "A resolved comment thread was reopened."),
+        new("rights.expiring", "rights", "The licence assigned to an asset is within 30, 7 or 1 days of ending (the payload names the asset, the licence, the end date, the days remaining and the threshold reached)."),
+        new("rights.expired", "rights", "The licence assigned to an asset has ended (the payload names the asset, the licence and its end date)."),
         new(Ping, "webhook", "A test event sent by the Ping button; never raised by the system itself."),
     ];
 

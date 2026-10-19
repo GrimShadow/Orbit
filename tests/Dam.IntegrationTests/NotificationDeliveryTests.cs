@@ -263,9 +263,9 @@ public sealed class NotificationDeliveryTests(PostgresFixture pg, RabbitFixture 
         var r = await Call(HttpMethod.Get, $"{Inbox}/preferences", a.Token);
         Assert.Equal(HttpStatusCode.OK, r.Status);
         var cats = r.Body.GetProperty("categories").EnumerateArray().ToList();
-        Assert.Equal(["workflow_task", "workflow_outcome", "sla", "asset_lifecycle", "mention", "comments"], cats.Select(c => c.GetProperty("key").GetString()));
+        Assert.Equal(["workflow_task", "workflow_outcome", "sla", "asset_lifecycle", "mention", "comments", "rights"], cats.Select(c => c.GetProperty("key").GetString()));
         Assert.All(cats, c => Assert.False(string.IsNullOrWhiteSpace(c.GetProperty("label").GetString())));
-        Assert.Equal([true, false, true, false, true, false], cats.Select(c => c.GetProperty("email").GetBoolean()));
+        Assert.Equal([true, false, true, false, true, false, true], cats.Select(c => c.GetProperty("email").GetBoolean()));
         Assert.Equal(cats.Select(c => c.GetProperty("defaultEmail").GetBoolean()), cats.Select(c => c.GetProperty("email").GetBoolean()));
         Assert.False(r.Body.GetProperty("emailAvailable").GetBoolean());   // the test API host has no SMTP
 

@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { SealCheck } from '@phosphor-icons/react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMe } from '../../api/me';
 import { BookmarkSimple, Button, FolderSimple, Select, Tag, TagInput, X, useToast } from '../../ui';
 import { ActionIcon } from '../asset/actionIcon';
 import { availableActions } from '../asset/lifecycle';
 import { useCreateStaticCollection } from '../collections/collectionsApi';
 import { NameCollectionDialog } from '../collections/NameCollectionDialog';
+import { BulkAssignDialog } from '../rights/asset/BulkAssignDialog';
 import { useBulkEditTags, useBulkMove, useBulkTransition } from './bulkEditApi';
 import type { BulkResult } from './bulkOrchestrator';
 import type { AssetDto } from './assets';
@@ -44,6 +47,9 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
   const [folderId, setFolderId] = useState(UNSET_FOLDER);
   const [panel, setPanel] = useState<'tags' | 'move' | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
+  const [rightsOpen, setRightsOpen] = useState(false);
+  const canAssignRights = !!useMe().data?.permissions.includes('rights.manage');
+  const titles = useMemo(() => new Map(assets.map((a) => [a.id, a.title])), [assets]);
 
   const selected = assets.filter((a) => selectedIds.includes(a.id));
   const actions = commonActions(selected);
@@ -161,6 +167,12 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
                   {t('library.bulk.moveTo')}
                 </Button>
               )}
+              {canAssignRights && (
+                <Button variant="secondary" size="sm" disabled={busy} onClick={() => setRightsOpen(true)}>
+                  <SealCheck size={16} weight="bold" aria-hidden="true" />
+                  {t('rightsAsset.bulk.button')}
+                </Button>
+              )}
             </div>
 
             {actions.length > 0 && (
@@ -187,6 +199,15 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
           </div>
         </div>
       </div>
+      <BulkAssignDialog
+        open={rightsOpen}
+        selectedIds={selectedIds}
+        titles={titles}
+        onClose={(finished) => {
+          setRightsOpen(false);
+          if (finished) onClear();
+        }}
+      />
       <NameCollectionDialog
         open={saveOpen}
         title={t('library.bulk.saveAsCollectionTitle')}

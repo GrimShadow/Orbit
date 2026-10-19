@@ -5,6 +5,7 @@ using System.Text;
 using Dam.Application.Abstractions;
 using Dam.Domain.Assets;
 using Dam.Domain.Authorization;
+using Dam.Domain.Licensing;
 using Dam.Infrastructure;
 using Dam.Infrastructure.Delivery;
 using Dam.Infrastructure.Messaging;
@@ -80,8 +81,17 @@ public static class DeliveryHost
         var version = await db.AssetVersions.AsNoTracking().FirstOrDefaultAsync(v => v.Id == asset.CurrentVersionId, ct);
         if (version is null) return Problem(404, "not_found", "Not found.");
 
-        // Unpublished content is only ever shown watermarked, whatever the link says.
-        var watermark = claims.Watermark || asset.Status != AssetStatuses.Published;
+        // Rights are looked at again now, not trusted from when the link was signed (ADR-0033): a licence can end, or its restrictions change, while a link is
+        // still good. Ended is 410 like an expired asset; not yet begun, or a channel/region the link was issued for that the rights no longer allow, is 403.
+        // The wording is deliberately generic: this endpoint is public, and the licence's name is not for link holders.
+        var rights = asset.RightsId is { } rightsId ? await db.Rights.AsNoTracking().FirstOrDefaultAsync(r => r.Id == rightsId, ct) : null;
+        var check = RightsChecker.Check(rights, asset.Attributes, claims.Channel, claims.Region, RightsRules.Today(clock.UtcNow));
+        if (check.Expired) return Problem(410, "rights_expired", "The licence for this asset has ended.");
+        if (check.NotYetValid) return Problem(403, "rights_not_valid", "The licence for this asset has not begun.");
+        if (!check.Allowed) return Problem(403, "rights_restricted", "This asset's rights do not allow that use.");
+
+        // Unpublished content, and content whose rights require it, is only ever shown watermarked, whatever the link says.
+        var watermark = claims.Watermark || asset.Status != AssetStatuses.Published || check.WatermarkRequired;
 
         // 4. Find or make the bytes.
         ServedObject? served;
@@ -91,7 +101,7 @@ public static class DeliveryHost
             if (transform is not null) served = await service.GetTransformAsync(version, transform, watermark, ct);
             else if (rendition == RenditionProfiles.Original)
             {
-                if (watermark) return Problem(403, "invalid_link", "The original file of an unpublished asset cannot be downloaded through a link.");
+                if (watermark) return Problem(403, "invalid_link", "The original file of an unpublished or watermark-required asset cannot be downloaded through a link.");
                 served = new ServedObject(version.Bucket, version.StorageKey, version.Mime, version.SizeBytes, CacheHit: true);
             }
             else served = await service.GetProfileAsync(version, rendition!, watermark, ct);

@@ -143,6 +143,12 @@ public interface IObjectStore
     /// <summary>A URL for server-side tools (ffprobe) to read the object with range requests. Not for browsers.</summary>
     string PresignGet(string bucket, string key, TimeSpan ttl);
     Task DeleteAsync(string bucket, string key, CancellationToken ct);
+    /// <summary>A time-limited URL a browser PUTs one whole object to (a single request, not multipart). The content type is part of the signature,
+    /// so the PUT must send exactly it. Computed locally; no network call.</summary>
+    string PresignPut(string bucket, string key, string contentType, TimeSpan ttl);
+    /// <summary>A time-limited URL a browser opens to DOWNLOAD the object: the response is forced to an attachment named <paramref name="fileName"/>
+    /// with the neutral type application/octet-stream, so the browser never renders it. Computed locally; no network call.</summary>
+    string PresignDownload(string bucket, string key, string fileName, TimeSpan ttl);
 }
 
 /// <summary>Tunables for resumable uploads (env: DAM_UPLOAD_*).</summary>

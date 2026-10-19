@@ -5,6 +5,7 @@ using Dam.Application.Workflow;
 using Dam.Domain.Assets;
 using Dam.Domain.Authorization;
 using Dam.Domain.Comments;
+using Dam.Domain.Licensing;
 using Dam.Domain.Notifications;
 using Dam.Domain.Identity;
 using Dam.Domain.Workflow;
@@ -105,6 +106,8 @@ public sealed class NotificationPlanner(
             case "comment.added": return await CommentAddedAsync(payload, ct);
             case CommentEdited.EventName: return One(await CommentEditedAsync(payload, ct));
             case "comment.resolved": return One(await CommentResolvedAsync(payload, ct));
+            case RightsExpiring.EventName: return One(await LicenceAsync(payload, expired: false, ct));
+            case RightsExpired.EventName: return One(await LicenceAsync(payload, expired: true, ct));
             default: return [];
         }
     }
@@ -177,6 +180,23 @@ public sealed class NotificationPlanner(
         var content = NotificationRules.AssetLifecycle(asset.Id, asset.Title, status, asset.StatusReason);
         var recipients = await ActiveAsync([owner], ct);
         return content is null || recipients.Count == 0 ? null : new NotificationPlan(content, recipients);
+    }
+
+    // ---- licences (ADR-0033) -------------------------------------------------------------------------------------
+
+    /// <summary>The owner of the asset is told its licence is about to end or has ended. Nobody else: the asset's rights managers see the licence list.</summary>
+    private async Task<NotificationPlan?> LicenceAsync(JsonElement payload, bool expired, CancellationToken ct)
+    {
+        if (!TryGuid(payload, "AssetId", out var assetId)
+            || !payload.TryGetProperty("RightsName", out var name) || name.GetString() is not { } rightsName
+            || !payload.TryGetProperty("ValidTo", out var to) || !DateOnly.TryParse(to.GetString(), System.Globalization.CultureInfo.InvariantCulture, out var validTo)) return null;
+        var asset = await q.FirstOrDefaultAsync(assets.Query().Where(a => a.Id == assetId), ct);
+        if (asset is not { OwnerId: { } owner } || asset.Status == AssetStatuses.Deleted) return null;
+        var recipients = await ActiveAsync([owner], ct);
+        if (recipients.Count == 0) return null;
+        if (expired) return new NotificationPlan(NotificationRules.LicenceExpired(asset.Id, asset.Title, rightsName, validTo), recipients);
+        var days = payload.TryGetProperty("DaysRemaining", out var d) && d.TryGetInt32(out var n) ? n : 0;
+        return new NotificationPlan(NotificationRules.LicenceExpiring(asset.Id, asset.Title, rightsName, validTo, days), recipients);
     }
 
     // ---- comments (ADR-0032) -------------------------------------------------------------------------------------
@@ -264,6 +284,8 @@ public sealed class NotificationPlanner(
         else if (eventName == "asset.version.added" && payload.TryGetProperty("VersionNo", out var no)) detail = $"Version {no}";
         else if (eventName == "rendition.ready" && payload.TryGetProperty("Profile", out var profile)) detail = $"Profile {profile.GetString()}";
         else if (eventName == "workflow.task.created" && payload.TryGetProperty("StepName", out var step)) detail = $"Step: {step.GetString()}";
+        else if (eventName is "rights.expiring" or "rights.expired" && payload.TryGetProperty("RightsName", out var rightsName))
+            detail = $"{rightsName.GetString()}, ends {(payload.TryGetProperty("ValidTo", out var validTo) ? validTo.GetString() : "")}";
         else if (eventName == "workflow.task.completed" && payload.TryGetProperty("Decision", out var decision))
             detail = decision.GetString() == "approve" ? "Approved" : $"Rejected{(payload.TryGetProperty("Comment", out var c) && c.GetString() is { Length: > 0 } text ? ": " + text : "")}";
         var (t, body) = NotificationRules.Describe(eventName, title, detail);

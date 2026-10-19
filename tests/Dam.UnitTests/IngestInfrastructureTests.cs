@@ -182,6 +182,8 @@ internal sealed class MemoryStore(byte[] content) : IObjectStore
     public Task CopyAsync(string sourceBucket, string sourceKey, string destinationBucket, string destinationKey, long size, CancellationToken ct) => throw new NotSupportedException();
     public string PresignGet(string bucket, string key, TimeSpan ttl) => throw new NotSupportedException();
     public Task DeleteAsync(string bucket, string key, CancellationToken ct) => throw new NotSupportedException();
+    public string PresignPut(string bucket, string key, string contentType, TimeSpan ttl) => throw new NotSupportedException();
+    public string PresignDownload(string bucket, string key, string fileName, TimeSpan ttl) => throw new NotSupportedException();
 }
 
 internal sealed class NoProbe : IMediaProbe
