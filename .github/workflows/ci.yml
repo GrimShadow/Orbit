@@ -133,7 +133,7 @@ jobs:
           file: ${{ matrix.file }}
           build-args: |
             ${{ matrix.args }}
-            ${{ endsWith(matrix.file, 'Dockerfile.dotnet') && format('SECURITY_REFRESH={0}', steps.refresh.outputs.day) || '' }}
+            SECURITY_REFRESH=${{ steps.refresh.outputs.day }}
           load: true
           tags: scan/${{ matrix.name }}:${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.name }}
@@ -160,7 +160,7 @@ jobs:
           file: ${{ matrix.file }}
           build-args: |
             ${{ matrix.args }}
-            ${{ endsWith(matrix.file, 'Dockerfile.dotnet') && format('SECURITY_REFRESH={0}', steps.refresh.outputs.day) || '' }}
+            SECURITY_REFRESH=${{ steps.refresh.outputs.day }}
           platforms: linux/amd64,linux/arm64
           push: true
           provenance: true
