@@ -49,6 +49,8 @@ public static class Permissions
     public const string RolesManage = "roles.manage";
     public const string AccessRulesManage = "access_rules.manage";
     public const string WebhooksManage = "webhooks.manage";
+    /// <summary>Chat notification channels (Slack, Teams). Webhook subscriptions are webhooks.manage; everyone manages their own inbox and preferences.</summary>
+    public const string NotificationsManage = "notifications.manage";
     public const string ApiClientsManage = "api_clients.manage";
     public const string RetentionManage = "retention.manage";
     public const string AuditRead = "audit.read";
@@ -68,7 +70,7 @@ public static class Permissions
         WorkflowManage, WorkflowTasksDecide, CommentsWrite,
         RightsManage, KnowledgeManage, QrManage, ShareManage, PortalsManage,
         AnalyticsRead, UsageWrite,
-        TenantsManage, UsersManage, GroupsManage, RolesManage, AccessRulesManage, WebhooksManage, ApiClientsManage,
+        TenantsManage, UsersManage, GroupsManage, RolesManage, AccessRulesManage, WebhooksManage, NotificationsManage, ApiClientsManage,
         RetentionManage, AuditRead, MigrationManage,
         SystemPing,
     ];

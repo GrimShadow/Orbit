@@ -30,6 +30,9 @@ public static class ApiEndpoints
         v1.MapCollectionEndpoints();
         v1.MapAnalyticsEndpoints();
         v1.MapWorkflowEndpoints();
+        v1.MapNotificationEndpoints();
+        v1.MapWebhookEndpoints();
+        v1.MapAuditEndpoints();
     }
 
     /// <summary>Maps a failed application Result to RFC 9457 problem+json.</summary>

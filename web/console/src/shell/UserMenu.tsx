@@ -1,4 +1,4 @@
-import { CaretDown, Keyboard, SignOut, UserCircle } from '@phosphor-icons/react';
+import { Bell, CaretDown, Keyboard, SignOut, UserCircle } from '@phosphor-icons/react';
 import { Avatar, Select } from '@dam/ui-kit';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -69,6 +69,10 @@ export function UserMenu({ onShowShortcuts }: { onShowShortcuts: () => void }) {
             <Link to="/me" className="dam-usermenu__link" onClick={close}>
               <UserCircle size={18} aria-hidden="true" />
               {t('nav.account')}
+            </Link>
+            <Link to="/notifications" className="dam-usermenu__link" onClick={close}>
+              <Bell size={18} aria-hidden="true" />
+              {t('notifications.title')}
             </Link>
             <button
               type="button"

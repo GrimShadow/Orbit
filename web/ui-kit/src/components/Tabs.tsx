@@ -7,9 +7,23 @@ export interface TabItem {
   content: ReactNode;
 }
 
-export function Tabs({ tabs, initialId, label }: { tabs: TabItem[]; initialId?: string; label: string }) {
+interface TabsProps {
+  tabs: TabItem[];
+  initialId?: string;
+  label: string;
+  /** Controlled mode: the selected tab id. Pair with `onChange`; without it the tabs keep their own state. */
+  value?: string;
+  onChange?: (id: string) => void;
+}
+
+export function Tabs({ tabs, initialId, label, value, onChange }: TabsProps) {
   const base = useId();
-  const [active, setActive] = useState(initialId ?? tabs[0]?.id);
+  const [own, setOwn] = useState(initialId ?? tabs[0]?.id);
+  const active = value ?? own;
+  const setActive = (id: string) => {
+    setOwn(id);
+    onChange?.(id);
+  };
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
   const list = useRef<HTMLDivElement>(null);
   const underline = useIndicator(list, active);

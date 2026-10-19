@@ -57,7 +57,7 @@ public sealed class EnsureTenantHandler(
 /// <summary>Just-in-time provisioning from validated token claims. The identity provider stays the source of truth.</summary>
 public sealed record ProvisionUserCommand(
     string Subject, string Email, string DisplayName,
-    IReadOnlyDictionary<string, string[]> Attributes, IReadOnlyList<string> Groups) : ICommand<ProvisionedUser>;
+    IReadOnlyDictionary<string, string[]> Attributes, IReadOnlyList<string> Groups, IReadOnlyList<string>? Roles = null) : ICommand<ProvisionedUser>;
 
 public sealed record ProvisionedUser(Guid UserId, bool Created, bool Changed);
 
@@ -92,11 +92,11 @@ public sealed class ProvisionUserHandler(
         var changed = created;
         if (user is null)
         {
-            user = User.Provision(tenant.TenantId, c.Subject, email, name, attrs, now);
+            user = User.Provision(tenant.TenantId, c.Subject, email, name, attrs, now, c.Roles);
             users.Add(user);
             await seeder.EnsureAsync(ct); // first user of a tenant: make sure the built-in roles exist
         }
-        else changed |= user.SyncFromIdp(email, name, attrs, now);
+        else changed |= user.SyncFromIdp(email, name, attrs, now, c.Roles);
 
         changed |= await SyncGroupsAsync(user, c.Groups, ct);
         return new ProvisionedUser(user.Id, created, changed);

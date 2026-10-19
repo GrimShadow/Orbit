@@ -1,0 +1,60 @@
+{
+  "notifications": {
+    "title": "Notifications",
+    "description": "Approvals waiting for you, deadlines and what happened to your assets.",
+    "tabsLabel": "Notification sections",
+    "tabs": {
+      "inbox": "Inbox",
+      "preferences": "Preferences"
+    },
+    "bell": {
+      "label": "Notifications",
+      "labelUnread_one": "Notifications, {{count}} unread",
+      "labelUnread_other": "Notifications, {{count}} unread"
+    },
+    "panel": {
+      "title": "Notifications",
+      "settings": "Notification preferences"
+    },
+    "listLabel": "Notifications",
+    "filterLabel": "Show",
+    "filter": {
+      "all": "All",
+      "unread": "Unread"
+    },
+    "unreadSr": "Unread:",
+    "markRead": "Mark as read",
+    "markReadNamed": "Mark as read: {{title}}",
+    "markAllRead": "Mark all read",
+    "markedAll_one": "{{count}} notification marked read",
+    "markedAll_other": "{{count}} notifications marked read",
+    "markAllFailed": "Couldn't mark your notifications read",
+    "seeAll": "See all notifications",
+    "loadMore": "Load more",
+    "loading": "Loading notifications",
+    "error": "Couldn't load notifications.",
+    "retry": "Try again",
+    "empty": {
+      "caughtUp": "You're all caught up",
+      "caughtUpHint": "New notifications will show up here.",
+      "unreadHint": "You have no unread notifications. Switch to All to see earlier ones.",
+      "noneTitle": "No notifications yet",
+      "noneHint": "When an approval needs you or something happens to one of your assets, it will appear here."
+    },
+    "prefs": {
+      "title": "How you are notified",
+      "intro": "Choose where each kind of notification reaches you. Turn both off to stop hearing about it.",
+      "listLabel": "Notification categories",
+      "loading": "Loading preferences",
+      "loadError": "Couldn't load your preferences.",
+      "inApp": "In-app",
+      "email": "Email",
+      "switchName": "{{category}}: {{channel}}",
+      "emailUnavailable": "Email delivery isn't set up for your organisation yet, so email choices can't be changed. Your saved choices are kept for when it is.",
+      "save": "Save preferences",
+      "discard": "Discard changes",
+      "saved": "Notification preferences saved",
+      "saveFailed": "Couldn't save your preferences"
+    }
+  }
+}

@@ -623,6 +623,10 @@
   .dam-topbar__brand .dam-brand__word {
     display: none;
   }
+  /* Five controls now share the bar with search (the bell is new): tighten them so the search box keeps its room. */
+  .dam-topbar__actions {
+    gap: 2px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .dam-sidebar,

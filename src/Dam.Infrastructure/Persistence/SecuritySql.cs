@@ -179,4 +179,19 @@ public static class SecuritySql
         GRANT SELECT ON workflow_tasks TO dam_system;
         CREATE POLICY system_read_workflow_tasks ON workflow_tasks FOR SELECT TO dam_system USING (true);
         """;
+
+    /// <summary>Webhooks and chat channels are edited and deleted freely; delivery history, notifications and the dedupe ledger are never
+    /// deleted by the app (a webhook's deliveries go with it through the foreign key's cascade).</summary>
+    public const string NotificationGrants = """
+        GRANT SELECT, INSERT, UPDATE, DELETE ON webhooks, notification_channels TO dam_app;
+        GRANT SELECT, INSERT, UPDATE ON webhook_deliveries, notifications, notification_preferences, siem_cursors TO dam_app;
+        GRANT SELECT, INSERT ON notification_deliveries TO dam_app;
+        """;
+
+    /// <summary>The webhook retry job (Step 2.6) finds due deliveries across every tenant through the system connection, read-only, like the
+    /// workflow SLA job; each attempt is then made through a tenant-scoped scope.</summary>
+    public const string WebhookSystemGrants = """
+        GRANT SELECT ON webhook_deliveries TO dam_system;
+        CREATE POLICY system_read_webhook_deliveries ON webhook_deliveries FOR SELECT TO dam_system USING (true);
+        """;
 }

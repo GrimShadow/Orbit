@@ -31,6 +31,13 @@ public abstract class EventConsumer
     public abstract Task HandleAsync(EventEnvelope message, CancellationToken ct);
 
     /// <summary>
+    /// Called after <see cref="HandleAsync"/>'s transaction has committed, on the same instance (so it can use what HandleAsync recorded),
+    /// for work that must only start once the effects are visible to others (for example an immediate webhook attempt). Best effort: an
+    /// exception is logged and does not retry the message, since its effects are already committed.
+    /// </summary>
+    public virtual Task AfterCommitAsync(EventEnvelope message, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>
     /// Called once when a message has failed every attempt and is parked in the DLQ, inside its own transaction. Override to
     /// move whatever the message was about into a truthful state (e.g. an upload that must not stay "processing" forever).
     /// </summary>

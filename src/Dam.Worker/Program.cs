@@ -3,6 +3,7 @@ using Dam.Infrastructure;
 using Dam.Infrastructure.Consumers;
 using Dam.Infrastructure.Delivery;
 using Dam.Infrastructure.Messaging;
+using Dam.Infrastructure.Notifications;
 using Dam.Infrastructure.Ingest;
 using Dam.Infrastructure.Search;
 using Dam.Infrastructure.Storage;
@@ -17,6 +18,7 @@ builder.Services.AddDamStorage(cfg);
 builder.Services.AddDamIngest(cfg);
 builder.Services.AddDamRendering(cfg);
 builder.Services.AddDamSearch(cfg);
+builder.Services.AddDamNotifications(cfg);
 builder.Services.AddDamMessaging(cfg.ReadMessagingOptions());
 builder.Services.AddEventConsumer<PingConsumer>();
 builder.Services.AddEventConsumer<HashUploadConsumer>();
@@ -27,6 +29,8 @@ builder.Services.AddEventConsumer<PromoteUploadConsumer>();
 builder.Services.AddEventConsumer<PerceptualHashConsumer>();
 builder.Services.AddEventConsumer<RenditionConsumer>();
 builder.Services.AddEventConsumer<IndexConsumer>();
+// Webhook fan-out and notifications (email, in-app, chat) both listen to the same public domain events, each on its own queue.
+builder.Services.AddDamNotificationConsumers();
 // Relay last: consumers must have declared and bound their queues before anything is published.
 builder.Services.AddOutboxRelay(Required("DAM_DB_SYSTEM_CONNECTION"));
 

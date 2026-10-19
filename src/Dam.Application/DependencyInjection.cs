@@ -23,6 +23,11 @@ public static class DependencyInjection
         services.AddScoped<Workflow.WorkflowRuntime>();
         services.AddScoped<Workflow.WorkflowTaskAccess>();
         services.AddScoped<Workflow.WorkflowTaskMapper>();
+        services.AddScoped<Webhooks.WebhookMapper>();
+        services.AddScoped<Webhooks.DeliveryMapper>();
+        services.AddScoped<Notifications.UserProfiles>();
+        services.AddScoped<Notifications.NotificationPlanner>();
+        services.AddScoped<Audit.AuditExporter>();
         services.AddValidatorsFromAssembly(asm, includeInternalTypes: true);
 
         foreach (var t in asm.GetTypes().Where(t => t is { IsAbstract: false, IsInterface: false }))

@@ -2,6 +2,7 @@
 # Core (default):  make up          -> postgres, s3, redis, rabbitmq, keycloak  (~2.5 GB RAM)
 # Search:          make up-search   -> + opensearch (single node, 1 GB heap)
 # Scanning:        make up-scan     -> + clamav (~1.5 GB RAM)
+# Mail catcher:    make up-mail     -> + mailpit (dev SMTP on :11025, web UI on :18025; nothing is sent to the outside)
 # Observability:   make up-obs      -> + otel-collector, tempo, loki, prometheus, grafana
 # Everything:      make up-all      (needs Docker Desktop with >= 8 GB RAM)
 name: dam
@@ -111,6 +112,15 @@ services:
     ports: ["${DAM_PORT_CLAM:-13310}:3310"]
     healthcheck: { test: ["CMD", "clamdcheck.sh"], interval: 30s, timeout: 10s, retries: 20, start_period: 120s }
     mem_limit: 3g
+
+  # Catches every email the app sends (notifications, Step 2.6) so nothing leaves the laptop. Point DAM_SMTP_HOST=localhost,
+  # DAM_SMTP_PORT=11025, DAM_SMTP_TLS=none at it; read the mail at http://localhost:18025.
+  mailpit:
+    profiles: [mail, all]
+    image: axllent/mailpit:v1.21
+    ports: ["${DAM_PORT_SMTP:-11025}:1025", "${DAM_PORT_MAIL_UI:-18025}:8025"]
+    healthcheck: { test: ["CMD", "/mailpit", "readyz"], <<: *hc }
+    mem_limit: 128m
 
   otel-collector:
     profiles: [obs, all]
