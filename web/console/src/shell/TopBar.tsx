@@ -4,6 +4,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
+import { NotificationBell } from '../features/notifications/NotificationBell';
 import { Brand } from './Brand';
 import { HELP_KEY, isHelpShortcut, isShortcutTarget, matchNavShortcut, NAV_SHORTCUTS } from './keyboardShortcuts';
 import { ThemeSwitcher } from './ThemeSwitcher';
@@ -117,6 +118,7 @@ export function TopBar() {
             >
               <Question size={20} aria-hidden="true" />
             </button>
+            <NotificationBell />
             <UserMenu onShowShortcuts={() => setHelpOpen(true)} />
           </div>
         </>

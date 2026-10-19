@@ -1193,6 +1193,367 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's own notifications, newest first (unread=true for unread only; limit up to 200; cursor from nextCursor) */
+        get: operations["ListNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How many unread notifications the caller has (for the badge) */
+        get: operations["GetUnreadNotificationCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marks all of the caller's notifications read */
+        post: operations["MarkAllNotificationsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marks one of the caller's notifications read (404 for anyone else's) */
+        post: operations["MarkNotificationRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The notification categories with the caller's in-app and email settings (their own choice, else the default), and whether the server can send email */
+        get: operations["GetNotificationPreferences"];
+        /** Sets the caller's settings for the categories listed; others keep theirs */
+        put: operations["UpdateNotificationPreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Slack and Teams channels that receive messages for matching events. Needs notifications.manage */
+        get: operations["ListNotificationChannels"];
+        put?: never;
+        /** Adds a chat channel. The incoming-webhook URL is stored encrypted and never returned */
+        post: operations["CreateNotificationChannel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-channels/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetNotificationChannel"];
+        /** Replaces a channel's settings; a null url keeps the stored one */
+        put: operations["UpdateNotificationChannel"];
+        post?: never;
+        delete: operations["DeleteNotificationChannel"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-channels/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Posts a test message to the channel and reports what the chat service answered */
+        post: operations["TestNotificationChannel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhooks/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The events webhooks and chat channels can subscribe to. Needs webhooks.manage or notifications.manage */
+        get: operations["ListWebhookEventTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Webhooks with their last-24-hour delivery counts. Needs webhooks.manage */
+        get: operations["ListWebhooks"];
+        put?: never;
+        /** Creates a webhook. The signing secret is in this response only (whsec_...); keep it. Private and internal addresses are refused */
+        post: operations["CreateWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhooks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWebhook"];
+        /** Replaces a webhook's name, URL, events and active flag (the secret is unchanged) */
+        put: operations["UpdateWebhook"];
+        post?: never;
+        /** Deletes a webhook and its delivery history */
+        delete: operations["DeleteWebhook"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhooks/{id}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generates a new signing secret, returned once; the old one stops working at once */
+        post: operations["RotateWebhookSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhooks/{id}/ping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sends a synthetic webhook.ping event now and returns the delivery with its outcome (409 if the webhook is switched off) */
+        post: operations["PingWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhooks/{id}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One webhook's deliveries, newest first. Filter by status (pending, succeeded, failed), eventType (exact, or a prefix such as workflow.*) and created time (from, to) */
+        get: operations["ListWebhookDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhook-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The delivery log across all webhooks (same filters as a single webhook's, plus webhookId) */
+        get: operations["ListAllWebhookDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhook-deliveries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One delivery with the exact payload sent and the receiver's response excerpt */
+        get: operations["GetWebhookDelivery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhook-deliveries/{id}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Creates a new delivery of the same payload (new id, replayOf set), attempts it now and returns it with its outcome */
+        post: operations["ReplayWebhookDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Audit entries, newest first. Filters: from/to (time), actor (identity subject or Orbit user id), action (prefix, e.g. asset.), entityType, entityId, q (free text over action, entity and actor). limit up to 200; cursor from nextCursor */
+        get: operations["ListAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The distinct action names recorded, for a filter picker */
+        get: operations["ListAuditActions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recomputes the hash chain over the rows in the time range (all of them when no range is given) and reports whether it is intact, or the first row that is not */
+        get: operations["VerifyAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Streams the filtered audit log as a file (format=csv or cef). It begins and ends with # comment lines stating whether the hash chain verified over the time range, the row count and the first and last hashes */
+        get: operations["ExportAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1274,6 +1635,51 @@ export interface components {
         AssetWorkflowDto: {
             instance: components["schemas"]["WorkflowInstanceViewDto"];
         };
+        AuditEntryDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            chainNo: number;
+            /** Format: date-time */
+            occurredAt: string;
+            actorId: string;
+            /** Format: uuid */
+            actorUserId: string | null;
+            actorName: string;
+            action: string;
+            entityType: string | null;
+            /** Format: uuid */
+            entityId: string | null;
+            before: components["schemas"]["NullableOfJsonElement"];
+            after: components["schemas"]["NullableOfJsonElement"];
+            ip: string | null;
+            hash: string;
+            prevHash: string;
+        };
+        AuditVerificationDto: {
+            verified: boolean;
+            /** Format: int64 */
+            checked: number;
+            /** Format: uuid */
+            firstId: string | null;
+            /** Format: uuid */
+            lastId: string | null;
+            /** Format: int64 */
+            firstChainNo: number | null;
+            /** Format: int64 */
+            lastChainNo: number | null;
+            firstHash: string | null;
+            lastHash: string | null;
+            /** Format: uuid */
+            brokenAtId: string | null;
+            /** Format: int64 */
+            brokenAtChainNo: number | null;
+            reason: string | null;
+            /** Format: date-time */
+            from: string | null;
+            /** Format: date-time */
+            to: string | null;
+        };
         BulkFileRequest: {
             fileName: string;
             /** Format: int64 */
@@ -1315,6 +1721,14 @@ export interface components {
             assetIds: string[];
             /** @default false */
             remove: boolean;
+        };
+        ChannelTestResultDto: {
+            ok: boolean;
+            /** Format: int32 */
+            statusCode: number | null;
+            error: string | null;
+            /** Format: int32 */
+            durationMs: number;
         };
         CollectionDto: {
             /** Format: uuid */
@@ -1507,6 +1921,10 @@ export interface components {
             sha256: string | null;
         };
         JsonElement: unknown;
+        MarkAllReadResultDto: {
+            /** Format: int32 */
+            marked: number;
+        };
         MeDto: {
             /** Format: uuid */
             userId: string | null;
@@ -1536,13 +1954,80 @@ export interface components {
         NameRequest: {
             name: string;
         };
+        NotificationCategoryDto: {
+            key: string;
+            label: string;
+            description: string;
+            inApp: boolean;
+            email: boolean;
+            defaultInApp: boolean;
+            defaultEmail: boolean;
+        };
+        NotificationChannelDto: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            name: string;
+            urlHint: string;
+            events: string[];
+            active: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        NotificationChannelInput: {
+            kind: string;
+            name: string;
+            url: string | null;
+            events: string[];
+            /** @default true */
+            active: boolean;
+        };
+        NotificationDto: {
+            /** Format: uuid */
+            id: string;
+            type: string;
+            category: string;
+            title: string;
+            body: string;
+            linkUrl: string | null;
+            /** Format: uuid */
+            assetId: string | null;
+            read: boolean;
+            /** Format: date-time */
+            readAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        NotificationPreferenceInput: {
+            category: string;
+            inApp: boolean;
+            email: boolean;
+        };
+        NotificationPreferencesDto: {
+            categories: components["schemas"]["NotificationCategoryDto"][];
+            emailAvailable: boolean;
+        };
         NullableOfJsonElement: unknown;
         PageOfAssetDto: {
             items: components["schemas"]["AssetDto"][];
             nextCursor: string | null;
         };
+        PageOfAuditEntryDto: {
+            items: components["schemas"]["AuditEntryDto"][];
+            nextCursor: string | null;
+        };
+        PageOfNotificationDto: {
+            items: components["schemas"]["NotificationDto"][];
+            nextCursor: string | null;
+        };
         PageOfUserDto: {
             items: components["schemas"]["UserDto"][];
+            nextCursor: string | null;
+        };
+        PageOfWebhookDeliveryDto: {
+            items: components["schemas"]["WebhookDeliveryDto"][];
             nextCursor: string | null;
         };
         PageOfWorkflowTaskDto: {
@@ -1898,6 +2383,10 @@ export interface components {
         TransitionAssetRequest: {
             reason: string | null;
         };
+        UnreadCountDto: {
+            /** Format: int32 */
+            count: number;
+        };
         UnusedAssetDto: {
             /** Format: uuid */
             id: string;
@@ -1949,6 +2438,9 @@ export interface components {
             defaultWorkflowId: string | null;
             /** @default false */
             clearDefaultWorkflow: boolean;
+        };
+        UpdateNotificationPreferencesInput: {
+            preferences: components["schemas"]["NotificationPreferenceInput"][];
         };
         UpdateRoleRequest: {
             description: string | null;
@@ -2118,6 +2610,112 @@ export interface components {
             levels: string[];
             /** Format: int32 */
             termCount: number;
+        };
+        WebhookCreatedDto: {
+            webhook: components["schemas"]["WebhookDto"];
+            secret: string;
+        };
+        WebhookDeliveryDetailDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            webhookId: string;
+            webhookName: string;
+            /** Format: uuid */
+            eventId: string;
+            eventType: string;
+            status: string;
+            /** Format: int32 */
+            attempt: number;
+            /** Format: int32 */
+            maxAttempts: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            nextAttemptAt: string | null;
+            /** Format: date-time */
+            deliveredAt: string | null;
+            /** Format: int32 */
+            lastStatusCode: number | null;
+            lastError: string | null;
+            /** Format: int32 */
+            lastDurationMs: number | null;
+            /** Format: uuid */
+            replayOf: string | null;
+            payload: components["schemas"]["JsonElement"];
+            responseExcerpt: string | null;
+        };
+        WebhookDeliveryDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            webhookId: string;
+            webhookName: string;
+            /** Format: uuid */
+            eventId: string;
+            eventType: string;
+            status: string;
+            /** Format: int32 */
+            attempt: number;
+            /** Format: int32 */
+            maxAttempts: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            nextAttemptAt: string | null;
+            /** Format: date-time */
+            deliveredAt: string | null;
+            /** Format: int32 */
+            lastStatusCode: number | null;
+            lastError: string | null;
+            /** Format: int32 */
+            lastDurationMs: number | null;
+            /** Format: uuid */
+            replayOf: string | null;
+        };
+        WebhookDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            url: string;
+            secretLast4: string;
+            events: string[];
+            active: boolean;
+            /** Format: uuid */
+            createdBy: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            stats: components["schemas"]["WebhookStatsDto"];
+        };
+        WebhookEventTypeDto: {
+            name: string;
+            category: string;
+            description: string;
+            derived: boolean;
+        };
+        WebhookInput: {
+            name: string;
+            url: string;
+            events: string[];
+            /** @default true */
+            active: boolean;
+        };
+        WebhookSecretDto: {
+            webhook: components["schemas"]["WebhookDto"];
+            secret: string;
+        };
+        WebhookStatsDto: {
+            /** Format: int32 */
+            succeeded24h: number;
+            /** Format: int32 */
+            failed24h: number;
+            /** Format: int32 */
+            pending: number;
+            /** Format: date-time */
+            lastDeliveryAt: string | null;
+            lastStatus: string | null;
         };
         WorkflowBindingDto: {
             /** Format: uuid */
@@ -4705,6 +5303,647 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WorkflowTaskDto"];
                 };
+            };
+        };
+    };
+    ListNotifications: {
+        parameters: {
+            query?: {
+                unread?: boolean;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfNotificationDto"];
+                };
+            };
+        };
+    };
+    GetUnreadNotificationCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCountDto"];
+                };
+            };
+        };
+    };
+    MarkAllNotificationsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkAllReadResultDto"];
+                };
+            };
+        };
+    };
+    MarkNotificationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationDto"];
+                };
+            };
+        };
+    };
+    GetNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesDto"];
+                };
+            };
+        };
+    };
+    UpdateNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNotificationPreferencesInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesDto"];
+                };
+            };
+        };
+    };
+    ListNotificationChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationChannelDto"][];
+                };
+            };
+        };
+    };
+    CreateNotificationChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationChannelInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationChannelDto"];
+                };
+            };
+        };
+    };
+    GetNotificationChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationChannelDto"];
+                };
+            };
+        };
+    };
+    UpdateNotificationChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationChannelInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationChannelDto"];
+                };
+            };
+        };
+    };
+    DeleteNotificationChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TestNotificationChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelTestResultDto"];
+                };
+            };
+        };
+    };
+    ListWebhookEventTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEventTypeDto"][];
+                };
+            };
+        };
+    };
+    ListWebhooks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDto"][];
+                };
+            };
+        };
+    };
+    CreateWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookCreatedDto"];
+                };
+            };
+        };
+    };
+    GetWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDto"];
+                };
+            };
+        };
+    };
+    UpdateWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDto"];
+                };
+            };
+        };
+    };
+    DeleteWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RotateWebhookSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookSecretDto"];
+                };
+            };
+        };
+    };
+    PingWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryDetailDto"];
+                };
+            };
+        };
+    };
+    ListWebhookDeliveries: {
+        parameters: {
+            query?: {
+                status?: string;
+                eventType?: string;
+                from?: string;
+                to?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfWebhookDeliveryDto"];
+                };
+            };
+        };
+    };
+    ListAllWebhookDeliveries: {
+        parameters: {
+            query?: {
+                webhookId?: string;
+                status?: string;
+                eventType?: string;
+                from?: string;
+                to?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfWebhookDeliveryDto"];
+                };
+            };
+        };
+    };
+    GetWebhookDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryDetailDto"];
+                };
+            };
+        };
+    };
+    ReplayWebhookDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryDetailDto"];
+                };
+            };
+        };
+    };
+    ListAudit: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                actor?: string;
+                action?: string;
+                entityType?: string;
+                entityId?: string;
+                q?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfAuditEntryDto"];
+                };
+            };
+        };
+    };
+    ListAuditActions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
+    VerifyAudit: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditVerificationDto"];
+                };
+            };
+        };
+    };
+    ExportAudit: {
+        parameters: {
+            query?: {
+                format?: string;
+                from?: string;
+                to?: string;
+                actor?: string;
+                action?: string;
+                entityType?: string;
+                entityId?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -42,25 +42,33 @@ public sealed class User : AggregateRoot
     public UserStatus Status { get; private set; } = UserStatus.Active;
     /// <summary>ABAC attributes (region, dealer, brand, channel) as synced from the IdP token.</summary>
     public Dictionary<string, string[]> Attributes { get; private set; } = [];
+    /// <summary>Role names (lower case) the identity provider put in the user's token the last time they signed in. Requests are authorised from the
+    /// live token; this copy exists so background work (notifications) can tell who holds a role without a token.</summary>
+    public List<string> IdpRoles { get; private set; } = [];
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset LastSeenAt { get; private set; }
 
     public static User Provision(Guid tenantId, string subject, string email, string displayName,
-        Dictionary<string, string[]> attributes, DateTimeOffset now)
+        Dictionary<string, string[]> attributes, DateTimeOffset now, IEnumerable<string>? idpRoles = null)
     {
         var u = new User
         {
             TenantId = tenantId, ExternalSubject = subject, Email = email, DisplayName = displayName,
-            Attributes = Normalize(attributes), CreatedAt = now, LastSeenAt = now,
+            Attributes = Normalize(attributes), IdpRoles = NormalizeRoles(idpRoles), CreatedAt = now, LastSeenAt = now,
         };
         u.Raise(new UserProvisioned(u.Id, subject, email));
         return u;
     }
 
     /// <summary>Applies IdP claims. Returns true when something changed.</summary>
-    public bool SyncFromIdp(string email, string displayName, Dictionary<string, string[]> attributes, DateTimeOffset now)
+    public bool SyncFromIdp(string email, string displayName, Dictionary<string, string[]> attributes, DateTimeOffset now, IEnumerable<string>? idpRoles = null)
     {
         var changed = false;
+        if (idpRoles is not null)
+        {
+            var roles = NormalizeRoles(idpRoles);
+            if (!roles.SequenceEqual(IdpRoles)) { IdpRoles = roles; changed = true; }
+        }
         if (Email != email) { Email = email; changed = true; }
         if (DisplayName != displayName) { DisplayName = displayName; changed = true; }
         var normalized = Normalize(attributes);
@@ -70,6 +78,9 @@ public sealed class User : AggregateRoot
     }
 
     public void SetStatus(UserStatus status) => Status = status;
+
+    private static List<string> NormalizeRoles(IEnumerable<string>? roles) =>
+        (roles ?? []).Select(r => r.Trim().ToLowerInvariant()).Where(r => r.Length is > 0 and <= 100).Distinct().Order(StringComparer.Ordinal).Take(100).ToList();
 
     private static Dictionary<string, string[]> Normalize(Dictionary<string, string[]> a) =>
         a.Where(kv => Dimensions.All.Contains(kv.Key) && kv.Value.Length > 0)

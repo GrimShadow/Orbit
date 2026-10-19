@@ -5,6 +5,8 @@ using Dam.Domain.Assets;
 using Dam.Domain.Common;
 using Dam.Domain.Content;
 using Dam.Domain.Identity;
+using Dam.Domain.Notifications;
+using Dam.Domain.Webhooks;
 using Dam.Domain.Workflow;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -42,6 +44,13 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<WorkflowBinding> WorkflowBindings => Set<WorkflowBinding>();
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
     public DbSet<WorkflowTask> WorkflowTasks => Set<WorkflowTask>();
+    public DbSet<Webhook> Webhooks => Set<Webhook>();
+    public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+    public DbSet<NotificationChannel> NotificationChannels => Set<NotificationChannel>();
+    public DbSet<NotificationDelivery> NotificationDeliveries => Set<NotificationDelivery>();
+    public DbSet<SiemCursor> SiemCursors => Set<SiemCursor>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -71,6 +80,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.Property(x => x.Hash).ValueGeneratedOnAdd();
             e.HasIndex(x => new { x.TenantId, x.ChainNo }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.EntityType, x.EntityId });
+            e.HasIndex(x => new { x.TenantId, x.Ts });
         });
 
         ConfigureIdentity(b);
@@ -82,6 +92,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureCollections(b);
         ConfigureUsage(b);
         ConfigureWorkflow(b);
+        ConfigureNotifications(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -108,6 +119,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.Ignore(x => x.DomainEvents);
             e.Property(x => x.Status).HasConversion<string>();
             e.Property(x => x.Attributes).AsJsonDictionary();
+            e.Property(x => x.IdpRoles).HasColumnType("text[]");
             e.HasIndex(x => new { x.TenantId, x.ExternalSubject }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.Email });
         });
@@ -391,6 +403,85 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasIndex(x => new { x.InstanceId, x.StepId, x.Round });
             // The SLA job sweeps every tenant for open, not-yet-breached tasks past their due time.
             e.HasIndex(x => new { x.Status, x.DueAt }).HasFilter("status = 'pending' AND sla_breached_at IS NULL AND due_at IS NOT NULL").HasDatabaseName("ix_workflow_tasks_sla_sweep");
+        });
+    }
+
+    private static void ConfigureNotifications(ModelBuilder b)
+    {
+        b.Entity<Webhook>(e =>
+        {
+            e.ToTable("webhooks");
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Url).HasMaxLength(2000);
+            e.Property(x => x.SecretCipher).HasMaxLength(500);
+            e.Property(x => x.SecretLast4).HasMaxLength(8);
+            e.Property(x => x.Events).HasColumnType("text[]");
+            e.HasIndex(x => new { x.TenantId, x.Active });
+        });
+        b.Entity<WebhookDelivery>(e =>
+        {
+            e.ToTable("webhook_deliveries", t => t.HasCheckConstraint("ck_webhook_deliveries_status", "status IN ('pending','succeeded','failed')"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EventType).HasMaxLength(100);
+            e.Property(x => x.Payload).HasColumnType("jsonb");
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.Property(x => x.LastError).HasMaxLength(500);
+            e.Property(x => x.ResponseExcerpt).HasMaxLength(4096);
+            e.HasOne<Webhook>().WithMany().HasForeignKey(x => x.WebhookId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.TenantId, x.WebhookId, x.Id });
+            e.HasIndex(x => new { x.TenantId, x.Status, x.Id });
+            e.HasIndex(x => x.ReplayOf).HasFilter("replay_of IS NOT NULL");
+            // One delivery per event per webhook; replays are extra deliveries of the same event and are exempt.
+            e.HasIndex(x => new { x.WebhookId, x.EventId }).IsUnique().HasFilter("replay_of IS NULL").HasDatabaseName("ux_webhook_deliveries_event");
+            // The retry job sweeps every tenant for pending deliveries that are due.
+            e.HasIndex(x => new { x.Status, x.NextAttemptAt }).HasFilter("status = 'pending'").HasDatabaseName("ix_webhook_deliveries_due");
+        });
+        b.Entity<Notification>(e =>
+        {
+            e.ToTable("notifications");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Type).HasMaxLength(100);
+            e.Property(x => x.Category).HasMaxLength(40);
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.Property(x => x.Body).HasMaxLength(2000);
+            e.Property(x => x.LinkUrl).HasMaxLength(500);
+            e.HasIndex(x => new { x.TenantId, x.UserId, x.Id });
+            e.HasIndex(x => new { x.TenantId, x.UserId }).HasFilter("read_at IS NULL").HasDatabaseName("ix_notifications_unread");
+        });
+        b.Entity<NotificationPreference>(e =>
+        {
+            e.ToTable("notification_preferences");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Category).HasMaxLength(40);
+            e.HasIndex(x => new { x.TenantId, x.UserId, x.Category }).IsUnique();
+        });
+        b.Entity<NotificationChannel>(e =>
+        {
+            e.ToTable("notification_channels", t => t.HasCheckConstraint("ck_notification_channels_kind", "kind IN ('slack','teams')"));
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.Kind).HasMaxLength(16);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.UrlCipher).HasMaxLength(4000);
+            e.Property(x => x.UrlHint).HasMaxLength(300);
+            e.Property(x => x.Events).HasColumnType("text[]");
+            e.HasIndex(x => new { x.TenantId, x.Active });
+        });
+        b.Entity<NotificationDelivery>(e =>
+        {
+            e.ToTable("notification_deliveries");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Channel).HasMaxLength(16);
+            e.Property(x => x.Recipient).HasMaxLength(64);
+            e.HasIndex(x => new { x.TenantId, x.EventId, x.Channel, x.Recipient }).IsUnique();
+        });
+        b.Entity<SiemCursor>(e =>
+        {
+            e.ToTable("siem_cursors");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.TenantId).IsUnique();
         });
     }
 

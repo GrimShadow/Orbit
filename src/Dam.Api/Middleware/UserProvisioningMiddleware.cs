@@ -28,7 +28,7 @@ public sealed class UserProvisioningMiddleware(RequestDelegate next, IMemoryCach
             return;
         }
 
-        var command = new ProvisionUserCommand(user.Subject, user.Email ?? "", user.DisplayName ?? "", user.Attributes, user.Groups);
+        var command = new ProvisionUserCommand(user.Subject, user.Email ?? "", user.DisplayName ?? "", user.Attributes, user.Groups, user.Roles.ToList());
         var key = CacheKey(tenant, command);
         if (!cache.TryGetValue(key, out _))
         {
@@ -68,7 +68,7 @@ public sealed class UserProvisioningMiddleware(RequestDelegate next, IMemoryCach
     private static string CacheKey(Guid tenant, ProvisionUserCommand c)
     {
         var raw = string.Join('|', c.Subject, c.Email, c.DisplayName,
-            string.Join(',', c.Groups.Order()),
+            string.Join(',', c.Groups.Order()), string.Join(',', (c.Roles ?? []).Order()),
             string.Join(';', c.Attributes.OrderBy(a => a.Key).Select(a => $"{a.Key}={string.Join(',', a.Value.Order())}")));
         return $"prov:{tenant}:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw)))}";
     }

@@ -5,6 +5,9 @@ import { ApiError } from './api/client';
 import { TasksPage } from './features/workflow/tasks/TasksPage';
 import { WorkflowDesignerPage } from './features/workflow/designer/WorkflowDesignerPage';
 import { WorkflowsPage } from './features/workflow/designer/WorkflowsPage';
+import { AuditPage } from './features/audit/AuditPage';
+import { NotificationsPage } from './features/notifications/NotificationsPage';
+import { WebhooksPage } from './features/webhooks/WebhooksPage';
 import { UnusedAssetsPage } from './features/analytics/UnusedAssetsPage';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { AssetDetailPage } from './features/asset/AssetDetailPage';
@@ -43,6 +46,9 @@ export function App() {
                 <Route path="/collections/:id" element={<CollectionDetailPage />} />
                 <Route path="/insights/unused" element={<UnusedAssetsPage />} />
                 <Route path="/tasks" element={<TasksPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/admin/webhooks" element={<WebhooksPage />} />
+                <Route path="/admin/audit" element={<AuditPage />} />
                 <Route path="/admin/workflows" element={<WorkflowsPage />} />
                 <Route path="/admin/workflows/:id" element={<WorkflowDesignerPage />} />
                 <Route path="/upload" element={<UploadPage />} />

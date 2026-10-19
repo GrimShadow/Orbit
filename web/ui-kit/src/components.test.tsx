@@ -207,6 +207,23 @@ describe('Tabs', () => {
   });
 });
 
+describe('Tabs (controlled)', () => {
+  it('follows `value` and reports a click through `onChange`', async () => {
+    const onChange = vi.fn();
+    const tabs = [
+      { id: 'a', label: 'Details', content: 'Panel A' },
+      { id: 'b', label: 'Versions', content: 'Panel B' },
+    ];
+    const { rerender } = render(<Tabs label="Asset" tabs={tabs} value="b" onChange={onChange} />);
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Panel B');
+    await userEvent.click(screen.getByRole('tab', { name: 'Details' }));
+    expect(onChange).toHaveBeenCalledWith('a');
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Panel B'); // the parent decides
+    rerender(<Tabs label="Asset" tabs={tabs} value="a" onChange={onChange} />);
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Panel A');
+  });
+});
+
 describe('Tree', () => {
   it('follows the WAI-ARIA keyboard model', async () => {
     const onSelect = vi.fn();

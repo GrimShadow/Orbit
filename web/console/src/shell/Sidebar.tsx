@@ -5,9 +5,11 @@ import {
   FlowArrow,
   House,
   Images,
+  ListMagnifyingGlass,
   MagnifyingGlass,
   Stack,
   UploadSimple,
+  WebhooksLogo,
   type Icon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
@@ -36,6 +38,8 @@ export const NAV_ITEMS: NavItem[] = [
 /** Administration sections, shown in the sidebar only to people holding the named permission. */
 export const ADMIN_ITEMS: (NavItem & { permission: string })[] = [
   { to: '/admin/workflows', labelKey: 'nav.workflows', Icon: FlowArrow, permission: 'workflow.manage' },
+  { to: '/admin/webhooks', labelKey: 'nav.webhooks', Icon: WebhooksLogo, permission: 'webhooks.manage' },
+  { to: '/admin/audit', labelKey: 'nav.audit', Icon: ListMagnifyingGlass, permission: 'audit.read' },
 ];
 
 interface SidebarProps {

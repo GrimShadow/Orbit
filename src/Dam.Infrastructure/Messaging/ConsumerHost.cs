@@ -114,9 +114,12 @@ public sealed class ConsumerHost<T>(
             }
             else
             {
-                await sp.GetRequiredService<T>().HandleAsync(envelope, default);
+                var consumer = sp.GetRequiredService<T>();
+                await consumer.HandleAsync(envelope, default);
                 await PersistAggregateEventsAsync(sp);
                 await uow.CommitAsync(default);
+                try { await consumer.AfterCommitAsync(envelope, default); }
+                catch (Exception ex) { log.LogWarning(ex, "{Consumer}: post-commit work for {MessageId} failed", _name, messageId); }
             }
             await ch.BasicAckAsync(ea.DeliveryTag, false);
         }

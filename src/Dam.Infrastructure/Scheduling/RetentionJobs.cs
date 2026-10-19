@@ -19,6 +19,9 @@ public readonly record struct AssetLead(Guid TenantId, Guid AssetId);
 /// </summary>
 public abstract class CrossTenantJob(IServiceScopeFactory scopeFactory, NpgsqlDataSource systemDb, ILogger log)
 {
+    /// <summary>For subclasses that need to open their own tenant-scoped scopes.</summary>
+    protected IServiceScopeFactory Scopes => scopeFactory;
+
     /// <summary>Runs <paramref name="sql"/>, which selects <c>(id, tenant_id)</c> rows.</summary>
     protected Task<IReadOnlyList<AssetLead>> FindAsync(string sql, CancellationToken ct) => FindAsync(sql, null, ct);
 

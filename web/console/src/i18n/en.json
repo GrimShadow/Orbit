@@ -12,7 +12,10 @@
     "upload": "Upload",
     "account": "My account",
     "tasks": "Tasks",
-    "workflows": "Workflows"
+    "workflows": "Workflows",
+    "webhooks": "Webhooks",
+    "audit": "Audit log",
+    "notifications": "Notifications"
   },
   "shell": {
     "tenant": "Tenant",
