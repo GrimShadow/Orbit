@@ -159,6 +159,57 @@
 .dam-sidebar__toggle svg {
   margin-inline: 2px;
 }
+/* Count pill on a nav item (Tasks): solid so it reads on the selected item's tint too. */
+.dam-navbadge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--dam-brand);
+  color: var(--dam-on-brand);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.dam-navbadge--danger {
+  background: var(--dam-danger);
+  color: var(--dam-surface);
+}
+.dam-sidenav__item .dam-navbadge {
+  margin-inline-start: auto;
+}
+.dam-sidebar--collapsed .dam-sidenav__item {
+  position: relative;
+}
+.dam-sidebar--collapsed .dam-navbadge {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  margin: 0;
+}
+.dam-tabbar__iconwrap {
+  position: relative;
+  display: inline-flex;
+}
+.dam-tabbar__iconwrap .dam-navbadge {
+  position: absolute;
+  top: -6px;
+  inset-inline-start: 55%;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+}
+
 /* Collapsed rail: icons only, centred */
 .dam-sidebar--collapsed .dam-sidenav__label,
 .dam-sidebar--collapsed .dam-brand__word {

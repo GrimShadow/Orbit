@@ -58,6 +58,9 @@ export function useBulkTransition() {
           }),
         );
       }),
-    onSettled: () => void queryClient.invalidateQueries({ queryKey: ['assets'] }),
+    // A submit starts an approval workflow (and a withdraw ends one), so the task counts and workflow views refresh too.
+    onSettled: () => {
+      for (const key of ['assets', 'assetWorkflow', 'tasks']) void queryClient.invalidateQueries({ queryKey: [key] });
+    },
   });
 }

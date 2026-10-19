@@ -95,6 +95,15 @@ const OVERVIEW = {
   uploads: Array.from({ length: 12 }, (_, i) => ({ weekStart: day(77 - i * 7), count: 1 })),
   storage: { totalBytes: 5 * 1024 ** 3, byType: [{ type: 'image', count: 10, bytes: 5 * 1024 ** 3 }] },
 };
+const TASKS = {
+  pendingForMe: 3,
+  overdueForMe: 1,
+  pendingTotal: 5,
+  overdueTotal: 2,
+  completed30d: 12,
+  completedOnTime30d: 11,
+  slaAttainmentPercent: 91.7,
+};
 const UNUSED = {
   items: [
     {
@@ -136,6 +145,8 @@ function homeFetch(overrides: Record<string, () => Response> = {}) {
         });
       case '/api/v1/assets/links/batch':
         return json({ a1: 'https://cdn.example/a1.jpg', a2: null, a9: null });
+      case '/api/v1/tasks/summary':
+        return json(TASKS);
       case '/api/v1/analytics/overview':
         return json(OVERVIEW);
       case '/api/v1/analytics/unused-assets':
@@ -278,7 +289,10 @@ describe('home', () => {
 
     const stats = await screen.findByRole('list', { name: 'Library overview' });
     expect(await within(stats).findByRole('link', { name: /Total assets.*12/ })).toHaveAttribute('href', '/library');
-    expect(within(stats).getByRole('link', { name: /Published.*5/ })).toHaveAttribute('href', '/library?status=published');
+    expect(within(stats).getByRole('link', { name: /Total assets.*5 published/ })).toBeInTheDocument(); // the published count lives here now
+    expect(within(stats).queryByRole('link', { name: /^Published/ })).not.toBeInTheDocument();
+    const openTasks = await within(stats).findByRole('link', { name: /Open tasks.*3.*1 overdue.*92% on time/ });
+    expect(openTasks).toHaveAttribute('href', '/tasks');
     expect(await within(stats).findByText('5.0 GB')).toBeInTheDocument();
     expect(within(stats).getByText(/Uses, last 30 days/)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Uses per day over the last 30 days' })).toBeInTheDocument();
@@ -331,7 +345,51 @@ describe('home', () => {
     homeFetch({ '/api/v1/search': () => json({ title: 'Forbidden', status: 403 }, 403) });
     renderAt('/', signedIn);
     const stats = await screen.findByRole('list', { name: 'Library overview' });
-    expect(await within(stats).findAllByText('–', { selector: '.dam-stat__value' })).toHaveLength(2);
+    expect(await within(stats).findAllByText('–', { selector: '.dam-stat__value' })).toHaveLength(1);
+    expect(await within(stats).findByRole('link', { name: /Open tasks.*3/ })).toBeInTheDocument(); // independent of the library search
+  });
+
+  it('shows "None overdue" and leaves the SLA figure out when the caller is not allowed the tenant-wide numbers', async () => {
+    homeFetch({
+      '/api/v1/tasks/summary': () =>
+        json({
+          ...TASKS,
+          overdueForMe: 0,
+          pendingTotal: null,
+          overdueTotal: null,
+          completed30d: null,
+          completedOnTime30d: null,
+          slaAttainmentPercent: null,
+        }),
+    });
+    renderAt('/', signedIn);
+    const stats = await screen.findByRole('list', { name: 'Library overview' });
+    const card = await within(stats).findByRole('link', { name: /Open tasks/ });
+    expect(card).toHaveTextContent('None overdue');
+    expect(card).not.toHaveTextContent('on time');
+    expect(card.querySelector('.dam-stat--danger')).toBeNull();
+  });
+
+  it('marks the Open tasks card when something is overdue, and says when nothing is waiting', async () => {
+    homeFetch();
+    const { unmount } = renderAt('/', signedIn);
+    const stats = await screen.findByRole('list', { name: 'Library overview' });
+    const card = await within(stats).findByRole('link', { name: /Open tasks/ });
+    expect(card.querySelector('.dam-stat--danger')).not.toBeNull();
+    unmount();
+    queryClient.clear();
+
+    homeFetch({
+      '/api/v1/tasks/summary': () => json({ ...TASKS, pendingForMe: 0, overdueForMe: 0, slaAttainmentPercent: null }),
+    });
+    renderAt('/', signedIn);
+    expect(await screen.findByRole('link', { name: /Open tasks.*0.*Nothing waiting for you/ })).toBeInTheDocument();
+  });
+
+  it('shows the Open tasks card with a dash and a note when the summary cannot be loaded', async () => {
+    homeFetch({ '/api/v1/tasks/summary': () => json({ title: 'Forbidden', status: 403 }, 403) });
+    renderAt('/', signedIn);
+    expect(await screen.findByRole('link', { name: /Open tasks.*–.*Couldn't load/ })).toBeInTheDocument();
   });
 
   it('omits the usage panels, and shows review and draft counts instead, for a role without analytics access', async () => {
@@ -343,6 +401,7 @@ describe('home', () => {
     const stats = await screen.findByRole('list', { name: 'Library overview' });
     expect(await within(stats).findByRole('link', { name: /In review.*3/ })).toBeInTheDocument();
     expect(within(stats).getByRole('link', { name: /Drafts.*4/ })).toBeInTheDocument();
+    expect(within(stats).getByRole('link', { name: /Open tasks.*3/ })).toHaveAttribute('href', '/tasks');
     expect(screen.queryByRole('heading', { name: 'Not used' })).not.toBeInTheDocument();
     expect(screen.queryByText('Most used')).not.toBeInTheDocument();
   });

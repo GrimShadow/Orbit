@@ -112,7 +112,7 @@ public sealed class UpdateFolderValidator : AbstractValidator<UpdateFolderComman
     public UpdateFolderValidator() => RuleFor(x => x.Name).MaximumLength(200).When(x => x.Name is not null);
 }
 
-public sealed class UpdateFolderHandler(IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz, IEventCollector events)
+public sealed class UpdateFolderHandler(IRepository<Folder> folders, IRepository<Domain.Workflow.WorkflowDefinition> workflows, IQueryExecutor q, IAuthorizationService authz, IEventCollector events)
     : IRequestHandler<UpdateFolderCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(UpdateFolderCommand c, CancellationToken ct)
@@ -122,6 +122,8 @@ public sealed class UpdateFolderHandler(IRepository<Folder> folders, IQueryExecu
         if (!await FolderGuard.CanAsync(authz, Permissions.FoldersManage, f.Path, ct)) return Error.Forbidden();
         if (c.Name is { Length: 0 }) return Error.Validation(ContentMapping.Fail("name", "Name cannot be empty."));
         if (!ContentMapping.TryObject(c.InheritedMetadata, out var inherited, out var err)) return Error.Validation(ContentMapping.Fail("inheritedMetadata", err!));
+        if (!c.ClearDefaultWorkflow && c.DefaultWorkflowId is { } wid && !await q.AnyAsync(workflows.Query().Where(w => w.Id == wid), ct))
+            return Error.Validation(ContentMapping.Fail("defaultWorkflowId", "Workflow not found."));
 
         if (!string.IsNullOrWhiteSpace(c.Name)) f.Rename(c.Name);
         if (c.InheritedMetadata is not null) f.SetInheritedMetadata(inherited);

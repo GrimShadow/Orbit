@@ -5,6 +5,7 @@ using Dam.Domain.Assets;
 using Dam.Domain.Common;
 using Dam.Domain.Content;
 using Dam.Domain.Identity;
+using Dam.Domain.Workflow;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,10 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<Collection> Collections => Set<Collection>();
     public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
     public DbSet<AssetUsage> AssetUsages => Set<AssetUsage>();
+    public DbSet<WorkflowDefinition> WorkflowDefinitions => Set<WorkflowDefinition>();
+    public DbSet<WorkflowBinding> WorkflowBindings => Set<WorkflowBinding>();
+    public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
+    public DbSet<WorkflowTask> WorkflowTasks => Set<WorkflowTask>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -76,6 +81,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureRetention(b);
         ConfigureCollections(b);
         ConfigureUsage(b);
+        ConfigureWorkflow(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -319,6 +325,72 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasKey(x => x.AssetId);
             e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.TenantId, x.LastUsedAt });
+        });
+    }
+
+    private static void ConfigureWorkflow(ModelBuilder b)
+    {
+        b.Entity<WorkflowDefinition>(e =>
+        {
+            e.ToTable("workflow_definitions");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Description).HasMaxLength(1000);
+            e.Property(x => x.Json).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.TenantId, x.Name });
+        });
+        b.Entity<WorkflowBinding>(e =>
+        {
+            e.ToTable("workflow_bindings");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AssetType).HasMaxLength(16);
+            e.Property(x => x.Region).HasMaxLength(64);
+            e.HasOne<WorkflowDefinition>().WithMany().HasForeignKey(x => x.WorkflowId).OnDelete(DeleteBehavior.Restrict);
+            // One binding per (type, region); NULL means "any", and two NULLs must clash, so nulls are treated as equal.
+            e.HasIndex(x => new { x.TenantId, x.AssetType, x.Region }).IsUnique().AreNullsDistinct(false);
+            e.HasIndex(x => x.WorkflowId);
+        });
+        b.Entity<WorkflowInstance>(e =>
+        {
+            e.ToTable("workflow_instances", t => t.HasCheckConstraint("ck_workflow_instances_status", "status IN ('running','approved','rejected','cancelled')"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.DefinitionName).HasMaxLength(200);
+            e.Property(x => x.DefinitionJson).HasColumnType("jsonb");   // the frozen snapshot this instance runs by
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.Property(x => x.OutcomeReason).HasMaxLength(500);
+            e.Property(x => x.OutcomeStatus).HasMaxLength(16);
+            // Deleting a definition keeps the history of what ran: the snapshot above is all an instance needs.
+            e.HasOne<WorkflowDefinition>().WithMany().HasForeignKey(x => x.DefinitionId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Dam.Domain.Assets.Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.TenantId, x.AssetId, x.StartedAt });
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => x.DefinitionId);
+            // An asset is in at most one workflow at a time; two submits racing cannot both start one.
+            e.HasIndex(x => x.AssetId).IsUnique().HasFilter("status = 'running'").HasDatabaseName("ux_workflow_instances_running_per_asset");
+        });
+        b.Entity<WorkflowTask>(e =>
+        {
+            e.ToTable("workflow_tasks", t => t.HasCheckConstraint("ck_workflow_tasks_status", "status IN ('pending','approved','rejected','cancelled')"));
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.StepId).HasMaxLength(40);
+            e.Property(x => x.StepName).HasMaxLength(100);
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.Property(x => x.Comment).HasMaxLength(1000);
+            e.Property(x => x.AssigneeRoles).HasColumnType("text[]");
+            e.Property(x => x.AssigneeUserIds).HasColumnType("uuid[]");
+            e.Property(x => x.EscalatedRoles).HasColumnType("text[]");
+            e.Property(x => x.EscalatedUserIds).HasColumnType("uuid[]");
+            e.HasOne<WorkflowInstance>().WithMany().HasForeignKey(x => x.InstanceId).OnDelete(DeleteBehavior.Cascade);
+            // Inbox: open tasks of a tenant, found by assignee (GIN on the arrays) and listed newest first.
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => x.AssigneeRoles).HasMethod("gin");
+            e.HasIndex(x => x.AssigneeUserIds).HasMethod("gin");
+            e.HasIndex(x => new { x.TenantId, x.DecidedBy }).HasFilter("decided_by IS NOT NULL");
+            e.HasIndex(x => new { x.TenantId, x.AssetId });
+            e.HasIndex(x => new { x.InstanceId, x.StepId, x.Round });
+            // The SLA job sweeps every tenant for open, not-yet-breached tasks past their due time.
+            e.HasIndex(x => new { x.Status, x.DueAt }).HasFilter("status = 'pending' AND sla_breached_at IS NULL AND due_at IS NOT NULL").HasDatabaseName("ix_workflow_tasks_sla_sweep");
         });
     }
 

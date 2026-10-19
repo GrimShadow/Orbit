@@ -2,6 +2,7 @@ using System.Text.Json;
 using Dam.Application.Abstractions;
 using Dam.Application.Content;
 using Dam.Application.Messaging;
+using Dam.Application.Workflow;
 using Dam.Domain.Assets;
 using Dam.Domain.Authorization;
 using Dam.Domain.Common;
@@ -16,6 +17,8 @@ namespace Dam.Application.Assets;
 /// machine itself (which actions are legal from which status) lives in <see cref="AssetLifecycle"/>; this handler adds the
 /// guards the spec calls for on top: permission, required metadata complete (submit, publish) and workflow approved
 /// (publish) — "rights valid" is not checked yet, since no Rights entity exists (spec Phase 2.5).
+/// <para>When a workflow applies to the asset (ADR-0030), submit also starts it and approving or rejecting is done through its
+/// tasks instead of directly; withdrawing cancels it. When none applies, nothing about the transitions changes.</para>
 /// </summary>
 public sealed record TransitionAssetCommand(Guid AssetId, string Action, string? Reason) : ICommand<AssetDto>;
 
@@ -30,7 +33,7 @@ public sealed class TransitionAssetValidator : AbstractValidator<TransitionAsset
 
 public sealed class TransitionAssetHandler(
     IRepository<Asset> assets, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz,
-    AssetMetadataBuilder builder, IWorkflowGate workflow, IClock clock)
+    AssetMetadataBuilder builder, IWorkflowGate workflow, WorkflowRuntime runtime, IClock clock)
     : IRequestHandler<TransitionAssetCommand, AssetDto>
 {
     // The response is built from the asset just transitioned, not read back afterwards: some actions (e.g. approve) move
@@ -43,6 +46,8 @@ public sealed class TransitionAssetHandler(
         if (!AssetLifecycle.TryGetTarget(asset.Status, c.Action, out var to))
             return Error.Conflict($"Cannot {c.Action} an asset that is {asset.Status.Replace('_', ' ')}.");
         if (!await authz.CanAsync(Permission(c.Action), asset.ToResource(path), ct)) return Error.Forbidden();
+        if (c.Action is AssetLifecycle.Approve or AssetLifecycle.Reject && await runtime.HasRunningAsync(asset.Id, ct))
+            return Error.Conflict("This asset is going through a workflow. Decide via the workflow task instead.");
 
         if (c.Action is AssetLifecycle.Submit or AssetLifecycle.Publish)
         {
@@ -52,7 +57,17 @@ public sealed class TransitionAssetHandler(
         if (c.Action == AssetLifecycle.Publish && !await workflow.IsApprovedAsync(asset.Id, ct))
             return Error.Conflict("This asset has not completed its approval workflow.");
 
-        asset.ChangeStatus(to, c.Reason ?? DefaultReason(c.Action), clock.UtcNow);
+        var reason = c.Reason ?? DefaultReason(c.Action);
+        if (c.Action == AssetLifecycle.Submit)
+        {
+            var started = await runtime.StartIfBoundAsync(asset, path, (await authz.GetProfileAsync(ct)).UserId, ct);
+            if (started.IsFailure) return started.Error;
+            if (started.Value is { } workflowName && c.Reason is null) reason = $"Submitted for review (workflow '{workflowName}').";
+        }
+        else if (c.Action == AssetLifecycle.Withdraw && asset.Status == AssetStatuses.InReview)
+            await runtime.CancelRunningAsync(asset.Id, AssetStatuses.Draft, c.Reason ?? "Withdrawn.", ct);
+
+        asset.ChangeStatus(to, reason, clock.UtcNow);
         return AssetMapping.ToDto(asset);
     }
 
@@ -80,10 +95,4 @@ public sealed class TransitionAssetHandler(
         AssetLifecycle.Archive => "Archived.",
         _ => action,
     };
-}
-
-/// <summary>The only implementation until Phase 2 builds a real workflow engine: nothing is ever blocked on it.</summary>
-public sealed class AlwaysApprovedWorkflowGate : IWorkflowGate
-{
-    public Task<bool> IsApprovedAsync(Guid assetId, CancellationToken ct) => Task.FromResult(true);
 }

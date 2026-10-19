@@ -35,10 +35,11 @@ export const termsOptions = (api: ApiClient, vocabularyId: string) =>
     },
   });
 
-/** A title, tag, metadata or status change makes any cached grid/list stale; the single-asset caches are set directly. */
+/** A title, tag, metadata or status change makes any cached grid/list stale; the single-asset caches are set directly.
+ * A status change can also start, finish or cancel an approval workflow, so the workflow views and task counts refresh too. */
 function refreshLists(queryClient: QueryClient) {
   void queryClient.invalidateQueries({
-    predicate: (q) => ['assets', 'search', 'collections'].includes(String(q.queryKey[0])),
+    predicate: (q) => ['assets', 'search', 'collections', 'assetWorkflow', 'tasks'].includes(String(q.queryKey[0])),
   });
 }
 

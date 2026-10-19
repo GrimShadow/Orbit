@@ -152,6 +152,38 @@
         }
       }
     },
+    "/api/v1/assets/{id}/workflow": {
+      "get": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "The asset\u0027s latest workflow as a timeline of steps and their tasks; instance is null when none ever applied",
+        "operationId": "GetAssetWorkflow",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetWorkflowDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tenants/current": {
       "get": {
         "tags": [
@@ -1631,7 +1663,7 @@
         "tags": [
           "Templates"
         ],
-        "summary": "Starter packs: vocabularies, metadata schemas and folders",
+        "summary": "Starter packs: vocabularies, metadata schemas, folders and workflows",
         "operationId": "ListTemplates",
         "responses": {
           "200": {
@@ -3287,6 +3319,355 @@
           }
         }
       }
+    },
+    "/api/v1/workflows": {
+      "get": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Workflow definitions with how many folders and bindings use each and how many assets are running through it. Needs workflow.manage or folders.manage",
+        "operationId": "ListWorkflows",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Create a workflow from a definition (version 1: steps, assignees, any/all, SLA, escalation, routing). An invalid definition is 422 with errors addressed by path",
+        "operationId": "CreateWorkflow",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkflowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/validate": {
+      "post": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Checks a definition without saving it. Always 200: valid, or a list of errors addressed by path (for the designer\u0027s live feedback)",
+        "operationId": "ValidateWorkflow",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateWorkflowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateWorkflowResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/bindings": {
+      "get": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Which workflow applies to assets of a type and/or region when no folder names a default",
+        "operationId": "ListWorkflowBindings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowBindingDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Replaces the whole list of type/region bindings. Needs workflow.manage",
+        "operationId": "ReplaceWorkflowBindings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceWorkflowBindingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowBindingDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/{id}": {
+      "get": {
+        "tags": [
+          "Workflow"
+        ],
+        "operationId": "GetWorkflow",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Replaces a workflow. Assets already going through it keep the definition they started with",
+        "operationId": "UpdateWorkflow",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkflowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "409 while a folder uses it as default, a binding points at it, or an asset is running through it",
+        "operationId": "DeleteWorkflow",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/tasks": {
+      "get": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "The task inbox: tasks the caller can decide (assignee=me, default) or has decided; assignee=all lists every task and needs workflow.manage. status=pending (default), decided or all",
+        "operationId": "ListTasks",
+        "parameters": [
+          {
+            "name": "assignee",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOfWorkflowTaskDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/summary": {
+      "get": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Counts for the caller\u0027s inbox, plus tenant totals and 30-day SLA attainment for workflow.manage / analytics.read holders (null for others)",
+        "operationId": "GetTaskSummary",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskSummaryDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{id}/decision": {
+      "post": {
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Approve or reject a task (a comment is required to reject). Needs to be an assignee, workflow.tasks.decide and assets.approve on the asset. 409 if already decided",
+        "operationId": "DecideTask",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideTaskInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowTaskDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3542,6 +3923,17 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "AssetWorkflowDto": {
+        "required": [
+          "instance"
+        ],
+        "type": "object",
+        "properties": {
+          "instance": {
+            "$ref": "#/components/schemas/WorkflowInstanceViewDto"
           }
         }
       },
@@ -4025,6 +4417,42 @@
             "items": {
               "type": "string"
             },
+            "nullable": true
+          }
+        }
+      },
+      "CreateWorkflowRequest": {
+        "required": [
+          "name",
+          "description",
+          "definition"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "definition": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          }
+        }
+      },
+      "DecideTaskInput": {
+        "required": [
+          "decision",
+          "comment"
+        ],
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string",
             "nullable": true
           }
         }
@@ -4518,6 +4946,25 @@
           }
         }
       },
+      "PageOfWorkflowTaskDto": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowTaskDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "PartEtag": {
         "required": [
           "partNumber",
@@ -4708,6 +5155,20 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "ReplaceWorkflowBindingsRequest": {
+        "required": [
+          "bindings"
+        ],
+        "type": "object",
+        "properties": {
+          "bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowBindingInput"
+            }
           }
         }
       },
@@ -5320,6 +5781,53 @@
           }
         }
       },
+      "TaskSummaryDto": {
+        "required": [
+          "pendingForMe",
+          "overdueForMe",
+          "pendingTotal",
+          "overdueTotal",
+          "completed30d",
+          "completedOnTime30d",
+          "slaAttainmentPercent"
+        ],
+        "type": "object",
+        "properties": {
+          "pendingForMe": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "overdueForMe": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pendingTotal": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "overdueTotal": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "completed30d": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "completedOnTime30d": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "slaAttainmentPercent": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        }
+      },
       "TemplateApplyResultDto": {
         "required": [
           "applied",
@@ -5327,7 +5835,8 @@
           "termsCreated",
           "schemasCreated",
           "schemasExtended",
-          "foldersCreated"
+          "foldersCreated",
+          "workflowsCreated"
         ],
         "type": "object",
         "properties": {
@@ -5356,6 +5865,10 @@
           "foldersCreated": {
             "type": "integer",
             "format": "int32"
+          },
+          "workflowsCreated": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -5368,7 +5881,8 @@
           "vocabularies",
           "terms",
           "schemas",
-          "folders"
+          "folders",
+          "workflows"
         ],
         "type": "object",
         "properties": {
@@ -5400,6 +5914,10 @@
             "format": "int32"
           },
           "folders": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workflows": {
             "type": "integer",
             "format": "int32"
           }
@@ -5905,6 +6423,26 @@
           }
         }
       },
+      "UpdateWorkflowRequest": {
+        "required": [
+          "name",
+          "description",
+          "definition"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "definition": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          }
+        }
+      },
       "UploadDto": {
         "required": [
           "id",
@@ -6273,6 +6811,35 @@
           }
         }
       },
+      "ValidateWorkflowRequest": {
+        "required": [
+          "definition"
+        ],
+        "type": "object",
+        "properties": {
+          "definition": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          }
+        }
+      },
+      "ValidateWorkflowResultDto": {
+        "required": [
+          "valid",
+          "errors"
+        ],
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowErrorDto"
+            }
+          }
+        }
+      },
       "ValidationResultDto": {
         "required": [
           "valid",
@@ -6352,6 +6919,336 @@
             "format": "int32"
           }
         }
+      },
+      "WorkflowBindingDto": {
+        "required": [
+          "id",
+          "workflowId",
+          "workflowName",
+          "assetType",
+          "region"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workflowId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workflowName": {
+            "type": "string"
+          },
+          "assetType": {
+            "type": "string",
+            "nullable": true
+          },
+          "region": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "WorkflowBindingInput": {
+        "required": [
+          "workflowId",
+          "assetType",
+          "region"
+        ],
+        "type": "object",
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetType": {
+            "type": "string",
+            "nullable": true
+          },
+          "region": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "WorkflowDto": {
+        "required": [
+          "id",
+          "name",
+          "description",
+          "definition",
+          "usedByFolders",
+          "bindings",
+          "runningInstances",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "usedByFolders": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bindings": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "runningInstances": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WorkflowErrorDto": {
+        "required": [
+          "path",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkflowInstanceViewDto": {
+        "required": [
+          "id",
+          "workflowName",
+          "status",
+          "startedBy",
+          "startedByName",
+          "startedAt",
+          "completedAt",
+          "outcomeReason",
+          "outcomeStatus",
+          "autoPublish",
+          "steps"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workflowName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "startedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "startedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "outcomeReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "outcomeStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "autoPublish": {
+            "type": "boolean"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowStepViewDto"
+            }
+          }
+        },
+        "nullable": true
+      },
+      "WorkflowStepViewDto": {
+        "required": [
+          "id",
+          "name",
+          "state",
+          "mode",
+          "slaHours",
+          "tasks"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "slaHours": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowTaskDto"
+            }
+          }
+        }
+      },
+      "WorkflowTaskDto": {
+        "required": [
+          "id",
+          "assetId",
+          "assetTitle",
+          "assetType",
+          "workflowName",
+          "stepId",
+          "stepName",
+          "status",
+          "assigneeRoles",
+          "assigneeUserIds",
+          "dueAt",
+          "slaBreached",
+          "slaBreachedAt",
+          "createdAt",
+          "decision",
+          "decidedBy",
+          "decidedAt",
+          "comment",
+          "escalated",
+          "decidedByName",
+          "instanceId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetTitle": {
+            "type": "string"
+          },
+          "assetType": {
+            "type": "string"
+          },
+          "workflowName": {
+            "type": "string"
+          },
+          "stepId": {
+            "type": "string"
+          },
+          "stepName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "assigneeRoles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "assigneeUserIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "slaBreached": {
+            "type": "boolean"
+          },
+          "slaBreachedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decision": {
+            "type": "string",
+            "nullable": true
+          },
+          "decidedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true
+          },
+          "escalated": {
+            "type": "boolean"
+          },
+          "decidedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "instanceId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
       }
     }
   },
@@ -6364,6 +7261,9 @@
     },
     {
       "name": "Usage"
+    },
+    {
+      "name": "Workflow"
     },
     {
       "name": "Tenant"

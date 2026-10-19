@@ -200,7 +200,11 @@ export function useItemActions({ onOpenFolder, onFolderDeleted }: Options = {}) 
               push(
                 result.failed.length === 0
                   ? { title: t('library.card.actionDone', { action: t(`asset.action.${action}`) }), tone: 'success' }
-                  : { title: t('library.card.actionFailed', { action: t(`asset.action.${action}`) }), tone: 'error' },
+                  : {
+                      title: t('library.card.actionFailed', { action: t(`asset.action.${action}`) }),
+                      message: result.failed[0]?.error,
+                      tone: 'error',
+                    },
               ),
           },
         ),

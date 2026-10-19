@@ -625,5 +625,39 @@
       ]
     }
   ],
-  "folders": []
+    "folders": [],
+  "workflows": [
+    {
+      "name": "Two-level approval",
+      "description": "Review by an Approver, then final approval by a Librarian. Each step is due in a set time and escalates to an Admin when late. Not bound to anything until you choose where it applies.",
+      "definition": {
+        "version": 1,
+        "start": "review",
+        "autoPublish": false,
+        "distinctApprovers": true,
+        "steps": [
+          {
+            "id": "review",
+            "name": "Review",
+            "assignees": { "roles": ["Approver"], "users": [] },
+            "mode": "any",
+            "slaHours": 48,
+            "escalation": { "to": { "roles": ["Admin"], "users": [] } },
+            "onApprove": "final-approval",
+            "onReject": "reject"
+          },
+          {
+            "id": "final-approval",
+            "name": "Final approval",
+            "assignees": { "roles": ["Librarian"], "users": [] },
+            "mode": "any",
+            "slaHours": 24,
+            "escalation": { "to": { "roles": ["Admin"], "users": [] } },
+            "onApprove": "complete",
+            "onReject": "reject"
+          }
+        ]
+      }
+    }
+  ]
 }

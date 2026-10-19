@@ -1,3 +1,5 @@
+import { ApiError } from '../../api/client';
+
 /** How many items run at once - the same fixed-concurrency-pool shape `useUploadBatch.ts` already established for
  * bulk uploads (ADR-0015), reused here instead of a library: enough parallelism to keep 50 assets well under the
  * spec's "< 5s round-trip" accept criterion (spec Step 1.8) without opening 50 connections at once. */
@@ -22,7 +24,8 @@ export async function runBulk(ids: string[], task: (id: string) => Promise<void>
         await task(id);
         succeeded.push(id);
       } catch (e) {
-        failed.push({ id, error: e instanceof Error ? e.message : String(e) });
+        // The server's own explanation (e.g. "decide via the workflow task") beats the bare status title.
+        failed.push({ id, error: e instanceof ApiError ? e.detail || e.title : e instanceof Error ? e.message : String(e) });
       }
     }
   };

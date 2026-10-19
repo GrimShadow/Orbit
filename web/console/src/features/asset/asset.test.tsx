@@ -127,6 +127,7 @@ function standardHandlers(
     if (pathname === '/api/v1/assets/a1' && method === 'GET') return json({ ...asset, status: assetStatus });
     if (pathname === `/api/v1/schemas/${asset.type}`) return json({ ...SCHEMA, assetType: asset.type });
     if (pathname === '/api/v1/assets/a1/versions') return json(VERSIONS);
+    if (pathname === '/api/v1/assets/a1/workflow') return json({ instance: null });
     if (pathname === '/api/v1/assets/a1/links') return linksResponse(call, assetStatus, asset.type);
     return undefined;
   };

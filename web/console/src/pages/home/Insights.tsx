@@ -1,4 +1,4 @@
-import { CheckCircle, Clock, HardDrives, Lightning, NotePencil, PaperPlaneTilt, Stack } from '@phosphor-icons/react';
+import { CheckSquareOffset, Clock, HardDrives, Lightning, NotePencil, PaperPlaneTilt, Stack } from '@phosphor-icons/react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -20,6 +20,7 @@ import { UnusedAssetsPanel } from '../../features/analytics/UnusedAssets';
 import { formatBytes } from '../../lib/format';
 import { facetCount, useLibrarySnapshot } from './homeData';
 import { useThumbnailLinks } from '../../features/asset/assetApi';
+import { useTaskSummary, type TaskSummary } from '../../features/workflow/workflowApi';
 import { useAssets } from '../../features/library/assets';
 import { ListSkeleton, ReviewList, SectionEmpty, SectionNote } from './HomeSections';
 
@@ -60,12 +61,26 @@ export function Kpis() {
   const { t, i18n } = useTranslation();
   const snapshot = useLibrarySnapshot();
   const overview = useOverview(USAGE_DAYS);
+  const tasks = useTaskSummary();
   const fmt = (n: number) => new Intl.NumberFormat(i18n.language).format(n);
   const facets = snapshot.data?.facets;
   const total = snapshot.data?.total;
   const published = snapshot.data ? facetCount(facets, 'status', 'published') : undefined;
   const o = overview.data;
   const noAnalytics = isForbidden(overview.error);
+
+  /** "3 overdue · SLA 92% on time": the overdue count is always said (or "Nothing waiting for you"); the tenant-wide SLA
+   * figure only exists for people allowed to see it. */
+  const taskHint = (s: TaskSummary | undefined) => {
+    if (!s) return t('home.stats.tasksFailed');
+    const parts = [
+      s.overdueForMe > 0
+        ? t('home.stats.tasksOverdue', { count: s.overdueForMe })
+        : t(s.pendingForMe === 0 ? 'home.stats.tasksHintNone' : 'home.stats.tasksNoneOverdue'),
+    ];
+    if (s.slaAttainmentPercent !== null) parts.push(t('home.stats.tasksSla', { percent: Math.round(s.slaAttainmentPercent) }));
+    return parts.join(' · ');
+  };
 
   const cards: ReactNode[] = [];
   const weeks = o?.uploads.map((w) => w.count) ?? [];
@@ -79,7 +94,7 @@ export function Kpis() {
         <StatCard
           label={t('home.stats.total')}
           value={typeof total === 'number' ? fmt(total) : '–'}
-          hint={o ? t('analytics.insights.kpiTotalHint', { count: weeks.reduce((a, b) => a + b, 0) }) : t('home.stats.totalHint')}
+          hint={typeof published === 'number' ? t('home.stats.totalPublished', { count: published }) : t('home.stats.totalHint')}
           icon={<Stack size={20} weight="duotone" />}
           tone="brand"
           trend={
@@ -91,16 +106,25 @@ export function Kpis() {
         />
       </Link>
     ),
-    snapshot.isPending ? (
-      <KpiSkeleton key="published" />
+    tasks.isPending ? (
+      <KpiSkeleton key="tasks" />
     ) : (
-      <Link key="published" to="/library?status=published" className="dam-home__statlink">
+      <Link
+        key="tasks"
+        to="/tasks"
+        className="dam-home__statlink"
+        title={
+          tasks.data?.slaAttainmentPercent != null
+            ? t('home.stats.tasksSlaTitle', { percent: Math.round(tasks.data.slaAttainmentPercent) })
+            : undefined
+        }
+      >
         <StatCard
-          label={t('analytics.insights.kpiPublished')}
-          value={typeof published === 'number' ? fmt(published) : '–'}
-          hint={t('analytics.insights.kpiPublishedHint', { percent: total ? Math.round(((published ?? 0) / total) * 100) : 0 })}
-          icon={<CheckCircle size={20} weight="duotone" />}
-          tone="success"
+          label={t('home.stats.tasks')}
+          value={tasks.data ? fmt(tasks.data.pendingForMe) : '–'}
+          hint={taskHint(tasks.data)}
+          icon={<CheckSquareOffset size={20} weight="duotone" />}
+          tone={tasks.data && tasks.data.overdueForMe > 0 ? 'danger' : 'brand'}
         />
       </Link>
     ),

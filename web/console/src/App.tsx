@@ -2,6 +2,9 @@ import { ToastProvider } from '@dam/ui-kit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Route, Routes } from 'react-router-dom';
 import { ApiError } from './api/client';
+import { TasksPage } from './features/workflow/tasks/TasksPage';
+import { WorkflowDesignerPage } from './features/workflow/designer/WorkflowDesignerPage';
+import { WorkflowsPage } from './features/workflow/designer/WorkflowsPage';
 import { UnusedAssetsPage } from './features/analytics/UnusedAssetsPage';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { AssetDetailPage } from './features/asset/AssetDetailPage';
@@ -39,6 +42,9 @@ export function App() {
                 <Route path="/collections" element={<CollectionsPage />} />
                 <Route path="/collections/:id" element={<CollectionDetailPage />} />
                 <Route path="/insights/unused" element={<UnusedAssetsPage />} />
+                <Route path="/tasks" element={<TasksPage />} />
+                <Route path="/admin/workflows" element={<WorkflowsPage />} />
+                <Route path="/admin/workflows/:id" element={<WorkflowDesignerPage />} />
                 <Route path="/upload" element={<UploadPage />} />
                 <Route path="/me" element={<MePage />} />
               </Route>

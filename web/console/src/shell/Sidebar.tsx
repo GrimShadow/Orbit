@@ -1,6 +1,8 @@
 import {
   CaretDoubleLeft,
   CaretDoubleRight,
+  CheckSquareOffset,
+  FlowArrow,
   House,
   Images,
   MagnifyingGlass,
@@ -12,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 import { useMe } from '../api/me';
 import { Brand } from './Brand';
+import { NavCount, useTasksBadge } from './NavBadge';
 
 export interface NavItem {
   to: string;
@@ -26,7 +29,13 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/library', labelKey: 'nav.library', Icon: Images },
   { to: '/search', labelKey: 'nav.search', Icon: MagnifyingGlass },
   { to: '/collections', labelKey: 'nav.collections', Icon: Stack },
+  { to: '/tasks', labelKey: 'nav.tasks', Icon: CheckSquareOffset },
   { to: '/upload', labelKey: 'nav.upload', Icon: UploadSimple },
+];
+
+/** Administration sections, shown in the sidebar only to people holding the named permission. */
+export const ADMIN_ITEMS: (NavItem & { permission: string })[] = [
+  { to: '/admin/workflows', labelKey: 'nav.workflows', Icon: FlowArrow, permission: 'workflow.manage' },
 ];
 
 interface SidebarProps {
@@ -39,13 +48,31 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { t } = useTranslation();
   const { data: me } = useMe();
+  const tasksBadge = useTasksBadge();
   return (
     <aside className={`dam-sidebar${collapsed ? ' dam-sidebar--collapsed' : ''}`} aria-label={t('shell.sidebar')}>
       <div className="dam-sidebar__brand">
         <Brand wordmark={!collapsed} />
       </div>
       <nav aria-label={t('nav.primary')} className="dam-sidenav">
-        {NAV_ITEMS.map(({ to, end, labelKey, Icon }) => (
+        {NAV_ITEMS.map(({ to, end, labelKey, Icon }) => {
+          const badge = to === '/tasks' ? tasksBadge : null;
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className="dam-sidenav__item"
+              title={collapsed ? t(labelKey) : undefined}
+              aria-label={badge ? badge.name : collapsed ? t(labelKey) : undefined}
+            >
+              <Icon size={20} weight="regular" aria-hidden="true" className="dam-sidenav__icon" />
+              <span className="dam-sidenav__label">{t(labelKey)}</span>
+              {badge && <NavCount badge={badge} />}
+            </NavLink>
+          );
+        })}
+        {ADMIN_ITEMS.filter((i) => me?.permissions.includes(i.permission)).map(({ to, end, labelKey, Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -89,14 +116,21 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 /** Phone navigation: the same sections as a fixed bottom tab bar. */
 export function MobileTabBar() {
   const { t } = useTranslation();
+  const tasksBadge = useTasksBadge();
   return (
     <nav aria-label={t('shell.mobileNav')} className="dam-tabbar">
-      {NAV_ITEMS.map(({ to, end, labelKey, Icon }) => (
-        <NavLink key={to} to={to} end={end} className="dam-tabbar__item">
-          <Icon size={22} aria-hidden="true" className="dam-tabbar__icon" />
-          <span>{t(labelKey)}</span>
-        </NavLink>
-      ))}
+      {NAV_ITEMS.map(({ to, end, labelKey, Icon }) => {
+        const badge = to === '/tasks' ? tasksBadge : null;
+        return (
+          <NavLink key={to} to={to} end={end} className="dam-tabbar__item" aria-label={badge?.name}>
+            <span className="dam-tabbar__iconwrap">
+              <Icon size={22} aria-hidden="true" className="dam-tabbar__icon" />
+              {badge && <NavCount badge={badge} />}
+            </span>
+            <span>{t(labelKey)}</span>
+          </NavLink>
+        );
+      })}
     </nav>
   );
 }

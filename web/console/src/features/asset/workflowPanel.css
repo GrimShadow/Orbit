@@ -1,0 +1,193 @@
+/* Approval timeline on the asset page. Tokens only; works in light and dark. */
+.dam-apv {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+}
+.dam-apv .dam-metasection__title {
+  margin: 0;
+}
+.dam-apv__meta {
+  margin: calc(var(--dam-space-1) * -1) 0 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+
+.dam-apv-outcome {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3);
+  border-radius: var(--dam-radius);
+  background: var(--dam-tone-neutral-bg);
+  color: var(--dam-tone-neutral-text);
+  font-size: var(--dam-text-sm);
+}
+.dam-apv-outcome--approved {
+  background: var(--dam-tone-success-bg);
+  color: var(--dam-tone-success-text);
+}
+.dam-apv-outcome--rejected {
+  background: var(--dam-tone-danger-bg);
+  color: var(--dam-tone-danger-text);
+}
+.dam-apv-outcome__icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.dam-apv-outcome__title,
+.dam-apv-outcome__reason {
+  margin: 0;
+}
+.dam-apv-outcome__reason {
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.dam-apv-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dam-apv-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: var(--dam-space-3);
+  padding-bottom: var(--dam-space-4);
+}
+.dam-apv-step:last-child {
+  padding-bottom: 0;
+}
+/* The connector between two markers. */
+.dam-apv-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  inset-block: 26px 2px;
+  inset-inline-start: 11px;
+  width: 2px;
+  background: var(--dam-border);
+}
+.dam-apv-step--done:not(:last-child)::before {
+  background: var(--dam-brand);
+}
+.dam-apv-step__marker {
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  color: var(--dam-muted);
+}
+.dam-apv-step--done .dam-apv-step__marker {
+  color: var(--dam-brand);
+}
+.dam-apv-step--rejected .dam-apv-step__marker {
+  color: var(--dam-danger);
+}
+.dam-apv-step--rejected:not(:last-child)::before {
+  background: var(--dam-danger);
+}
+.dam-apv-step--active .dam-apv-step__marker {
+  color: var(--dam-brand);
+}
+.dam-apv-step__dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--dam-brand);
+  background: radial-gradient(circle, var(--dam-brand) 0 4px, transparent 5px), var(--dam-brand-soft);
+}
+.dam-apv-step__body {
+  min-width: 0;
+}
+.dam-apv-step--active .dam-apv-step__body {
+  padding: var(--dam-space-3);
+  margin-top: calc(var(--dam-space-2) * -1);
+  border-radius: var(--dam-radius);
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+}
+.dam-apv-step--active .dam-apv-step__meta,
+.dam-apv-step--active .dam-apv-step__state,
+.dam-apv-step--active .dam-apv-task__who,
+.dam-apv-step--active .dam-apv-task__by {
+  color: var(--dam-brand-soft-text);
+}
+.dam-apv-step__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--dam-space-2);
+}
+.dam-apv-step__name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.dam-apv-step--waiting .dam-apv-step__name,
+.dam-apv-step--skipped .dam-apv-step__name {
+  color: var(--dam-muted);
+}
+.dam-apv-step--skipped .dam-apv-step__name {
+  text-decoration: line-through;
+}
+.dam-apv-step__state {
+  flex: 0 0 auto;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dam-apv-step__meta {
+  margin: 2px 0 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+
+.dam-apv-tasks {
+  list-style: none;
+  margin: var(--dam-space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+}
+.dam-apv-task {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--dam-text-sm);
+}
+.dam-apv-task__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-apv-task__who {
+  font-weight: 600;
+}
+.dam-apv-task__by {
+  margin: 0;
+  color: var(--dam-muted);
+}
+.dam-apv-task__comment {
+  margin: 2px 0 0;
+  padding: 2px var(--dam-space-3);
+  border-inline-start: 3px solid var(--dam-border);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.dam-apv-task__decide {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2) var(--dam-space-3);
+  margin-top: var(--dam-space-2);
+}
+.dam-apv-task__your {
+  margin: 0;
+  font-weight: 600;
+}

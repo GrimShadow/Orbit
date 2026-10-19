@@ -1,0 +1,34 @@
+/* Approve / Reject controls and their comment dialog (inbox rows and the asset page's approval panel). */
+.dam-taskdecision {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-taskdecision__reject:hover:not(:disabled) {
+  color: var(--dam-tone-danger-text);
+  border-color: var(--dam-danger);
+}
+.dam-stack.dam-taskdialog {
+  align-items: stretch;
+  min-width: min(440px, 80vw);
+}
+.dam-taskdialog .dam-field {
+  gap: var(--dam-space-1);
+}
+.dam-taskdialog__text {
+  height: auto;
+  min-height: 96px;
+  padding-block: var(--dam-space-2);
+  line-height: 1.5;
+  resize: vertical;
+}
+.dam-taskdialog__count {
+  align-self: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.dam-taskdialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--dam-space-2);
+}

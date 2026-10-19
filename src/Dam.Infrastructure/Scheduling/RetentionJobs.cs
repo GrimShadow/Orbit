@@ -19,14 +19,51 @@ public readonly record struct AssetLead(Guid TenantId, Guid AssetId);
 /// </summary>
 public abstract class CrossTenantJob(IServiceScopeFactory scopeFactory, NpgsqlDataSource systemDb, ILogger log)
 {
-    protected async Task<IReadOnlyList<AssetLead>> FindAsync(string sql, CancellationToken ct)
+    /// <summary>Runs <paramref name="sql"/>, which selects <c>(id, tenant_id)</c> rows.</summary>
+    protected Task<IReadOnlyList<AssetLead>> FindAsync(string sql, CancellationToken ct) => FindAsync(sql, null, ct);
+
+    /// <param name="parameters">Named parameters for <paramref name="sql"/> (for example the job's own clock reading).</param>
+    protected async Task<IReadOnlyList<AssetLead>> FindAsync(string sql, IReadOnlyDictionary<string, object>? parameters, CancellationToken ct)
     {
         var leads = new List<AssetLead>();
         await using var conn = await systemDb.OpenConnectionAsync(ct);
         await using var cmd = new NpgsqlCommand(sql, conn);
+        foreach (var (name, value) in parameters ?? new Dictionary<string, object>()) cmd.Parameters.AddWithValue(name, value);
         await using var r = await cmd.ExecuteReaderAsync(ct);
         while (await r.ReadAsync(ct)) leads.Add(new AssetLead(r.GetGuid(1), r.GetGuid(0)));
         return leads;
+    }
+
+    /// <summary>Like <see cref="ForEachAsync"/> but not tied to assets: runs <paramref name="apply"/> in a tenant-scoped scope for each
+    /// lead (<c>AssetId</c> is simply the id of whatever row the discovery query selected). Events raised are persisted in the
+    /// same transaction; one lead failing is logged and never stops the batch.</summary>
+    protected async Task ForEachScopedAsync(IReadOnlyList<AssetLead> leads, Func<IServiceProvider, DamDbContext, AssetLead, CancellationToken, Task<bool>> apply, CancellationToken ct)
+    {
+        foreach (var lead in leads)
+        {
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var sp = scope.ServiceProvider;
+            try
+            {
+                sp.GetRequiredService<MutableTenantContext>().TenantId = lead.TenantId;
+                var db = sp.GetRequiredService<DamDbContext>();
+                var uow = sp.GetRequiredService<IUnitOfWork>();
+                await uow.BeginAsync(ct);
+                try
+                {
+                    if (!await apply(sp, db, lead, ct)) { await uow.RollbackAsync(ct); continue; }
+                    var events = sp.GetRequiredService<IDomainEventSource>().Drain();
+                    if (events.Count > 0) await sp.GetRequiredService<IOutbox>().EnqueueAsync(events, ct);
+                    await db.SaveChangesAsync(ct);
+                    await uow.CommitAsync(ct);
+                }
+                catch { await uow.RollbackAsync(ct); throw; }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                log.LogError(ex, "Could not process {Row} in tenant {Tenant}", lead.AssetId, lead.TenantId);
+            }
+        }
     }
 
     /// <summary>Runs <paramref name="apply"/> against a fresh, tenant-scoped scope, then persists whatever domain events the
@@ -165,13 +202,14 @@ public sealed class RetentionJob(IServiceScopeFactory scopeFactory, NpgsqlDataSo
 
 public static class RetentionSchedulingRegistration
 {
-    /// <summary>Registers the two cross-tenant jobs and the read-only system connection they discover candidates through
+    /// <summary>Registers the cross-tenant jobs (publish/expire, retention, workflow SLA) and the read-only system connection they discover candidates through
     /// (env: DAM_DB_SYSTEM_CONNECTION) — not the full outbox relay, since a scheduler host relays nothing itself.</summary>
     public static IServiceCollection AddDamRetentionScheduling(this IServiceCollection services, string systemConnectionString)
     {
         services.AddSingleton(new NpgsqlDataSourceBuilder(systemConnectionString).Build());
         services.AddScheduledJob<PublishExpireJob>();
         services.AddScheduledJob<RetentionJob>();
+        services.AddScheduledJob<WorkflowSlaJob>();
         return services;
     }
 }

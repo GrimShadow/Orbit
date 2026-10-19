@@ -4,6 +4,11 @@ import { Button, CaretDown, DotsThree, IconButton, PopoverMenu, useToast, type M
 import { ActionIcon } from './actionIcon';
 import { errorMessage, useTransition } from './assetApi';
 import { availableActions, primaryAction } from './lifecycle';
+import { useRunningStep } from './WorkflowPanel';
+
+/** While a workflow runs, approving and rejecting are decisions on its tasks, not on the asset: the server refuses the
+ * direct transitions (409) for everybody, so they are not offered. */
+const TASK_DECIDED = new Set(['approve', 'reject']);
 
 /** The lifecycle controls: the next step as the prominent button, every other valid action (reject stays danger-toned)
  * in an overflow menu. Which actions are valid is only a courtesy - the server re-checks each transition. */
@@ -16,9 +21,12 @@ export function LifecycleActions({ assetId, status }: { assetId: string; status:
   const menuId = useId();
   const close = useCallback(() => setOpen(false), []);
 
-  const actions = availableActions(status);
-  if (actions.length === 0) return null;
-  const primary = primaryAction(status);
+  const workflow = useRunningStep(assetId, status);
+  // An in-review asset's controls wait for the answer (one quick request) rather than flashing Approve and taking it away.
+  if (workflow.pending) return null;
+  const actions = availableActions(status).filter((a) => !(workflow.running && TASK_DECIDED.has(a)));
+  if (actions.length === 0 && !workflow.running) return null;
+  const primary = actions.includes(primaryAction(status) ?? '') ? primaryAction(status) : null;
   const pendingAction = transition.isPending ? transition.variables?.action : undefined;
 
   const run = (action: string) =>
@@ -58,6 +66,11 @@ export function LifecycleActions({ assetId, status }: { assetId: string; status:
 
   return (
     <div className="dam-lifecycle" role="group" aria-label={t('asset.lifecycleActions')}>
+      {workflow.running && (
+        <p className="dam-lifecycle__awaiting">
+          {workflow.stepName ? t('assetWorkflow.awaiting', { step: workflow.stepName }) : t('assetWorkflow.awaitingGeneric')}
+        </p>
+      )}
       {primary && (
         <Button
           variant="primary"

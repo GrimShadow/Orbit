@@ -1,0 +1,135 @@
+/* The approval inbox. */
+.dam-tasks {
+  max-width: 1040px;
+}
+.dam-tasks__controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-3) var(--dam-space-4);
+}
+.dam-tasks__summary {
+  margin: 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.dam-tasks__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3) var(--dam-space-4);
+  border: 1px solid var(--dam-border-subtle);
+  border-inline-start: 4px solid var(--dam-danger);
+  border-radius: var(--dam-radius);
+  background: var(--dam-surface-raised);
+}
+.dam-tasks__more {
+  display: flex;
+  justify-content: center;
+  padding-block: var(--dam-space-4);
+}
+
+.dam-tasklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-lg, var(--dam-radius));
+  background: var(--dam-surface-raised);
+  overflow: hidden;
+}
+.dam-taskrow {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--dam-space-4);
+  padding: var(--dam-space-3) var(--dam-space-4);
+}
+.dam-taskrow + .dam-taskrow {
+  border-top: 1px solid var(--dam-border-subtle);
+}
+.dam-taskrow__thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--dam-radius);
+  object-fit: cover;
+  background: var(--dam-surface-2);
+}
+.dam-taskrow__thumb--empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dam-muted);
+}
+.dam-taskrow__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-1);
+  min-width: 0;
+}
+.dam-taskrow__title {
+  color: var(--dam-text);
+  font-weight: 600;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-taskrow__title:hover {
+  color: var(--dam-brand);
+  text-decoration: underline;
+}
+.dam-taskrow__step {
+  margin: 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-taskrow__badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+  margin-top: 2px;
+}
+.dam-taskrow__assignees {
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+.dam-taskrow__comment {
+  margin: var(--dam-space-1) 0 0;
+  padding: var(--dam-space-1) var(--dam-space-3);
+  border-inline-start: 3px solid var(--dam-border);
+  color: var(--dam-text);
+  font-size: var(--dam-text-sm);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.dam-tasklist--skeleton .dam-taskrow__main {
+  gap: var(--dam-space-2);
+}
+
+@media (max-width: 639px) {
+  .dam-taskrow {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: var(--dam-space-3);
+    padding: var(--dam-space-3);
+  }
+  .dam-taskrow__thumb {
+    width: 48px;
+    height: 48px;
+  }
+  .dam-taskrow__actions {
+    grid-column: 1 / -1;
+  }
+  .dam-taskrow__title,
+  .dam-taskrow__step {
+    white-space: normal;
+  }
+}

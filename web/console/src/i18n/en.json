@@ -10,7 +10,9 @@
     "search": "Search",
     "collections": "Collections",
     "upload": "Upload",
-    "account": "My account"
+    "account": "My account",
+    "tasks": "Tasks",
+    "workflows": "Workflows"
   },
   "shell": {
     "tenant": "Tenant",

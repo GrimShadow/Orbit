@@ -55,6 +55,7 @@ export function BulkEditBar({ assets, selectedIds, onClear }: BulkEditBarProps) 
     } else {
       push({
         title: t('library.bulk.someFailed', { succeeded: result.succeeded.length, failed: result.failed.length }),
+        message: result.failed[0]?.error,
         tone: 'error',
       });
     }

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Badge, Card, Skeleton, TagInput } from '../../ui';
 import { FileInfo } from './FileInfo';
+import { WorkflowPanel } from './WorkflowPanel';
 import { asCodes } from './channels';
 import { useSchema, useTerms, useVocabularies, type AssetDto } from './assetApi';
 import type { AssetDraft } from './useAssetDraft';
@@ -61,6 +62,7 @@ export function DetailsPanel({ asset, draft }: { asset: AssetDto; draft: AssetDr
           <strong>{t('asset.statusReason')}</strong> {asset.statusReason}
         </p>
       )}
+      <WorkflowPanel assetId={asset.id} status={asset.status} />
       <ChannelsCard asset={asset} draft={draft} />
       <Card as="section" padding="md" aria-label={t('asset.tagsTitle')}>
         <TagInput

@@ -89,6 +89,15 @@
   gap: var(--dam-space-2);
   flex: 0 0 auto;
 }
+.dam-lifecycle__awaiting {
+  margin: 0;
+  padding: 4px var(--dam-space-3);
+  border-radius: var(--dam-radius);
+  background: var(--dam-tone-info-bg);
+  color: var(--dam-tone-info-text);
+  font-size: var(--dam-text-sm);
+  font-weight: 600;
+}
 
 .dam-asset-title {
   display: flex;

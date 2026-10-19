@@ -282,4 +282,28 @@ describe('bulk edit', () => {
     await waitFor(() => expect(transitioned.sort()).toEqual(['a1:submit', 'a2:submit']));
     expect(await screen.findByText('2 assets updated')).toBeInTheDocument();
   });
+  it('says why when the server refuses an approve because a workflow is running', async () => {
+    mockApi((call) => {
+      if (call.pathname === '/api/v1/assets')
+        return json({
+          items: [
+            asset({ id: 'a1', title: 'Hero shot', status: 'in_review' }),
+            asset({ id: 'a2', title: 'Second shot', status: 'in_review' }),
+          ],
+          nextCursor: null,
+        });
+      if (/\/transitions\/approve$/.test(call.pathname))
+        return new Response(
+          JSON.stringify({ title: 'Conflict', status: 409, detail: 'A workflow is running: decide via the workflow task.' }),
+          { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
+        );
+      return undefined;
+    });
+    renderAt('/library');
+    await screen.findByText('Hero shot');
+    await userEvent.click(screen.getByLabelText('Select all 2 assets on this page'));
+    const bar = await screen.findByRole('region', { name: '2 assets selected' });
+    await userEvent.click(within(bar).getByRole('button', { name: 'Approve' }));
+    expect(await screen.findByText('A workflow is running: decide via the workflow task.')).toBeInTheDocument();
+  });
 });

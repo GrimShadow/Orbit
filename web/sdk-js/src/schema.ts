@@ -89,6 +89,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assets/{id}/workflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The asset's latest workflow as a timeline of steps and their tasks; instance is null when none ever applied */
+        get: operations["GetAssetWorkflow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/current": {
         parameters: {
             query?: never;
@@ -488,7 +505,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Starter packs: vocabularies, metadata schemas and folders */
+        /** Starter packs: vocabularies, metadata schemas, folders and workflows */
         get: operations["ListTemplates"];
         put?: never;
         post?: never;
@@ -1054,6 +1071,128 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workflow definitions with how many folders and bindings use each and how many assets are running through it. Needs workflow.manage or folders.manage */
+        get: operations["ListWorkflows"];
+        put?: never;
+        /** Create a workflow from a definition (version 1: steps, assignees, any/all, SLA, escalation, routing). An invalid definition is 422 with errors addressed by path */
+        post: operations["CreateWorkflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Checks a definition without saving it. Always 200: valid, or a list of errors addressed by path (for the designer's live feedback) */
+        post: operations["ValidateWorkflow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/bindings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which workflow applies to assets of a type and/or region when no folder names a default */
+        get: operations["ListWorkflowBindings"];
+        /** Replaces the whole list of type/region bindings. Needs workflow.manage */
+        put: operations["ReplaceWorkflowBindings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflows/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkflow"];
+        /** Replaces a workflow. Assets already going through it keep the definition they started with */
+        put: operations["UpdateWorkflow"];
+        post?: never;
+        /** 409 while a folder uses it as default, a binding points at it, or an asset is running through it */
+        delete: operations["DeleteWorkflow"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The task inbox: tasks the caller can decide (assignee=me, default) or has decided; assignee=all lists every task and needs workflow.manage. status=pending (default), decided or all */
+        get: operations["ListTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Counts for the caller's inbox, plus tenant totals and 30-day SLA attainment for workflow.manage / analytics.read holders (null for others) */
+        get: operations["GetTaskSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve or reject a task (a comment is required to reject). Needs to be an assignee, workflow.tasks.decide and assets.approve on the asset. 409 if already decided */
+        post: operations["DecideTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1131,6 +1270,9 @@ export interface components {
             changeNote: string;
             /** Format: date-time */
             createdAt: string;
+        };
+        AssetWorkflowDto: {
+            instance: components["schemas"]["WorkflowInstanceViewDto"];
         };
         BulkFileRequest: {
             fileName: string;
@@ -1260,6 +1402,15 @@ export interface components {
             description: string | null;
             hierarchical: boolean;
             levels: string[] | null;
+        };
+        CreateWorkflowRequest: {
+            name: string;
+            description: string | null;
+            definition: components["schemas"]["NullableOfJsonElement"];
+        };
+        DecideTaskInput: {
+            decision: string;
+            comment: string | null;
         };
         DeliveryLinkDto: {
             /** Format: date-time */
@@ -1394,6 +1545,10 @@ export interface components {
             items: components["schemas"]["UserDto"][];
             nextCursor: string | null;
         };
+        PageOfWorkflowTaskDto: {
+            items: components["schemas"]["WorkflowTaskDto"][];
+            nextCursor: string | null;
+        };
         PartEtag: {
             /** Format: int32 */
             partNumber: number;
@@ -1452,6 +1607,9 @@ export interface components {
             pageNo: number | null;
             /** Format: date-time */
             createdAt: string;
+        };
+        ReplaceWorkflowBindingsRequest: {
+            bindings: components["schemas"]["WorkflowBindingInput"][];
         };
         RetentionPolicyDto: {
             /** Format: uuid */
@@ -1637,6 +1795,22 @@ export interface components {
             title: string;
             type: string;
         };
+        TaskSummaryDto: {
+            /** Format: int32 */
+            pendingForMe: number;
+            /** Format: int32 */
+            overdueForMe: number;
+            /** Format: int32 */
+            pendingTotal: number | null;
+            /** Format: int32 */
+            overdueTotal: number | null;
+            /** Format: int32 */
+            completed30d: number | null;
+            /** Format: int32 */
+            completedOnTime30d: number | null;
+            /** Format: double */
+            slaAttainmentPercent: number | null;
+        };
         TemplateApplyResultDto: {
             applied: string[];
             /** Format: int32 */
@@ -1649,6 +1823,8 @@ export interface components {
             schemasExtended: number;
             /** Format: int32 */
             foldersCreated: number;
+            /** Format: int32 */
+            workflowsCreated: number;
         };
         TemplateDto: {
             id: string;
@@ -1663,6 +1839,8 @@ export interface components {
             schemas: number;
             /** Format: int32 */
             folders: number;
+            /** Format: int32 */
+            workflows: number;
         };
         TenantDto: {
             /** Format: uuid */
@@ -1800,6 +1978,11 @@ export interface components {
             description: string | null;
             levels: string[] | null;
         };
+        UpdateWorkflowRequest: {
+            name: string;
+            description: string | null;
+            definition: components["schemas"]["NullableOfJsonElement"];
+        };
         UploadDto: {
             /** Format: uuid */
             id: string;
@@ -1904,6 +2087,13 @@ export interface components {
             /** Format: int32 */
             version: number | null;
         };
+        ValidateWorkflowRequest: {
+            definition: components["schemas"]["NullableOfJsonElement"];
+        };
+        ValidateWorkflowResultDto: {
+            valid: boolean;
+            errors: components["schemas"]["WorkflowErrorDto"][];
+        };
         ValidationResultDto: {
             valid: boolean;
             /** Format: int32 */
@@ -1928,6 +2118,99 @@ export interface components {
             levels: string[];
             /** Format: int32 */
             termCount: number;
+        };
+        WorkflowBindingDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workflowId: string;
+            workflowName: string;
+            assetType: string | null;
+            region: string | null;
+        };
+        WorkflowBindingInput: {
+            /** Format: uuid */
+            workflowId: string;
+            assetType: string | null;
+            region: string | null;
+        };
+        WorkflowDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: string;
+            definition: components["schemas"]["JsonElement"];
+            /** Format: int32 */
+            usedByFolders: number;
+            /** Format: int32 */
+            bindings: number;
+            /** Format: int32 */
+            runningInstances: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        WorkflowErrorDto: {
+            path: string;
+            message: string;
+        };
+        WorkflowInstanceViewDto: {
+            /** Format: uuid */
+            id: string;
+            workflowName: string;
+            status: string;
+            /** Format: uuid */
+            startedBy: string | null;
+            startedByName: string | null;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            completedAt: string | null;
+            outcomeReason: string | null;
+            outcomeStatus: string | null;
+            autoPublish: boolean;
+            steps: components["schemas"]["WorkflowStepViewDto"][];
+        } | null;
+        WorkflowStepViewDto: {
+            id: string;
+            name: string;
+            state: string;
+            mode: string;
+            /** Format: int32 */
+            slaHours: number | null;
+            tasks: components["schemas"]["WorkflowTaskDto"][];
+        };
+        WorkflowTaskDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            assetId: string;
+            assetTitle: string;
+            assetType: string;
+            workflowName: string;
+            stepId: string;
+            stepName: string;
+            status: string;
+            assigneeRoles: string[];
+            assigneeUserIds: string[];
+            /** Format: date-time */
+            dueAt: string | null;
+            slaBreached: boolean;
+            /** Format: date-time */
+            slaBreachedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            decision: string | null;
+            /** Format: uuid */
+            decidedBy: string | null;
+            /** Format: date-time */
+            decidedAt: string | null;
+            comment: string | null;
+            escalated: boolean;
+            decidedByName: string | null;
+            /** Format: uuid */
+            instanceId: string;
         };
     };
     responses: never;
@@ -2044,6 +2327,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecordUsageResultDto"];
+                };
+            };
+        };
+    };
+    GetAssetWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetWorkflowDto"];
                 };
             };
         };
@@ -4148,6 +4453,257 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyticsOverviewDto"];
+                };
+            };
+        };
+    };
+    ListWorkflows: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowDto"][];
+                };
+            };
+        };
+    };
+    CreateWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWorkflowRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowDto"];
+                };
+            };
+        };
+    };
+    ValidateWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateWorkflowRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateWorkflowResultDto"];
+                };
+            };
+        };
+    };
+    ListWorkflowBindings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowBindingDto"][];
+                };
+            };
+        };
+    };
+    ReplaceWorkflowBindings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceWorkflowBindingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowBindingDto"][];
+                };
+            };
+        };
+    };
+    GetWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowDto"];
+                };
+            };
+        };
+    };
+    UpdateWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWorkflowRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowDto"];
+                };
+            };
+        };
+    };
+    DeleteWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ListTasks: {
+        parameters: {
+            query?: {
+                assignee?: string;
+                status?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfWorkflowTaskDto"];
+                };
+            };
+        };
+    };
+    GetTaskSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskSummaryDto"];
+                };
+            };
+        };
+    };
+    DecideTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideTaskInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowTaskDto"];
                 };
             };
         };
