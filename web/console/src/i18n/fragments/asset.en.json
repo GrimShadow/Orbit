@@ -1,0 +1,83 @@
+{
+  "asset": {
+    "pageTitle": "Asset",
+    "loading": "Loading asset",
+    "loadFailedHint": "It may have been removed, or you may not have access to it.",
+    "breadcrumb": "Breadcrumb",
+    "detailsTab": "Details",
+    "rename": "Rename",
+    "renamed": "Title updated",
+    "renameFailed": "Could not rename the asset",
+    "titleRequired": "A title is required.",
+    "actions": "Actions",
+    "moreActions": "More actions",
+    "transitionDone": "Status is now {{status}}",
+    "transitionFailed": "{{action}} failed",
+    "saved": "Changes saved",
+    "saveFailed": "Could not save the changes",
+    "unsaved": "You have unsaved changes",
+    "discard": "Discard",
+    "saveChanges": "Save changes",
+    "metadataLoading": "Loading metadata",
+    "noMetadataFields": "This asset type has no metadata fields.",
+    "requiredMissing_one": "{{count}} required field is empty. It must be filled in before this asset can be submitted for review.",
+    "requiredMissing_other": "{{count}} required fields are empty. They must be filled in before this asset can be submitted for review.",
+    "requiredError": "{{field}} is required before this asset can be submitted for review.",
+    "optionsLoading": "Loading options for {{field}}",
+    "optionsFailed": "Could not load the options for this field.",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
+    "tagsTitle": "Tags",
+    "tagsHint": "Press Enter or comma to add.",
+    "tagsPlaceholder": "Add a tag",
+    "removeTag": "Remove {{tag}}",
+    "tagList": "{{field}} (selected)",
+    "ml": {
+      "filled": "{{filled}} of {{total}} languages",
+      "language": "Language of {{field}}"
+    },
+    "sections": {
+      "content": "Content",
+      "properties": "Properties",
+      "classification": "Classification",
+      "availability": "Availability"
+    },
+    "channels": {
+      "title": "Available for",
+      "none": "Not available for any system yet. Choose systems under Metadata."
+    },
+    "statusReason": "Reason:",
+    "lifecycleTitle": "Schedule",
+    "schedule": {
+      "publishAt": "Publishes",
+      "expireAt": "Expires",
+      "legalHold": "Legal hold",
+      "legalHoldOn": "On hold"
+    },
+    "fileInfoLoading": "Loading file information",
+    "versionsLoading": "Loading versions",
+    "noVersions": "No versions yet",
+    "restored": "Version {{n}} restored",
+    "restoreFailed": "Could not restore this version",
+    "stage": {
+      "label": "Preview",
+      "tools": "Preview tools",
+      "zoom": "Zoom",
+      "fit": "Fit",
+      "actual": "100%",
+      "openNewTab": "Open in new tab",
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied",
+      "linkExpires": "It expires {{time}}.",
+      "copyFailed": "Could not copy the link",
+      "videoDraft": "Video playback is available once the asset is published.",
+      "prevPage": "Previous page",
+      "nextPage": "Next page",
+      "pageOf": "Page {{page}} of {{total}}",
+      "pageAlt": "{{title}}, page {{page}}",
+      "noPreview": "No preview for this file type",
+      "noPreviewDraft": "You can download the file once the asset is published.",
+      "pdfDraft": "Only the first page is previewed until the asset is published."
+    }
+  }
+}

@@ -80,7 +80,9 @@ export function buildFileFacts(asset: AssetDto, version: AssetVersionDto, locale
       add(facts, 'aspectRatio', aspectRatio(w, h));
     }
     const exif = obj(image.exif) ?? {};
-    add(facts, 'colorSpace', str(exif['Color Space']));
+    // EXIF's way of saying "not specified" is not a fact worth showing.
+    const space = str(exif['Color Space']);
+    add(facts, 'colorSpace', space && !/^(undefined|uncalibrated|unknown|none)$/i.test(space.trim()) ? space : undefined);
     if (typeof image.hasAlpha === 'boolean') add(facts, 'transparency', t(image.hasAlpha ? 'asset.facts.yes' : 'asset.facts.no'));
     groups.push({ id: 'image', facts });
 

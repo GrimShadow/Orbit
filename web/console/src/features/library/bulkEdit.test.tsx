@@ -54,8 +54,8 @@ const FOLDERS = [
     id: 'f1',
     parentId: null,
     path: 'brand',
-    label: 'Brand',
-    name: 'brand',
+    label: 'brand',
+    name: 'Brand',
     inheritedMetadata: {},
     defaultWorkflowId: null,
     createdAt: '2026-01-01T00:00:00Z',
@@ -137,8 +137,10 @@ describe('bulk edit', () => {
     await userEvent.click(screen.getByLabelText('Select all 2 assets on this page'));
     expect(await screen.findByRole('region', { name: '2 assets selected' })).toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText('Tags'), 'campaign');
-    await userEvent.click(screen.getByRole('button', { name: 'Add tags' }));
+    const bar = screen.getByRole('region', { name: '2 assets selected' });
+    await userEvent.click(within(bar).getByRole('button', { name: 'Tags' })); // opens the tags panel
+    await userEvent.type(within(bar).getByLabelText('Tags'), 'campaign{Enter}'); // Enter turns the text into a chip
+    await userEvent.click(within(bar).getByRole('button', { name: 'Add tags' }));
 
     await waitFor(() => expect(patches).toHaveLength(2));
     expect(patches.find((p) => p.id === 'a1')?.tags.sort()).toEqual(['campaign', 'existing']);
@@ -168,6 +170,7 @@ describe('bulk edit', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Hero shot' }));
     await screen.findByRole('region', { name: '1 asset selected' });
 
+    await userEvent.click(screen.getByRole('button', { name: 'Move to…' })); // opens the move panel
     expect(screen.getByRole('button', { name: 'Move' })).toBeDisabled();
     await userEvent.selectOptions(screen.getByLabelText('Move to folder'), 'Brand');
     expect(screen.getByRole('button', { name: 'Move' })).toBeEnabled();
@@ -278,5 +281,29 @@ describe('bulk edit', () => {
     await userEvent.click(within(bar).getByRole('button', { name: 'Submit for review' }));
     await waitFor(() => expect(transitioned.sort()).toEqual(['a1:submit', 'a2:submit']));
     expect(await screen.findByText('2 assets updated')).toBeInTheDocument();
+  });
+  it('says why when the server refuses an approve because a workflow is running', async () => {
+    mockApi((call) => {
+      if (call.pathname === '/api/v1/assets')
+        return json({
+          items: [
+            asset({ id: 'a1', title: 'Hero shot', status: 'in_review' }),
+            asset({ id: 'a2', title: 'Second shot', status: 'in_review' }),
+          ],
+          nextCursor: null,
+        });
+      if (/\/transitions\/approve$/.test(call.pathname))
+        return new Response(
+          JSON.stringify({ title: 'Conflict', status: 409, detail: 'A workflow is running: decide via the workflow task.' }),
+          { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
+        );
+      return undefined;
+    });
+    renderAt('/library');
+    await screen.findByText('Hero shot');
+    await userEvent.click(screen.getByLabelText('Select all 2 assets on this page'));
+    const bar = await screen.findByRole('region', { name: '2 assets selected' });
+    await userEvent.click(within(bar).getByRole('button', { name: 'Approve' }));
+    expect(await screen.findByText('A workflow is running: decide via the workflow task.')).toBeInTheDocument();
   });
 });

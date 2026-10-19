@@ -6,38 +6,56 @@ interface NameCollectionDialogProps {
   open: boolean;
   title: string;
   busy?: boolean;
+  /** One line of context under the title (what is about to be saved). */
+  description?: string;
+  /** Text of the confirm button; "Save" by default. */
+  confirmLabel?: string;
+  /** Server/validation message to show under the name field. */
+  error?: string;
   onClose: () => void;
   onSave: (name: string) => void;
 }
 
-/** The one small piece of UI shared between "save this search" (Search page, a smart collection) and "save selection
- * as a collection" (Library bulk edit bar, a static collection) - naming is the only input either flow needs beyond
- * what it already has (the current query, or the current selection). */
-export function NameCollectionDialog({ open, title, busy, onClose, onSave }: NameCollectionDialogProps) {
+function NameForm({
+  busy,
+  description,
+  confirmLabel,
+  error,
+  onClose,
+  onSave,
+}: Omit<NameCollectionDialogProps, 'open' | 'title'>) {
   const { t } = useTranslation();
   const [name, setName] = useState('');
-
   return (
-    <Modal
-      open={open}
-      title={title}
-      onClose={() => {
-        setName('');
-        onClose();
+    <form
+      className="dam-stack dam-dialogform"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (name.trim()) onSave(name.trim());
       }}
     >
-      <form
-        className="dam-stack"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (name.trim()) onSave(name.trim());
-        }}
-      >
-        <Input label={t('collections.nameLabel')} value={name} onChange={(e) => setName(e.target.value)} />
-        <Button type="submit" variant="primary" loading={busy} disabled={!name.trim()}>
-          {t('collections.save')}
+      {description && <p className="dam-hint">{description}</p>}
+      <Input label={t('collections.nameLabel')} value={name} onChange={(e) => setName(e.target.value)} error={error} />
+      <div className="dam-dialogform__actions">
+        <Button variant="ghost" onClick={onClose}>
+          {t('collections.cancel')}
         </Button>
-      </form>
+        <Button type="submit" variant="primary" loading={busy} disabled={!name.trim()}>
+          {confirmLabel ?? t('collections.save')}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/** The one small piece of UI shared between "save this search" (Search page, a smart collection), "save selection
+ * as a collection" (Library bulk edit bar, a static collection) and "New collection" - naming is the only input any
+ * of them needs beyond what it already has (the current query, the current selection, or nothing). The form is
+ * remounted on every open, so a name typed earlier never lingers. */
+export function NameCollectionDialog({ open, title, onClose, ...form }: NameCollectionDialogProps) {
+  return (
+    <Modal open={open} title={title} onClose={onClose}>
+      <NameForm {...form} onClose={onClose} />
     </Modal>
   );
 }

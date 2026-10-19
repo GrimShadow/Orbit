@@ -16,76 +16,178 @@
   font-display: swap;
 }
 
+/* ---------------------------------------------------------------------------------------------------------------
+ * Tokens
+ * All colour pairs below (tone text on tone background, on-brand on brand, muted on surface) are verified >= 4.5:1
+ * in both themes; re-run the contrast check before changing any of them.
+ * ------------------------------------------------------------------------------------------------------------- */
 :root {
-  --dam-bg: #f6f7fb;
+  --dam-bg: #f6f5f1;
   --dam-surface: #ffffff;
-  --dam-surface-2: #eef0f7;
-  --dam-text: #111827;
-  --dam-muted: #4b5563;
-  --dam-border: #c9ced9;
-  /* Forest green - a considered, non-default accent (indigo/purple is the most common AI-design tell). */
-  --dam-brand: #15803d;
-  --dam-brand-hover: #166534;
+  --dam-surface-2: #eceae3;
+  /* Cards and panels that sit above --dam-surface. Light: the same white, lifted by shadow rather than colour. */
+  --dam-surface-raised: #ffffff;
+  --dam-text: #17201b;
+  --dam-muted: #525c55;
+  --dam-border: #c8ccc3;
+  /* Hairline dividers inside components (table rows, menu separators, indent guides). */
+  --dam-border-subtle: #e4e5dd;
+  /* Pine green - a muted, considered, non-default accent (indigo/purple is the most common AI-design tell). */
+  --dam-brand: #235c46;
+  --dam-brand-hover: #1b4a39;
   --dam-on-brand: #ffffff;
+  /* Brand tint for selected nav items, chips and selected rows; --dam-brand-soft-text is AA (6.49:1) on it. */
+  --dam-brand-soft: #e5eee8;
+  --dam-brand-soft-text: #1b4a39;
   --dam-danger: #b91c1c;
+  /* Categorical chart series (pine, sage, ochre, steel, violet, stone). */
+  --dam-chart-1: #235c46;
+  --dam-chart-2: #4f9677;
+  --dam-chart-3: #b8862d;
+  --dam-chart-4: #4a78b0;
+  --dam-chart-5: #8a64ad;
+  --dam-chart-6: #8b948d;
   /* Teal, deliberately distinct from --dam-brand's forest green so status and identity never blur together. */
-  --dam-success: #0d9488;
+  --dam-success: #0f766e;
   --dam-warning: #92400e;
-  --dam-focus: #1d4ed8;
+  /* The focus ring takes the brand colour; the 2px offset keeps it readable on brand-filled controls too. */
+  --dam-focus: #235c46;
+  /* Semantic tones for badges, stat cards and toasts. Text on background: info 7.15, success 6.73, warning 6.37,
+   * danger 6.80, neutral 9.05 (light). */
+  --dam-tone-info-bg: #dbeafe;
+  --dam-tone-info-text: #1e40af;
+  --dam-tone-success-bg: #d4ece7;
+  --dam-tone-success-text: #0f5650;
+  --dam-tone-warning-bg: #fef3c7;
+  --dam-tone-warning-text: #92400e;
+  --dam-tone-danger-bg: #fee2e2;
+  --dam-tone-danger-text: #991b1b;
+  --dam-tone-neutral-bg: #eceae3;
+  --dam-tone-neutral-text: #3a443d;
   --dam-radius-sm: 6px;
   --dam-radius: 10px;
   --dam-radius-lg: 16px;
-  --dam-shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06);
-  --dam-shadow: 0 1px 2px rgb(16 24 40 / 0.08), 0 4px 12px rgb(16 24 40 / 0.08);
+  --dam-radius-xl: 20px;
+  /* Shadows carry the green-black hue of the text colour rather than plain black so they read as ambient light. */
+  --dam-shadow-sm: 0 1px 2px rgb(18 28 22 / 0.06);
+  --dam-shadow: 0 1px 2px rgb(18 28 22 / 0.08), 0 4px 12px rgb(18 28 22 / 0.08);
+  --dam-shadow-lg: 0 1px 2px rgb(18 28 22 / 0.05), 0 12px 32px -6px rgb(18 28 22 / 0.16), 0 28px 56px -16px rgb(18 28 22 / 0.12);
   --dam-space-1: 4px;
   --dam-space-2: 8px;
   --dam-space-3: 12px;
   --dam-space-4: 16px;
   --dam-space-5: 24px;
   --dam-space-6: 32px;
+  --dam-space-7: 40px;
+  --dam-space-8: 48px;
   --dam-font: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Devanagari', sans-serif;
   --dam-font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --dam-text-xs: 0.75rem;
   --dam-text-sm: 0.875rem;
   --dam-text-md: 1rem;
   --dam-text-lg: 1.25rem;
   --dam-text-xl: 1.625rem;
+  --dam-text-2xl: 2rem;
   /* Nothing had a transition before this - interactive elements changed state instantly with no feedback. */
   --dam-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dam-ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
   --dam-duration: 160ms;
+  --dam-duration-slow: 280ms;
+  /* One z-index scale for the whole product; never write a bare number. */
+  --dam-z-sticky: 10;
+  --dam-z-menu: 1000;
+  --dam-z-overlay: 2000;
+  --dam-z-modal: 2100;
+  --dam-z-toast: 3000;
+  --dam-z-contextmenu: 3100;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --dam-bg: #0b1020;
-    --dam-surface: #131a2e;
-    --dam-surface-2: #1b2440;
-    --dam-text: #e8ecf5;
-    --dam-muted: #aab4c8;
-    --dam-border: #33405f;
-    --dam-brand: #4ade80;
-    --dam-brand-hover: #86efac;
-    --dam-on-brand: #0b1020;
+    --dam-bg: #0e1411;
+    --dam-surface: #141c18;
+    --dam-surface-2: #1b2520;
+    --dam-surface-raised: #18211d;
+    --dam-text: #e7ede8;
+    --dam-muted: #a6b2aa;
+    --dam-border: #36443d;
+    --dam-border-subtle: #26322c;
+    --dam-brand: #74c49a;
+    --dam-brand-hover: #94d4b3;
+    --dam-on-brand: #0b1a12;
+    --dam-brand-soft: #1e3328;
+    --dam-brand-soft-text: #a9dcc1;
     --dam-danger: #fca5a5;
-    --dam-success: #2dd4bf;
+    --dam-chart-1: #74c49a;
+    --dam-chart-2: #4f9e7d;
+    --dam-chart-3: #dcb25f;
+    --dam-chart-4: #7ba7dc;
+    --dam-chart-5: #b394d6;
+    --dam-chart-6: #7e8a83;
+    --dam-success: #3fd0bd;
     --dam-warning: #fcd34d;
-    --dam-focus: #93c5fd;
+    --dam-focus: #74c49a;
+    --dam-tone-info-bg: #1b2d57;
+    --dam-tone-info-text: #a9c8fd;
+    --dam-tone-success-bg: #123a35;
+    --dam-tone-success-text: #7ae9d8;
+    --dam-tone-warning-bg: #42300f;
+    --dam-tone-warning-text: #fcd34d;
+    --dam-tone-danger-bg: #4a1d22;
+    --dam-tone-danger-text: #fda4a4;
+    --dam-tone-neutral-bg: #202b25;
+    --dam-tone-neutral-text: #cbd6cf;
+    --dam-shadow-sm: 0 1px 2px rgb(0 6 3 / 0.4);
+    --dam-shadow: 0 1px 2px rgb(0 6 3 / 0.4), 0 4px 14px rgb(0 6 3 / 0.45);
+    --dam-shadow-lg: 0 1px 2px rgb(0 6 3 / 0.4), 0 12px 32px -6px rgb(0 6 3 / 0.6), 0 28px 56px -16px rgb(0 6 3 / 0.5);
   }
 }
-:root[data-theme='dark'] {
-  --dam-bg: #0b1020;
-  --dam-surface: #131a2e;
-  --dam-surface-2: #1b2440;
-  --dam-text: #e8ecf5;
-  --dam-muted: #aab4c8;
-  --dam-border: #33405f;
-  --dam-brand: #4ade80;
-  --dam-brand-hover: #86efac;
-  --dam-on-brand: #0b1020;
-  --dam-danger: #fca5a5;
-  --dam-success: #2dd4bf;
-  --dam-warning: #fcd34d;
-  --dam-focus: #93c5fd;
+:root[data-theme='light'] {
+  color-scheme: light;
 }
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --dam-bg: #0e1411;
+  --dam-surface: #141c18;
+  --dam-surface-2: #1b2520;
+  --dam-surface-raised: #18211d;
+  --dam-text: #e7ede8;
+  --dam-muted: #a6b2aa;
+  --dam-border: #36443d;
+  --dam-border-subtle: #26322c;
+  --dam-brand: #74c49a;
+  --dam-brand-hover: #94d4b3;
+  --dam-on-brand: #0b1a12;
+  --dam-brand-soft: #1e3328;
+  --dam-brand-soft-text: #a9dcc1;
+  --dam-danger: #fca5a5;
+  --dam-chart-1: #74c49a;
+  --dam-chart-2: #4f9e7d;
+  --dam-chart-3: #dcb25f;
+  --dam-chart-4: #7ba7dc;
+  --dam-chart-5: #b394d6;
+  --dam-chart-6: #7e8a83;
+  --dam-success: #3fd0bd;
+  --dam-warning: #fcd34d;
+  --dam-focus: #74c49a;
+  --dam-tone-info-bg: #1b2d57;
+  --dam-tone-info-text: #a9c8fd;
+  --dam-tone-success-bg: #123a35;
+  --dam-tone-success-text: #7ae9d8;
+  --dam-tone-warning-bg: #42300f;
+  --dam-tone-warning-text: #fcd34d;
+  --dam-tone-danger-bg: #4a1d22;
+  --dam-tone-danger-text: #fda4a4;
+  --dam-tone-neutral-bg: #202b25;
+  --dam-tone-neutral-text: #cbd6cf;
+  --dam-shadow-sm: 0 1px 2px rgb(0 6 3 / 0.4);
+  --dam-shadow: 0 1px 2px rgb(0 6 3 / 0.4), 0 4px 14px rgb(0 6 3 / 0.45);
+  --dam-shadow-lg: 0 1px 2px rgb(0 6 3 / 0.4), 0 12px 32px -6px rgb(0 6 3 / 0.6), 0 28px 56px -16px rgb(0 6 3 / 0.5);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Base
+ * ------------------------------------------------------------------------------------------------------------- */
 
 /* Without this, any element that combines an explicit/100% width with padding or a border renders wider than its
  * container in the default content-box model - the console's own header overflowed the viewport by exactly its
@@ -104,11 +206,14 @@ body {
   background: var(--dam-bg);
   font-size: var(--dam-text-md);
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 /* Plain in-content links (back links, table titles) take the brand colour instead of the browser's default blue;
  * anything with a class (nav items, buttons rendered as links) keeps its own styling. */
 a:not([class]) {
   color: var(--dam-brand);
+  text-underline-offset: 2px;
 }
 /* Native progress bars take the brand colour rather than the browser's default blue. */
 progress {
@@ -128,44 +233,81 @@ a.dam-btn {
   white-space: nowrap;
   border: 0;
 }
-:where(.dam-root, .dam-root *):focus-visible {
-  outline: 3px solid var(--dam-focus);
+/* One focus ring everywhere: 2px brand, 2px offset. Portalled layers (context menu, toasts) live outside .dam-root
+ * and are listed explicitly so they get the same ring. */
+:where(.dam-root, .dam-root *, .dam-contextmenu *, .dam-popover *, .dam-toasts *, .dam-dialog, .dam-dialog *):focus-visible {
+  outline: 2px solid var(--dam-focus);
   outline-offset: 2px;
 }
+/* Thin, themed scrollbars where supported; the default scrollbar elsewhere. */
+.dam-root,
+.dam-root *,
+.dam-dialog,
+.dam-dialog * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--dam-border) transparent;
+}
+@supports not (scrollbar-width: thin) {
+  .dam-root ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .dam-root ::-webkit-scrollbar-thumb {
+    background: var(--dam-border);
+    border-radius: 999px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  * {
+  /* Loading spinners keep turning (a frozen spinner reads as "stuck"); everything else snaps. */
+  *:not(.dam-spinner),
+  *:not(.dam-spinner)::before,
+  *:not(.dam-spinner)::after {
     animation: none !important;
     transition: none !important;
   }
 }
 
-/* Button */
+/* ---------------------------------------------------------------------------------------------------------------
+ * Button + IconButton
+ * ------------------------------------------------------------------------------------------------------------- */
 .dam-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--dam-space-2);
-  min-height: 40px;
-  padding: 0 var(--dam-space-4);
+  height: 36px;
+  min-height: 36px;
+  padding: 0 14px;
   border-radius: var(--dam-radius-sm);
   border: 1px solid transparent;
   font: inherit;
+  font-size: var(--dam-text-sm);
   font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
   cursor: pointer;
+  user-select: none;
   transition:
     background-color var(--dam-duration) var(--dam-ease),
     border-color var(--dam-duration) var(--dam-ease),
     color var(--dam-duration) var(--dam-ease),
-    transform var(--dam-duration) var(--dam-ease);
+    box-shadow var(--dam-duration) var(--dam-ease),
+    transform var(--dam-duration) var(--dam-ease-spring);
+}
+.dam-btn > svg {
+  flex: 0 0 auto;
 }
 .dam-btn:active:not([disabled]) {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 .dam-btn[disabled] {
   opacity: 0.55;
   cursor: not-allowed;
 }
 .dam-btn--sm {
+  height: 32px;
   min-height: 32px;
   padding: 0 var(--dam-space-3);
   font-size: var(--dam-text-sm);
@@ -173,6 +315,10 @@ a.dam-btn {
 .dam-btn--primary {
   background: var(--dam-brand);
   color: var(--dam-on-brand);
+  /* A hairline inner highlight gives the filled button a touch of volume without a gradient. */
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    var(--dam-shadow-sm);
 }
 .dam-btn--primary:hover:not([disabled]) {
   background: var(--dam-brand-hover);
@@ -181,9 +327,11 @@ a.dam-btn {
   background: var(--dam-surface);
   color: var(--dam-text);
   border-color: var(--dam-border);
+  box-shadow: var(--dam-shadow-sm);
 }
 .dam-btn--secondary:hover:not([disabled]) {
   background: var(--dam-surface-2);
+  border-color: var(--dam-muted);
 }
 .dam-btn--ghost {
   background: transparent;
@@ -195,10 +343,30 @@ a.dam-btn {
 .dam-btn--danger {
   background: var(--dam-danger);
   color: var(--dam-surface);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
+}
+.dam-btn--danger:hover:not([disabled]) {
+  filter: brightness(0.94);
+}
+/* IconButton: a square button whose only content is an icon; shares every variant/state above. */
+.dam-btn--icon {
+  width: 36px;
+  padding: 0;
+  flex: 0 0 auto;
+}
+.dam-btn--icon.dam-btn--sm {
+  width: 32px;
+}
+.dam-btn--icon.dam-btn--ghost {
+  color: var(--dam-muted);
+}
+.dam-btn--icon.dam-btn--ghost:hover:not([disabled]) {
+  color: var(--dam-text);
 }
 .dam-spinner {
   width: 1em;
   height: 1em;
+  flex: 0 0 auto;
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
@@ -210,85 +378,420 @@ a.dam-btn {
   }
 }
 
-/* Fields */
+/* ---------------------------------------------------------------------------------------------------------------
+ * Fields
+ * ------------------------------------------------------------------------------------------------------------- */
 .dam-field {
   display: flex;
   flex-direction: column;
-  gap: var(--dam-space-1);
+  gap: 6px;
+  min-width: 0;
 }
 .dam-label {
   font-weight: 600;
   font-size: var(--dam-text-sm);
+  line-height: 1.3;
 }
 .dam-hint {
   color: var(--dam-muted);
   font-size: var(--dam-text-sm);
 }
 .dam-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--dam-danger);
   font-size: var(--dam-text-sm);
+  font-weight: 500;
 }
 .dam-input,
 .dam-select {
-  min-height: 40px;
+  width: 100%;
+  height: 36px;
+  min-height: 36px;
   padding: 0 var(--dam-space-3);
   font: inherit;
+  font-size: var(--dam-text-sm);
   color: var(--dam-text);
   background: var(--dam-surface);
   border: 1px solid var(--dam-border);
   border-radius: var(--dam-radius-sm);
+  box-shadow: var(--dam-shadow-sm);
   transition:
     border-color var(--dam-duration) var(--dam-ease),
-    box-shadow var(--dam-duration) var(--dam-ease);
+    box-shadow var(--dam-duration) var(--dam-ease),
+    background-color var(--dam-duration) var(--dam-ease);
 }
-.dam-input:hover:not([disabled]),
-.dam-select:hover:not([disabled]) {
+.dam-input::placeholder {
+  color: var(--dam-muted);
+  opacity: 0.8;
+}
+.dam-input:hover:not([disabled]):not(:focus),
+.dam-select:hover:not([disabled]):not(:focus) {
   border-color: var(--dam-muted);
 }
 .dam-input:focus,
 .dam-select:focus {
-  border-color: var(--dam-focus);
+  outline: none;
+  border-color: var(--dam-brand);
+  box-shadow:
+    0 0 0 2px var(--dam-surface),
+    0 0 0 4px var(--dam-brand);
+}
+.dam-input[disabled],
+.dam-select[disabled] {
+  background: var(--dam-surface-2);
+  color: var(--dam-muted);
+  cursor: not-allowed;
+  box-shadow: none;
 }
 .dam-input[aria-invalid='true'],
 .dam-select[aria-invalid='true'] {
   border-color: var(--dam-danger);
 }
+.dam-input[aria-invalid='true']:focus,
+.dam-select[aria-invalid='true']:focus {
+  box-shadow:
+    0 0 0 2px var(--dam-surface),
+    0 0 0 4px var(--dam-danger);
+}
+/* Native <select> with the browser arrow replaced. Outside the Select component (a raw .dam-select) a neutral grey
+ * caret is painted from CSS; inside it, the Phosphor icon is rendered as a sibling instead. */
+.dam-select {
+  appearance: none;
+  padding-inline-end: 36px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' fill='%236b7280'><path d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+}
+.dam-select[multiple],
+.dam-select[size]:not([size='1']) {
+  height: auto;
+  padding: var(--dam-space-1);
+  padding-inline-end: var(--dam-space-1);
+  background-image: none;
+}
+.dam-select-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+.dam-select-wrap .dam-select {
+  background-image: none;
+}
+.dam-select__chevron {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 12px;
+  transform: translateY(-50%);
+  color: var(--dam-muted);
+  pointer-events: none;
+  transition: transform var(--dam-duration) var(--dam-ease);
+}
+.dam-select-wrap:focus-within .dam-select__chevron {
+  color: var(--dam-text);
+}
 
-/* Table */
-.dam-table-wrap {
-  overflow-x: auto;
+/* Checkbox rows - shared by CheckboxGroup and FacetList. */
+.dam-checkgroup {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dam-checkgroup__legend {
+  padding: 0;
+  margin-bottom: 2px;
+  font-weight: 600;
+  font-size: var(--dam-text-sm);
+  line-height: 1.3;
+}
+.dam-checkgroup__list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dam-checkgroup__list--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--dam-space-3);
+}
+.dam-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 0 var(--dam-space-2);
+  margin: 0 calc(-1 * var(--dam-space-2));
+  border-radius: var(--dam-radius-sm);
+  font-size: var(--dam-text-sm);
+  cursor: pointer;
+  transition: background-color var(--dam-duration) var(--dam-ease);
+}
+.dam-check:hover {
+  background: var(--dam-surface-2);
+}
+.dam-check--disabled {
+  color: var(--dam-muted);
+  cursor: not-allowed;
+}
+.dam-check--disabled:hover {
+  background: transparent;
+}
+.dam-check__input {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--dam-border);
+  border-radius: 4px;
+  background: var(--dam-surface);
+  cursor: inherit;
+  transition:
+    background-color var(--dam-duration) var(--dam-ease),
+    border-color var(--dam-duration) var(--dam-ease),
+    transform var(--dam-duration) var(--dam-ease-spring);
+}
+.dam-check__input::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background: currentColor;
+  color: var(--dam-on-brand);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><path fill='black' d='M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z'/></svg>")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><path fill='black' d='M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z'/></svg>")
+    center / contain no-repeat;
+  transform: scale(0);
+  transition: transform var(--dam-duration) var(--dam-ease-spring);
+}
+.dam-check:hover .dam-check__input:not([disabled]) {
+  border-color: var(--dam-muted);
+}
+.dam-check__input:checked {
+  background: var(--dam-brand);
+  border-color: var(--dam-brand);
+}
+.dam-check__input:checked::after {
+  transform: scale(1);
+}
+.dam-check__input:active:not([disabled]) {
+  transform: scale(0.92);
+}
+.dam-check__input[disabled] {
+  opacity: 0.5;
+}
+.dam-check__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-check__count {
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+  color: var(--dam-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--dam-text-xs);
+  font-weight: 500;
+}
+
+/* TagInput */
+.dam-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 6px;
+  background: var(--dam-surface);
   border: 1px solid var(--dam-border);
+  border-radius: var(--dam-radius-sm);
+  box-shadow: var(--dam-shadow-sm);
+  cursor: text;
+  transition:
+    border-color var(--dam-duration) var(--dam-ease),
+    box-shadow var(--dam-duration) var(--dam-ease);
+}
+.dam-tags:hover:not(:focus-within) {
+  border-color: var(--dam-muted);
+}
+.dam-tags:focus-within {
+  border-color: var(--dam-brand);
+  box-shadow:
+    0 0 0 2px var(--dam-surface),
+    0 0 0 4px var(--dam-brand);
+}
+.dam-tags__list {
+  display: contents;
+}
+.dam-tags__input {
+  flex: 1 1 80px;
+  min-width: 80px;
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--dam-text-sm);
+  color: var(--dam-text);
+}
+.dam-tags__input:focus {
+  outline: none;
+}
+.dam-tags__input::placeholder {
+  color: var(--dam-muted);
+  opacity: 0.8;
+}
+.dam-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+  font-size: var(--dam-text-xs);
+  font-weight: 600;
+  line-height: 1;
+  max-width: 100%;
+  animation: dam-pop-in var(--dam-duration) var(--dam-ease-spring);
+}
+.dam-chip__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-chip__remove {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color var(--dam-duration) var(--dam-ease);
+}
+.dam-chip__remove:hover {
+  background: rgb(0 0 0 / 0.08);
+}
+.dam-chip__remove:focus-visible {
+  outline-offset: 0;
+}
+@keyframes dam-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Table
+ * ------------------------------------------------------------------------------------------------------------- */
+.dam-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--dam-border-subtle);
   border-radius: var(--dam-radius);
   background: var(--dam-surface);
+  box-shadow: var(--dam-shadow-sm);
 }
 .dam-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: var(--dam-text-sm);
+  font-variant-numeric: tabular-nums;
 }
 .dam-table th,
 .dam-table td {
-  padding: var(--dam-space-3) var(--dam-space-4);
+  padding: 10px var(--dam-space-4);
   text-align: start;
-  border-bottom: 1px solid var(--dam-border);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--dam-border-subtle);
 }
 .dam-table th {
-  background: var(--dam-surface-2);
+  position: sticky;
+  top: 0;
+  z-index: var(--dam-z-sticky);
+  background: var(--dam-surface);
+  color: var(--dam-muted);
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom-color: var(--dam-border);
 }
-.dam-table tr:last-child td {
+.dam-table tbody tr {
+  transition: background-color var(--dam-duration) var(--dam-ease);
+}
+.dam-table tbody tr:hover {
+  background: var(--dam-surface-2);
+}
+.dam-table tbody tr.dam-table__row--selected {
+  background: var(--dam-brand-soft);
+}
+.dam-table tbody tr:last-child td {
   border-bottom: 0;
+}
+.dam-table td:has(> .dam-check__input),
+.dam-table th:has(> .dam-sr-only) {
+  width: 40px;
+  padding-inline-end: 0;
+}
+.dam-table__thumb {
+  display: block;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-surface-2);
+  flex: 0 0 auto;
 }
 .dam-sort {
   all: unset;
   cursor: pointer;
   display: inline-flex;
+  align-items: center;
   gap: var(--dam-space-1);
-  font-weight: 600;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  border-radius: 4px;
+  transition: color var(--dam-duration) var(--dam-ease);
+}
+.dam-sort:hover {
+  color: var(--dam-text);
 }
 .dam-sort:focus-visible {
-  outline: 3px solid var(--dam-focus);
+  outline: 2px solid var(--dam-focus);
   outline-offset: 2px;
+}
+.dam-sort__icon {
+  opacity: 0.6;
+}
+th[aria-sort='ascending'] .dam-sort,
+th[aria-sort='descending'] .dam-sort {
+  color: var(--dam-text);
+}
+th[aria-sort='ascending'] .dam-sort__icon,
+th[aria-sort='descending'] .dam-sort__icon {
+  opacity: 1;
+  color: var(--dam-brand);
 }
 .dam-empty {
   padding: var(--dam-space-6);
@@ -296,44 +799,99 @@ a.dam-btn {
   color: var(--dam-muted);
 }
 
-/* Dialog: modal + drawer */
+/* ---------------------------------------------------------------------------------------------------------------
+ * Dialog: modal + drawer (native <dialog>; the top layer needs no z-index)
+ * ------------------------------------------------------------------------------------------------------------- */
 .dam-dialog {
-  border: 1px solid var(--dam-border);
+  border: 1px solid var(--dam-border-subtle);
   border-radius: var(--dam-radius-lg);
   padding: 0;
-  background: var(--dam-surface);
+  background: var(--dam-surface-raised);
   color: var(--dam-text);
-  box-shadow: var(--dam-shadow);
+  box-shadow: var(--dam-shadow-lg);
   max-width: min(560px, calc(100vw - 32px));
   width: 100%;
+  overflow: hidden;
+}
+.dam-dialog[open] {
+  animation: dam-dialog-in 200ms var(--dam-ease-spring);
 }
 .dam-dialog::backdrop {
-  background: rgb(8 12 24 / 0.55);
+  background: rgb(8 12 24 / 0.45);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.dam-dialog[open]::backdrop {
+  animation: dam-fade-in 200ms var(--dam-ease);
 }
 .dam-dialog--drawer {
   margin: 0 0 0 auto;
   height: 100dvh;
   max-height: 100dvh;
   border-radius: 0;
+  border-width: 0 0 0 1px;
   max-width: min(440px, 100vw);
+  display: flex;
+  flex-direction: column;
+}
+.dam-dialog--drawer:not([open]) {
+  /* The display above would otherwise beat the user-agent's closed-<dialog> rule and leave a blank panel on screen. */
+  display: none;
+}
+.dam-dialog--drawer[open] {
+  animation: dam-drawer-in var(--dam-duration-slow) var(--dam-ease-spring);
+}
+[dir='rtl'] .dam-dialog--drawer {
+  margin: 0 auto 0 0;
+  border-width: 0 1px 0 0;
+}
+[dir='rtl'] .dam-dialog--drawer[open] {
+  animation-name: dam-drawer-in-rtl;
 }
 .dam-dialog__head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--dam-space-3);
-  padding: var(--dam-space-4) var(--dam-space-5);
-  border-bottom: 1px solid var(--dam-border);
+  padding: var(--dam-space-5) var(--dam-space-5) var(--dam-space-4);
 }
 .dam-dialog__title {
   margin: 0;
   font-size: var(--dam-text-lg);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
 }
 .dam-dialog__body {
-  padding: var(--dam-space-5);
+  padding: 0 var(--dam-space-5) var(--dam-space-5);
+  overflow: auto;
+  flex: 1 1 auto;
+}
+@keyframes dam-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(4px);
+  }
+}
+@keyframes dam-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dam-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes dam-drawer-in-rtl {
+  from {
+    transform: translateX(-100%);
+  }
 }
 
-/* Toasts */
+/* ---------------------------------------------------------------------------------------------------------------
+ * Toasts
+ * ------------------------------------------------------------------------------------------------------------- */
 .dam-toasts {
   position: fixed;
   inset-inline-end: var(--dam-space-4);
@@ -341,25 +899,36 @@ a.dam-btn {
   display: flex;
   flex-direction: column;
   gap: var(--dam-space-2);
-  z-index: 1000;
+  z-index: var(--dam-z-toast);
   max-width: min(380px, calc(100vw - 32px));
+  width: 100%;
 }
 .dam-toast {
   display: flex;
   gap: var(--dam-space-3);
   align-items: flex-start;
-  padding: var(--dam-space-3) var(--dam-space-4);
-  background: var(--dam-surface);
-  border: 1px solid var(--dam-border);
-  border-inline-start: 4px solid var(--dam-brand);
-  border-radius: var(--dam-radius-sm);
-  box-shadow: var(--dam-shadow);
+  padding: var(--dam-space-3) var(--dam-space-3) var(--dam-space-3) var(--dam-space-4);
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius);
+  box-shadow: var(--dam-shadow-lg);
+  font-size: var(--dam-text-sm);
+  animation: dam-toast-in var(--dam-duration-slow) var(--dam-ease-spring);
 }
-.dam-toast--success {
-  border-inline-start-color: var(--dam-success);
+.dam-toast__icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--dam-tone-info-text);
 }
-.dam-toast--error {
-  border-inline-start-color: var(--dam-danger);
+.dam-toast--success .dam-toast__icon {
+  color: var(--dam-success);
+}
+.dam-toast--error .dam-toast__icon {
+  color: var(--dam-danger);
+}
+.dam-toast__content {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .dam-toast__title {
   font-weight: 600;
@@ -368,41 +937,76 @@ a.dam-btn {
   color: var(--dam-muted);
   font-size: var(--dam-text-sm);
 }
+.dam-toast .dam-btn--icon {
+  margin: -4px -4px -4px 0;
+}
+@keyframes dam-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
 
-/* Tabs */
+/* ---------------------------------------------------------------------------------------------------------------
+ * Tabs
+ * ------------------------------------------------------------------------------------------------------------- */
 .dam-tablist {
+  position: relative;
   display: flex;
   gap: var(--dam-space-1);
-  border-bottom: 1px solid var(--dam-border);
+  border-bottom: 1px solid var(--dam-border-subtle);
   overflow-x: auto;
+  scrollbar-width: none;
 }
 .dam-tab {
   all: unset;
+  position: relative;
   cursor: pointer;
-  padding: var(--dam-space-3) var(--dam-space-4);
+  padding: 10px var(--dam-space-3);
+  font-size: var(--dam-text-sm);
   font-weight: 600;
   color: var(--dam-muted);
-  border-bottom: 3px solid transparent;
+  border-radius: var(--dam-radius-sm) var(--dam-radius-sm) 0 0;
+  white-space: nowrap;
   transition:
     color var(--dam-duration) var(--dam-ease),
-    border-color var(--dam-duration) var(--dam-ease);
+    background-color var(--dam-duration) var(--dam-ease);
 }
 .dam-tab:hover {
   color: var(--dam-text);
+  background: var(--dam-surface-2);
 }
 .dam-tab[aria-selected='true'] {
   color: var(--dam-brand);
-  border-bottom-color: var(--dam-brand);
+}
+/* The hover tint sits behind the selected tab's brand-coloured label; the plain brand colour fell just under AA on it. */
+.dam-tab[aria-selected='true']:hover {
+  color: var(--dam-brand-soft-text);
 }
 .dam-tab:focus-visible {
-  outline: 3px solid var(--dam-focus);
-  outline-offset: -3px;
+  outline: 2px solid var(--dam-focus);
+  outline-offset: -2px;
+}
+/* Measured by the component and moved with transform only. */
+.dam-tablist__indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 1px;
+  height: 2px;
+  background: var(--dam-brand);
+  border-radius: 2px 2px 0 0;
+  transform-origin: 0 50%;
+  transition: transform var(--dam-duration-slow) var(--dam-ease-spring);
+  pointer-events: none;
 }
 .dam-tabpanel {
   padding: var(--dam-space-4) 0;
 }
 
-/* Tree */
+/* ---------------------------------------------------------------------------------------------------------------
+ * Tree
+ * ------------------------------------------------------------------------------------------------------------- */
 .dam-tree,
 .dam-tree ul {
   list-style: none;
@@ -410,38 +1014,78 @@ a.dam-btn {
   padding: 0;
 }
 .dam-tree ul {
-  padding-inline-start: var(--dam-space-5);
+  margin-inline-start: 15px;
+  padding-inline-start: 9px;
+  border-inline-start: 2px solid var(--dam-border-subtle);
 }
 .dam-treeitem__row {
   display: flex;
   align-items: center;
-  gap: var(--dam-space-2);
-  padding: var(--dam-space-1) var(--dam-space-2);
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 var(--dam-space-2) 0 var(--dam-space-1);
   border-radius: var(--dam-radius-sm);
+  font-size: var(--dam-text-sm);
   cursor: pointer;
-  transition: background-color var(--dam-duration) var(--dam-ease);
+  transition:
+    background-color var(--dam-duration) var(--dam-ease),
+    color var(--dam-duration) var(--dam-ease);
+}
+.dam-treeitem__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dam-treeitem:focus {
   outline: none;
 }
 .dam-treeitem:focus-visible > .dam-treeitem__row {
-  outline: 3px solid var(--dam-focus);
-  outline-offset: -1px;
+  outline: 2px solid var(--dam-focus);
+  outline-offset: -2px;
 }
 .dam-treeitem[aria-selected='true'] > .dam-treeitem__row {
-  background: var(--dam-surface-2);
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
   font-weight: 600;
 }
 .dam-treeitem__row:hover {
   background: var(--dam-surface-2);
 }
+.dam-treeitem[aria-selected='true'] > .dam-treeitem__row:hover {
+  background: var(--dam-brand-soft);
+}
 .dam-caret {
-  width: 1em;
-  display: inline-block;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: var(--dam-muted);
+  border-radius: 4px;
+  transition: transform var(--dam-duration) var(--dam-ease-spring);
+}
+.dam-caret--open {
+  transform: rotate(90deg);
+}
+[dir='rtl'] .dam-caret {
+  transform: scaleX(-1);
+}
+[dir='rtl'] .dam-caret--open {
+  transform: rotate(-90deg);
+}
+.dam-treeitem__icon {
+  flex: 0 0 auto;
   color: var(--dam-muted);
 }
+.dam-treeitem[aria-selected='true'] > .dam-treeitem__row .dam-treeitem__icon {
+  color: inherit;
+}
 
-/* Facets */
+/* ---------------------------------------------------------------------------------------------------------------
+ * Facets (same checkbox rows as CheckboxGroup)
+ * ------------------------------------------------------------------------------------------------------------- */
 .dam-facet {
   border: 0;
   padding: 0;
@@ -449,24 +1093,20 @@ a.dam-btn {
   min-width: 0;
 }
 .dam-facet legend {
-  font-weight: 700;
   padding: 0;
-  margin-bottom: var(--dam-space-2);
-}
-.dam-facet__opt {
-  display: flex;
-  align-items: center;
-  gap: var(--dam-space-2);
-  padding: var(--dam-space-1) 0;
-}
-.dam-facet__count {
-  margin-inline-start: auto;
+  margin-bottom: var(--dam-space-1);
   color: var(--dam-muted);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--dam-text-sm);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
+/* .dam-facet__opt / .dam-facet__count are kept on the markup for consumers' selectors; the visuals come from
+ * .dam-check / .dam-check__count above. */
 
-/* Thumbnail grid */
+/* ---------------------------------------------------------------------------------------------------------------
+ * Thumbnail grid
+ * ------------------------------------------------------------------------------------------------------------- */
 .dam-grid {
   list-style: none;
   margin: 0;
@@ -475,23 +1115,32 @@ a.dam-btn {
   gap: var(--dam-space-4);
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
 }
+@media (max-width: 639px) {
+  .dam-grid {
+    gap: var(--dam-space-3);
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
 .dam-thumb {
   position: relative;
-  background: var(--dam-surface);
-  border: 1px solid var(--dam-border);
+  min-width: 0;
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
   border-radius: var(--dam-radius-lg);
   overflow: hidden;
   box-shadow: var(--dam-shadow-sm);
   transition:
     box-shadow var(--dam-duration) var(--dam-ease),
     border-color var(--dam-duration) var(--dam-ease),
-    transform var(--dam-duration) var(--dam-ease);
+    transform var(--dam-duration) var(--dam-ease-spring);
 }
 .dam-thumb:hover {
   box-shadow: var(--dam-shadow);
+  border-color: var(--dam-border);
   transform: translateY(-2px);
 }
-.dam-thumb--selected {
+.dam-thumb--selected,
+.dam-thumb--selected:hover {
   border-color: var(--dam-brand);
   box-shadow: 0 0 0 2px var(--dam-brand);
 }
@@ -502,8 +1151,8 @@ a.dam-btn {
   cursor: pointer;
 }
 .dam-thumb__open:focus-visible {
-  outline: 3px solid var(--dam-focus);
-  outline-offset: -3px;
+  outline: 2px solid var(--dam-focus);
+  outline-offset: -2px;
 }
 .dam-thumb__img {
   aspect-ratio: 4 / 3;
@@ -511,9 +1160,16 @@ a.dam-btn {
   object-fit: cover;
   display: block;
   background: var(--dam-surface-2);
+  transition: transform var(--dam-duration-slow) var(--dam-ease-spring);
+}
+.dam-thumb:hover .dam-thumb__img {
+  transform: scale(1.02);
 }
 .dam-thumb__meta {
-  padding: var(--dam-space-2) var(--dam-space-3);
+  position: relative;
+  min-width: 0;
+  padding: 10px var(--dam-space-3) var(--dam-space-3);
+  background: var(--dam-surface-raised);
 }
 .dam-thumb__title {
   font-weight: 600;
@@ -526,13 +1182,26 @@ a.dam-btn {
   display: flex;
   align-items: center;
   gap: var(--dam-space-1);
+  min-width: 0;
   color: var(--dam-muted);
-  font-size: var(--dam-text-sm);
+  font-size: var(--dam-text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-thumb__sub > svg {
+  flex: 0 0 auto;
 }
 .dam-thumb__metaline {
   color: var(--dam-muted);
-  font-size: var(--dam-text-sm);
+  font-size: var(--dam-text-xs);
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-thumb__meta .dam-badge {
+  margin-top: 6px;
 }
 .dam-cardmenu {
   position: absolute;
@@ -546,26 +1215,33 @@ a.dam-btn {
   width: 28px;
   height: 28px;
   padding: 0;
-  border: 0;
+  border: 1px solid rgb(255 255 255 / 0.25);
   border-radius: 999px;
-  background: rgb(17 24 39 / 0.55);
+  background: rgb(17 24 39 / 0.5);
+  -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  backdrop-filter: blur(8px) saturate(1.2);
   color: #fff;
   cursor: pointer;
   opacity: 0;
   transition:
     opacity var(--dam-duration) var(--dam-ease),
-    background-color var(--dam-duration) var(--dam-ease);
+    background-color var(--dam-duration) var(--dam-ease),
+    transform var(--dam-duration) var(--dam-ease-spring);
 }
 .dam-thumb:hover .dam-cardmenu__trigger,
+.dam-thumb:focus-within .dam-cardmenu__trigger,
 .dam-cardmenu__trigger:focus-visible,
 .dam-cardmenu__trigger[aria-expanded='true'] {
   opacity: 1;
 }
 .dam-cardmenu__trigger:hover {
-  background: rgb(17 24 39 / 0.8);
+  background: rgb(17 24 39 / 0.75);
+}
+.dam-cardmenu__trigger:active {
+  transform: scale(0.94);
 }
 .dam-cardmenu__trigger:focus-visible {
-  outline: 3px solid var(--dam-focus);
+  outline: 2px solid #fff;
   outline-offset: 1px;
 }
 @media (hover: none) {
@@ -573,40 +1249,111 @@ a.dam-btn {
     opacity: 1;
   }
 }
-.dam-cardmenu__list {
-  position: absolute;
-  top: calc(100% + 4px);
-  inset-inline-end: 0;
-  min-width: 200px;
+/* The "..." menu is portalled to <body> (PopoverMenu) and positioned from the trigger's rect. */
+.dam-popover {
+  position: fixed;
+  z-index: var(--dam-z-menu);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Menu - shared by the "..." menu, the right-click menu and submenus.
+ * ------------------------------------------------------------------------------------------------------------- */
+.dam-menu {
+  position: relative;
   display: flex;
   flex-direction: column;
-  padding: var(--dam-space-1);
-  background: var(--dam-surface);
-  border: 1px solid var(--dam-border);
+  min-width: 220px;
+  padding: 6px;
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
   border-radius: var(--dam-radius);
-  box-shadow: var(--dam-shadow);
+  box-shadow: var(--dam-shadow-lg);
+  animation: dam-menu-in var(--dam-duration) var(--dam-ease);
 }
-.dam-cardmenu__item {
+.dam-menu--sub {
+  position: absolute;
+  top: calc(-6px - 1px);
+  inset-inline-start: calc(100% - 4px);
+  z-index: 1;
+}
+.dam-menu--sub.dam-menu--flip {
+  inset-inline-start: auto;
+  inset-inline-end: calc(100% - 4px);
+}
+.dam-menu__entry {
+  position: relative;
+}
+.dam-menu__sep {
+  height: 1px;
+  margin: 6px calc(-1 * 6px);
+  background: var(--dam-border-subtle);
+}
+.dam-menu__item {
   display: flex;
   align-items: center;
-  gap: var(--dam-space-2);
-  padding: var(--dam-space-2) var(--dam-space-3);
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
   border: 0;
-  border-radius: var(--dam-radius-sm);
+  border-radius: 8px;
   background: transparent;
   color: var(--dam-text);
   font: inherit;
   font-size: var(--dam-text-sm);
+  font-weight: 500;
   text-align: start;
   cursor: pointer;
+  transition: background-color var(--dam-duration) var(--dam-ease);
 }
-.dam-cardmenu__item:hover,
-.dam-cardmenu__item:focus-visible {
+.dam-menu__item:hover,
+.dam-menu__item:focus-visible,
+.dam-menu__item[aria-expanded='true'] {
   background: var(--dam-surface-2);
   outline: none;
 }
-.dam-cardmenu__item--danger {
+.dam-menu__item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--dam-focus);
+}
+.dam-menu__item:disabled {
+  color: var(--dam-muted);
+  cursor: default;
+  background: transparent;
+}
+.dam-menu__item--danger {
   color: var(--dam-danger);
+}
+.dam-menu__item--danger:hover,
+.dam-menu__item--danger:focus-visible {
+  background: var(--dam-tone-danger-bg);
+}
+.dam-menu__lead {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  flex: 0 0 16px;
+  color: var(--dam-muted);
+}
+.dam-menu__item--danger .dam-menu__lead,
+.dam-menu__item[aria-checked='true'] .dam-menu__lead {
+  color: inherit;
+}
+.dam-menu__label {
+  flex: 1 1 auto;
+}
+.dam-menu__caret {
+  flex: 0 0 auto;
+  color: var(--dam-muted);
+}
+.dam-contextmenu {
+  position: fixed;
+  z-index: var(--dam-z-contextmenu);
+}
+@keyframes dam-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 .dam-thumb__select-wrap {
   position: absolute;
@@ -624,16 +1371,27 @@ a.dam-btn {
   width: 100%;
   height: 100%;
   border-radius: 999px;
-  border: 2px solid rgb(255 255 255 / 0.85);
+  border: 2px solid rgb(255 255 255 / 0.9);
   background: rgb(17 24 39 / 0.35);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
   cursor: pointer;
   transition:
     background-color var(--dam-duration) var(--dam-ease),
-    border-color var(--dam-duration) var(--dam-ease);
+    border-color var(--dam-duration) var(--dam-ease),
+    transform var(--dam-duration) var(--dam-ease-spring);
+}
+.dam-thumb__select:active {
+  transform: scale(0.92);
 }
 .dam-thumb__select:checked {
   background: var(--dam-brand);
   border-color: var(--dam-brand);
+}
+.dam-thumb__select:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
 }
 .dam-thumb__select-check {
   position: absolute;
@@ -647,35 +1405,95 @@ a.dam-btn {
 .dam-thumb__select:checked ~ .dam-thumb__select-check {
   opacity: 1;
 }
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Badge
+ * ------------------------------------------------------------------------------------------------------------- */
 .dam-badge {
-  display: inline-block;
-  padding: 0 var(--dam-space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
   border-radius: 999px;
-  background: var(--dam-surface-2);
-  font-size: 0.75rem;
+  background: var(--dam-tone-neutral-bg);
+  color: var(--dam-tone-neutral-text);
+  font-size: var(--dam-text-xs);
   font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.dam-badge--sm {
+  height: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+.dam-badge--info {
+  background: var(--dam-tone-info-bg);
+  color: var(--dam-tone-info-text);
+}
+.dam-badge--success {
+  background: var(--dam-tone-success-bg);
+  color: var(--dam-tone-success-text);
+}
+.dam-badge--warning {
+  background: var(--dam-tone-warning-bg);
+  color: var(--dam-tone-warning-text);
+}
+.dam-badge--danger {
+  background: var(--dam-tone-danger-bg);
+  color: var(--dam-tone-danger-text);
+}
+.dam-badge--brand {
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+}
+.dam-badge > svg {
+  flex: 0 0 auto;
 }
 
-/* Skeleton */
+/* ---------------------------------------------------------------------------------------------------------------
+ * Skeleton - shimmer moves a translated highlight (transform only) across a flat block.
+ * ------------------------------------------------------------------------------------------------------------- */
 .dam-skeleton {
+  position: relative;
   display: block;
-  background: linear-gradient(90deg, var(--dam-surface-2), var(--dam-border), var(--dam-surface-2));
-  background-size: 200% 100%;
+  overflow: hidden;
+  background: var(--dam-surface-2);
   border-radius: var(--dam-radius-sm);
-  animation: dam-shimmer 1.4s linear infinite;
+}
+.dam-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.5) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: dam-shimmer 1.6s var(--dam-ease) infinite;
+}
+:root[data-theme='dark'] .dam-skeleton::after {
+  background: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.07) 50%, transparent 100%);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .dam-skeleton::after {
+    background: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.07) 50%, transparent 100%);
+  }
 }
 @keyframes dam-shimmer {
   to {
-    background-position: -200% 0;
+    transform: translateX(100%);
   }
 }
 
-/* Breadcrumb */
+/* ---------------------------------------------------------------------------------------------------------------
+ * Breadcrumb
+ * ------------------------------------------------------------------------------------------------------------- */
 .dam-breadcrumb ol {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--dam-space-1);
+  gap: 2px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -683,14 +1501,14 @@ a.dam-btn {
 .dam-breadcrumb li {
   display: flex;
   align-items: center;
-  gap: var(--dam-space-1);
+  gap: 2px;
   min-width: 0;
 }
 .dam-breadcrumb button {
   all: unset;
   cursor: pointer;
   color: var(--dam-muted);
-  font-weight: 600;
+  font-weight: 500;
   font-size: var(--dam-text-sm);
   border-radius: var(--dam-radius-sm);
   padding: var(--dam-space-1) var(--dam-space-2);
@@ -702,9 +1520,14 @@ a.dam-btn {
   color: var(--dam-text);
   background: var(--dam-surface-2);
 }
+.dam-breadcrumb button:focus-visible {
+  outline: 2px solid var(--dam-focus);
+  outline-offset: 0;
+}
 .dam-breadcrumb [aria-current='page'] {
   padding: var(--dam-space-1) var(--dam-space-2);
-  font-weight: 600;
+  font-size: var(--dam-text-sm);
+  font-weight: 700;
   color: var(--dam-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -712,5 +1535,565 @@ a.dam-btn {
 }
 .dam-breadcrumb__sep {
   color: var(--dam-muted);
+  opacity: 0.7;
   flex-shrink: 0;
+}
+[dir='rtl'] .dam-breadcrumb__sep {
+  transform: scaleX(-1);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Card / EmptyState / PageHeader / StatCard / Avatar / Kbd / SegmentedControl / Logo
+ * ------------------------------------------------------------------------------------------------------------- */
+.dam-card {
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-lg);
+  box-shadow: var(--dam-shadow-sm);
+  min-width: 0;
+}
+.dam-card--pad-sm {
+  padding: var(--dam-space-3);
+}
+.dam-card--pad-md {
+  padding: var(--dam-space-4);
+}
+.dam-card--pad-lg {
+  padding: var(--dam-space-5);
+}
+.dam-card--interactive {
+  cursor: pointer;
+  transition:
+    box-shadow var(--dam-duration) var(--dam-ease),
+    border-color var(--dam-duration) var(--dam-ease),
+    transform var(--dam-duration) var(--dam-ease-spring);
+}
+.dam-card--interactive:hover {
+  box-shadow: var(--dam-shadow);
+  border-color: var(--dam-border);
+  transform: translateY(-1px);
+}
+.dam-card--interactive:active {
+  transform: translateY(0) scale(0.995);
+}
+
+.dam-emptystate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--dam-space-2);
+  padding: var(--dam-space-8) var(--dam-space-5);
+  max-width: 440px;
+  margin: 0 auto;
+}
+.dam-emptystate__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--dam-space-2);
+  border-radius: var(--dam-radius-lg);
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+}
+.dam-emptystate__icon > svg {
+  width: 26px;
+  height: 26px;
+}
+.dam-emptystate__title {
+  margin: 0;
+  font-size: var(--dam-text-md);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.dam-emptystate__desc {
+  margin: 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+  text-wrap: pretty;
+}
+.dam-emptystate__action {
+  margin-top: var(--dam-space-3);
+  display: flex;
+  gap: var(--dam-space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.dam-pagehead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+  margin-bottom: var(--dam-space-5);
+}
+.dam-pagehead__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--dam-space-4);
+  flex-wrap: wrap;
+}
+.dam-pagehead__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dam-pagehead__eyebrow {
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dam-pagehead__title {
+  margin: 0;
+  font-size: var(--dam-text-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.dam-pagehead__desc {
+  margin: 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+  max-width: 64ch;
+  text-wrap: pretty;
+}
+.dam-pagehead__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+.dam-pagehead__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+  flex-wrap: wrap;
+}
+
+.dam-stat {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--dam-space-3);
+  row-gap: var(--dam-space-2);
+  padding: var(--dam-space-4);
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-lg);
+  box-shadow: var(--dam-shadow-sm);
+  min-width: 0;
+}
+.dam-stat__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--dam-radius);
+  background: var(--dam-tone-neutral-bg);
+  color: var(--dam-tone-neutral-text);
+}
+.dam-stat--info .dam-stat__icon {
+  background: var(--dam-tone-info-bg);
+  color: var(--dam-tone-info-text);
+}
+.dam-stat--success .dam-stat__icon {
+  background: var(--dam-tone-success-bg);
+  color: var(--dam-tone-success-text);
+}
+.dam-stat--warning .dam-stat__icon {
+  background: var(--dam-tone-warning-bg);
+  color: var(--dam-tone-warning-text);
+}
+.dam-stat--danger .dam-stat__icon {
+  background: var(--dam-tone-danger-bg);
+  color: var(--dam-tone-danger-text);
+}
+.dam-stat--brand .dam-stat__icon {
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+}
+.dam-stat__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.dam-stat__label {
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dam-stat__value {
+  font-size: var(--dam-text-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-stat__hint {
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+
+/* Avatar: initials on a brand-tinted rounded square. Sizes are keyed off data-size so an app-level `.dam-avatar`
+ * rule from before this component existed cannot win on source order alone. */
+.dam-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  user-select: none;
+}
+.dam-avatar[data-size='sm'] {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  font-size: 10px;
+}
+.dam-avatar[data-size='md'] {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  font-size: var(--dam-text-xs);
+}
+.dam-avatar[data-size='lg'] {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  font-size: var(--dam-text-sm);
+}
+
+.dam-kbd {
+  display: inline-block;
+  min-width: 20px;
+  padding: 1px 5px;
+  border: 1px solid var(--dam-border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--dam-surface);
+  color: var(--dam-muted);
+  font-family: var(--dam-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.dam-segmented {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--dam-radius);
+  background: var(--dam-surface-2);
+  border: 1px solid var(--dam-border-subtle);
+}
+.dam-segmented__pill {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  width: 1px;
+  height: calc(100% - 6px);
+  border-radius: 8px;
+  background: var(--dam-surface-raised);
+  box-shadow: var(--dam-shadow-sm);
+  transform-origin: 0 50%;
+  transition: transform var(--dam-duration-slow) var(--dam-ease-spring);
+  pointer-events: none;
+}
+.dam-segmented__btn {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dam-muted);
+  font: inherit;
+  font-size: var(--dam-text-sm);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--dam-duration) var(--dam-ease);
+}
+.dam-segmented__btn:hover {
+  color: var(--dam-text);
+}
+.dam-segmented__btn[aria-pressed='true'] {
+  color: var(--dam-text);
+}
+.dam-segmented__btn:focus-visible {
+  outline-offset: -2px;
+}
+/* No measured pill yet (first paint, jsdom): the pressed button paints its own surface. */
+.dam-segmented--static .dam-segmented__btn[aria-pressed='true'] {
+  background: var(--dam-surface-raised);
+  box-shadow: var(--dam-shadow-sm);
+}
+
+.dam-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--dam-text);
+  text-decoration: none;
+  line-height: 1;
+}
+.dam-logo__glyph {
+  flex: 0 0 auto;
+  color: var(--dam-brand);
+}
+.dam-logo__word {
+  font-family: var(--dam-font);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Library round: card skeletons, list-view row menu, responsive table columns
+ * ------------------------------------------------------------------------------------------------------------- */
+.dam-thumb--skeleton,
+.dam-thumb--skeleton:hover {
+  transform: none;
+  box-shadow: var(--dam-shadow-sm);
+  border-color: var(--dam-border-subtle);
+}
+.dam-thumb__skel-img {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+}
+.dam-thumb__skel-img > .dam-skeleton {
+  border-radius: 0;
+}
+.dam-thumb__skel-line {
+  margin-top: 8px;
+}
+.dam-thumb--skeleton .dam-thumb__meta {
+  padding-bottom: var(--dam-space-4);
+}
+/* A table row's "..." menu is a quiet icon button, not the translucent pill that sits on a card's image. */
+.dam-table .dam-cardmenu {
+  position: static;
+  display: flex;
+  justify-content: flex-end;
+}
+.dam-table .dam-cardmenu__trigger {
+  opacity: 1;
+  background: transparent;
+  border-color: transparent;
+  color: var(--dam-muted);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.dam-table .dam-cardmenu__trigger:hover,
+.dam-table .dam-cardmenu__trigger[aria-expanded='true'] {
+  background: var(--dam-surface-2);
+  color: var(--dam-text);
+}
+.dam-table .dam-cardmenu__trigger:focus-visible {
+  outline: 2px solid var(--dam-focus);
+  outline-offset: 1px;
+}
+@media (max-width: 639px) {
+  .dam-table .dam-col--hide-sm {
+    display: none;
+  }
+}
+
+/* Charts: hand-drawn with CSS/SVG so the kit stays dependency-free. */
+.dam-stat__trend {
+  grid-column: 3;
+  grid-row: 1;
+}
+.dam-stat__chart {
+  grid-column: 1 / -1;
+  align-self: end;
+  color: var(--dam-brand);
+  margin-top: var(--dam-space-1);
+}
+.dam-spark {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.dam-trend {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--dam-text-xs);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dam-trend--good {
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+}
+.dam-trend--bad {
+  background: var(--dam-tone-danger-bg);
+  color: var(--dam-tone-danger-text);
+}
+.dam-trend--flat {
+  background: var(--dam-tone-neutral-bg);
+  color: var(--dam-tone-neutral-text);
+}
+.dam-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+  min-width: 0;
+}
+.dam-bars__plot {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  height: var(--dam-bars-h, 140px);
+  border-bottom: 1px solid var(--dam-border-subtle);
+}
+.dam-bars--fill {
+  height: 100%;
+}
+.dam-bars--fill .dam-bars__plot {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 96px;
+}
+.dam-bars--fill {
+  min-height: 132px;
+}
+.dam-bars__col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+}
+.dam-bars__bar {
+  display: block;
+  width: 100%;
+  min-height: 2px;
+  background: var(--dam-bar, var(--dam-chart-1));
+  border-radius: 3px 3px 0 0;
+  opacity: 0.85;
+  transition: opacity var(--dam-duration) var(--dam-ease);
+}
+.dam-bars__bar--zero {
+  opacity: 0.25;
+}
+.dam-bars__col:hover .dam-bars__bar {
+  opacity: 1;
+}
+.dam-bars__axis {
+  display: flex;
+  gap: 3px;
+}
+.dam-bars__tick {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--dam-muted);
+  font-size: 11px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: visible;
+}
+.dam-dist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+}
+.dam-dist__bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.dam-dist__seg {
+  min-width: 4px;
+}
+.dam-dist__seg--empty {
+  background: var(--dam-surface-2);
+}
+.dam-dist__legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--dam-space-2) var(--dam-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dam-dist__item {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+  min-width: 0;
+  font-size: var(--dam-text-sm);
+}
+.dam-dist__dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dam-dist__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dam-muted);
+}
+.dam-dist__val {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.dam-dist__pct {
+  color: var(--dam-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--dam-text-xs);
+}
+
+.dam-dist--compact {
+  gap: var(--dam-space-2);
+}
+.dam-dist--compact .dam-dist__bar {
+  height: 10px;
+}
+.dam-dist--compact .dam-dist__legend {
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 2px var(--dam-space-3);
+}
+.dam-dist--compact .dam-dist__item {
+  font-size: var(--dam-text-xs);
+}
+/* The last axis label ends at the plot's right edge instead of running past it. */
+.dam-bars__tick:last-child {
+  display: flex;
+  justify-content: flex-end;
 }

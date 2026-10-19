@@ -23,8 +23,12 @@ public sealed record PackSchema(string AssetType, List<FieldDefinition> Fields);
 
 public sealed record PackFolder(string Name, string? Label = null, Dictionary<string, JsonElement>? InheritedMetadata = null, List<PackFolder>? Children = null);
 
+/// <summary>A workflow definition a pack adds (created if no workflow of that name exists; never bound to anything).</summary>
+public sealed record PackWorkflow(string Name, string? Description, JsonElement Definition);
+
 public sealed record TemplatePack(
-    string Id, string Name, string Description, List<string>? Requires, List<PackVocabulary>? Vocabularies, List<PackSchema>? Schemas, List<PackFolder>? Folders)
+    string Id, string Name, string Description, List<string>? Requires, List<PackVocabulary>? Vocabularies, List<PackSchema>? Schemas, List<PackFolder>? Folders,
+    List<PackWorkflow>? Workflows = null)
 {
     public int TermCount => (Vocabularies ?? []).Sum(v => CountTerms(v.Terms));
     public int FolderCount => CountFolders(Folders ?? []);
@@ -80,6 +84,7 @@ public sealed class TemplateApplication
     public int SchemasCreated { get; set; }
     public int SchemasExtended { get; set; }
     public int FoldersCreated { get; set; }
+    public int WorkflowsCreated { get; set; }
 }
 
 /// <summary>
@@ -88,7 +93,7 @@ public sealed class TemplateApplication
 /// </summary>
 public sealed class TemplateApplier(
     IRepository<Vocabulary> vocabularies, IRepository<Term> terms, IRepository<MetadataSchema> schemas, IRepository<Folder> folders,
-    IQueryExecutor q, ITenantContext tenant, ICurrentUser me, IClock clock)
+    IRepository<Domain.Workflow.WorkflowDefinition> workflows, IQueryExecutor q, ITenantContext tenant, ICurrentUser me, IClock clock)
 {
     public Task<TemplateApplication> ApplyAsync(string packId, CancellationToken ct) => ApplyAsync([packId], ct);
 
@@ -109,6 +114,7 @@ public sealed class TemplateApplier(
         var termsByVocab = (await q.ToListAsync(terms.Query(), ct)).GroupBy(t => t.VocabularyId).ToDictionary(g => g.Key, g => g.ToList());
         var currentSchemas = (await q.ToListAsync(schemas.Query().Where(s => s.IsCurrent), ct)).ToDictionary(s => s.AssetType);
         var existingFolders = await q.ToListAsync(folders.Query(), ct);
+        var workflowNames = (await q.ToListAsync(workflows.Query().Select(w => w.Name), ct)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var now = clock.UtcNow;
 
         foreach (var pack in chain)
@@ -148,6 +154,13 @@ public sealed class TemplateApplier(
             }
 
             AddFolders(null, pack.Folders ?? [], existingFolders, result, now);
+
+            foreach (var pw in pack.Workflows ?? [])
+            {
+                if (!workflowNames.Add(pw.Name)) continue;   // never overwrites a workflow the tenant already has under that name
+                workflows.Add(Domain.Workflow.WorkflowDefinition.Create(tenant.TenantId, pw.Name, pw.Description, JsonSerializer.Serialize(pw.Definition), me.UserId, now));
+                result.WorkflowsCreated++;
+            }
         }
         return result;
     }
@@ -197,7 +210,7 @@ public sealed class ListTemplatesHandler : IRequestHandler<ListTemplatesQuery, I
 {
     public Task<Result<IReadOnlyList<TemplateDto>>> Handle(ListTemplatesQuery r, CancellationToken ct) =>
         Task.FromResult<Result<IReadOnlyList<TemplateDto>>>(TemplateCatalog.All.Values.OrderBy(p => p.Id)
-            .Select(p => new TemplateDto(p.Id, p.Name, p.Description, p.Requires ?? [], (p.Vocabularies ?? []).Count, p.TermCount, (p.Schemas ?? []).Count, p.FolderCount))
+            .Select(p => new TemplateDto(p.Id, p.Name, p.Description, p.Requires ?? [], (p.Vocabularies ?? []).Count, p.TermCount, (p.Schemas ?? []).Count, p.FolderCount, (p.Workflows ?? []).Count))
             .ToList());
 }
 
@@ -213,6 +226,6 @@ public sealed class ApplyTemplateHandler(TemplateApplier applier, IEventCollecto
         if (!TemplateCatalog.All.ContainsKey(c.TemplateId)) return Error.NotFound($"Unknown template '{c.TemplateId}'.");
         var r = await applier.ApplyAsync(c.TemplateId, ct);
         events.Raise(Events.Changed("template.applied", "template", Guid.Empty));
-        return new TemplateApplyResultDto(r.Applied, r.VocabulariesCreated, r.TermsCreated, r.SchemasCreated, r.SchemasExtended, r.FoldersCreated);
+        return new TemplateApplyResultDto(r.Applied, r.VocabulariesCreated, r.TermsCreated, r.SchemasCreated, r.SchemasExtended, r.FoldersCreated, r.WorkflowsCreated);
     }
 }

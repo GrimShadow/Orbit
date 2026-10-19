@@ -1,100 +1,48 @@
 import { DotsThree } from '@phosphor-icons/react';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useId, useState } from 'react';
+import { PopoverMenu, type MenuItem } from './Menu';
 
-export interface CardAction {
-  key: string;
-  label: string;
-  icon?: ReactNode;
-  /** `danger` is styled as destructive; everything else is neutral. */
-  tone?: 'danger';
-  onSelect: () => void;
-}
+/** Kept as an alias: a card's action is just a menu item. */
+export type CardAction = MenuItem;
 
 interface CardMenuProps {
   /** Accessible name of the trigger, e.g. "Actions for Hero shot". */
   label: string;
-  actions: CardAction[];
+  actions: MenuItem[];
+  /** Called when the menu opens - a place to start fetching whatever the items' state depends on. */
+  onOpen?: () => void;
 }
 
-/** A "..." trigger that opens a small action list on a card - the ARIA menu-button pattern: the trigger toggles it,
- * Arrow keys move between items, Home/End jump, Escape (or a click elsewhere) closes and returns focus to the trigger. */
-export function CardMenu({ label, actions }: CardMenuProps) {
+/** A "..." trigger that opens the same menu a right-click does (ARIA menu-button pattern): the trigger toggles it,
+ * Escape (or a click elsewhere) closes it and returns focus to the trigger. The menu itself is portalled to <body>
+ * (see `PopoverMenu`) so the card's `overflow: hidden` and hover transform can neither clip nor stack above it. */
+export function CardMenu({ label, actions, onOpen }: CardMenuProps) {
   const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
+  // The trigger element is state (callback ref) because the portalled menu needs it during render to anchor itself.
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
   const menuId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('pointerdown', onPointer);
-    return () => document.removeEventListener('pointerdown', onPointer);
-  }, [open]);
-
-  useEffect(() => {
-    if (open) root.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
 
   if (actions.length === 0) return null;
 
-  const close = (returnFocus: boolean) => {
-    setOpen(false);
-    if (returnFocus) trigger.current?.focus();
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    const items = [...(root.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
-    const at = items.indexOf(document.activeElement as HTMLElement);
-    const move = (to: number) => {
-      e.preventDefault();
-      items[(to + items.length) % items.length]?.focus();
-    };
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      close(true);
-    } else if (e.key === 'ArrowDown') move(at + 1);
-    else if (e.key === 'ArrowUp') move(at - 1);
-    else if (e.key === 'Home') move(0);
-    else if (e.key === 'End') move(items.length - 1);
-    else if (e.key === 'Tab') close(false);
-  };
-
   return (
-    <div className="dam-cardmenu" ref={root}>
+    <div className="dam-cardmenu">
       <button
-        ref={trigger}
+        ref={setTrigger}
         type="button"
         className="dam-cardmenu__trigger"
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (!open) onOpen?.();
+          setOpen((o) => !o);
+        }}
       >
         <DotsThree size={18} weight="bold" aria-hidden="true" />
       </button>
-      {open && (
-        <div id={menuId} role="menu" tabIndex={-1} aria-label={label} className="dam-cardmenu__list" onKeyDown={onKeyDown}>
-          {actions.map((a) => (
-            <button
-              key={a.key}
-              type="button"
-              role="menuitem"
-              tabIndex={-1}
-              className={`dam-cardmenu__item${a.tone === 'danger' ? ' dam-cardmenu__item--danger' : ''}`}
-              onClick={() => {
-                close(true);
-                a.onSelect();
-              }}
-            >
-              {a.icon}
-              {a.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {open && <PopoverMenu id={menuId} anchor={trigger} label={label} items={actions} onClose={close} />}
     </div>
   );
 }

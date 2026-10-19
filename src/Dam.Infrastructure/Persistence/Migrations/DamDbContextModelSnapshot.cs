@@ -169,6 +169,37 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Dam.Domain.Assets.AssetUsage", b =>
+                {
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<DateTimeOffset>("FirstUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_used_at");
+
+                    b.Property<DateTimeOffset>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("UseCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("use_count");
+
+                    b.HasKey("AssetId")
+                        .HasName("pk_asset_usage");
+
+                    b.HasIndex("TenantId", "LastUsedAt")
+                        .HasDatabaseName("ix_asset_usage_tenant_id_last_used_at");
+
+                    b.ToTable("asset_usage", (string)null);
+                });
+
             modelBuilder.Entity("Dam.Domain.Assets.AssetVersion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -534,6 +565,79 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasFilter("batch_id IS NOT NULL");
 
                     b.ToTable("uploads", (string)null);
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.UsageEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<string>("Channel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("channel");
+
+                    b.Property<string>("ClientEventId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("client_event_id");
+
+                    b.Property<string>("Context")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("context");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("event_type");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("Rendition")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("rendition");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_usage_events");
+
+                    b.HasIndex("AssetId")
+                        .HasDatabaseName("ix_usage_events_asset_id");
+
+                    b.HasIndex("TenantId", "ClientEventId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_usage_events_tenant_id_client_event_id")
+                        .HasFilter("client_event_id IS NOT NULL");
+
+                    b.HasIndex("TenantId", "OccurredAt")
+                        .HasDatabaseName("ix_usage_events_tenant_id_occurred_at");
+
+                    b.HasIndex("TenantId", "AssetId", "OccurredAt")
+                        .IsDescending(false, false, true)
+                        .HasDatabaseName("ix_usage_events_tenant_id_asset_id_occurred_at");
+
+                    b.ToTable("usage_events", (string)null);
                 });
 
             modelBuilder.Entity("Dam.Domain.Content.Collection", b =>
@@ -1149,6 +1253,306 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
+            modelBuilder.Entity("Dam.Domain.Workflow.WorkflowBinding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AssetType")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("asset_type");
+
+                    b.Property<string>("Region")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("region");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("WorkflowId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workflow_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_workflow_bindings");
+
+                    b.HasIndex("WorkflowId")
+                        .HasDatabaseName("ix_workflow_bindings_workflow_id");
+
+                    b.HasIndex("TenantId", "AssetType", "Region")
+                        .IsUnique()
+                        .HasDatabaseName("ix_workflow_bindings_tenant_id_asset_type_region");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("TenantId", "AssetType", "Region"), false);
+
+                    b.ToTable("workflow_bindings", (string)null);
+                });
+
+            modelBuilder.Entity("Dam.Domain.Workflow.WorkflowDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Json")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("json");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_workflow_definitions");
+
+                    b.HasIndex("TenantId", "Name")
+                        .HasDatabaseName("ix_workflow_definitions_tenant_id_name");
+
+                    b.ToTable("workflow_definitions", (string)null);
+                });
+
+            modelBuilder.Entity("Dam.Domain.Workflow.WorkflowInstance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<Guid?>("DefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("definition_id");
+
+                    b.Property<string>("DefinitionJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("definition_json");
+
+                    b.Property<string>("DefinitionName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("definition_name");
+
+                    b.Property<bool>("DistinctApprovers")
+                        .HasColumnType("boolean")
+                        .HasColumnName("distinct_approvers");
+
+                    b.Property<string>("OutcomeReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("outcome_reason");
+
+                    b.Property<string>("OutcomeStatus")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("outcome_status");
+
+                    b.Property<int>("Rounds")
+                        .HasColumnType("integer")
+                        .HasColumnName("rounds");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<Guid?>("StartedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("started_by");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_workflow_instances");
+
+                    b.HasIndex("AssetId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_workflow_instances_running_per_asset")
+                        .HasFilter("status = 'running'");
+
+                    b.HasIndex("DefinitionId")
+                        .HasDatabaseName("ix_workflow_instances_definition_id");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("ix_workflow_instances_tenant_id_status");
+
+                    b.HasIndex("TenantId", "AssetId", "StartedAt")
+                        .HasDatabaseName("ix_workflow_instances_tenant_id_asset_id_started_at");
+
+                    b.ToTable("workflow_instances", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_workflow_instances_status", "status IN ('running','approved','rejected','cancelled')");
+                        });
+                });
+
+            modelBuilder.Entity("Dam.Domain.Workflow.WorkflowTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.PrimitiveCollection<List<string>>("AssigneeRoles")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("assignee_roles");
+
+                    b.PrimitiveCollection<List<Guid>>("AssigneeUserIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("assignee_user_ids");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("comment");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<Guid?>("DecidedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by");
+
+                    b.Property<DateTimeOffset?>("DueAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("due_at");
+
+                    b.PrimitiveCollection<List<string>>("EscalatedRoles")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("escalated_roles");
+
+                    b.PrimitiveCollection<List<Guid>>("EscalatedUserIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("escalated_user_ids");
+
+                    b.Property<Guid>("InstanceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("instance_id");
+
+                    b.Property<int>("Round")
+                        .HasColumnType("integer")
+                        .HasColumnName("round");
+
+                    b.Property<DateTimeOffset?>("SlaBreachedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sla_breached_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StepId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("step_id");
+
+                    b.Property<string>("StepName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("step_name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_workflow_tasks");
+
+                    b.HasIndex("AssigneeRoles")
+                        .HasDatabaseName("ix_workflow_tasks_assignee_roles");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("AssigneeRoles"), "gin");
+
+                    b.HasIndex("AssigneeUserIds")
+                        .HasDatabaseName("ix_workflow_tasks_assignee_user_ids");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("AssigneeUserIds"), "gin");
+
+                    b.HasIndex("Status", "DueAt")
+                        .HasDatabaseName("ix_workflow_tasks_sla_sweep")
+                        .HasFilter("status = 'pending' AND sla_breached_at IS NULL AND due_at IS NOT NULL");
+
+                    b.HasIndex("TenantId", "AssetId")
+                        .HasDatabaseName("ix_workflow_tasks_tenant_id_asset_id");
+
+                    b.HasIndex("TenantId", "DecidedBy")
+                        .HasDatabaseName("ix_workflow_tasks_tenant_id_decided_by")
+                        .HasFilter("decided_by IS NOT NULL");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("ix_workflow_tasks_tenant_id_status");
+
+                    b.HasIndex("InstanceId", "StepId", "Round")
+                        .HasDatabaseName("ix_workflow_tasks_instance_id_step_id_round");
+
+                    b.ToTable("workflow_tasks", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_workflow_tasks_status", "status IN ('pending','approved','rejected','cancelled')");
+                        });
+                });
+
             modelBuilder.Entity("Dam.Infrastructure.Persistence.AuditLogEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1312,6 +1716,16 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_assets_retention_policies_retention_policy_id");
                 });
 
+            modelBuilder.Entity("Dam.Domain.Assets.AssetUsage", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_usage_assets_asset_id");
+                });
+
             modelBuilder.Entity("Dam.Domain.Assets.AssetVersion", b =>
                 {
                     b.HasOne("Dam.Domain.Assets.Asset", null)
@@ -1340,6 +1754,52 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_uploads_assets_asset_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.UsageEvent", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_usage_events_assets_asset_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Workflow.WorkflowBinding", b =>
+                {
+                    b.HasOne("Dam.Domain.Workflow.WorkflowDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("WorkflowId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_workflow_bindings_workflow_definitions_workflow_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Workflow.WorkflowInstance", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_workflow_instances_assets_asset_id");
+
+                    b.HasOne("Dam.Domain.Workflow.WorkflowDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("DefinitionId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_workflow_instances_workflow_definitions_definition_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Workflow.WorkflowTask", b =>
+                {
+                    b.HasOne("Dam.Domain.Workflow.WorkflowInstance", null)
+                        .WithMany()
+                        .HasForeignKey("InstanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_workflow_tasks_workflow_instances_instance_id");
                 });
 #pragma warning restore 612, 618
         }

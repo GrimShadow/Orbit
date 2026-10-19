@@ -1,55 +1,62 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, LoadingRegion, Skeleton } from '../../ui';
-import { useSchema, useUpdateAsset } from './assetApi';
-import { MetadataFields, type Json, type Values } from './MetadataFields';
+import { Button, EmptyState, LoadingRegion, Skeleton } from '../../ui';
+import { isEmptyValue, MetadataFields } from './MetadataFields';
+import type { AssetDraft } from './useAssetDraft';
+import { useSchema } from './assetApi';
 
 interface MetadataFormProps {
-  assetId: string;
   assetType: string;
-  metadata: Record<string, unknown>;
+  draft: AssetDraft;
 }
 
-/** A form generated from the asset type's current schema (spec Step 1.8: "metadata form generated from schema").
- * Fields the schema no longer knows about (an old asset validated against an earlier version) are preserved untouched
- * in the saved payload - `UpdateAsset` replaces the whole document, so only rendered fields are ever changed here. */
-export function MetadataForm({ assetId, assetType, metadata }: MetadataFormProps) {
+/** The form generated from the asset type's current schema (spec Step 1.8: "metadata form generated from schema"). The
+ * values live in `draft` (see `useAssetDraft`), which also keeps fields the schema no longer knows about untouched in the
+ * saved document; this only renders the fields it is told about. */
+export function MetadataForm({ assetType, draft }: MetadataFormProps) {
   const { t } = useTranslation();
   const schemaQuery = useSchema(assetType);
-  const update = useUpdateAsset(assetId);
-  const [values, setValues] = useState<Values>(metadata as Values);
-  const [dirty, setDirty] = useState(false);
-
-  const setField = (name: string, value: Json) => {
-    setValues((v) => ({ ...v, [name]: value }));
-    setDirty(true);
-  };
 
   if (schemaQuery.isPending)
     return (
-      <LoadingRegion>
-        <Skeleton height={200} />
+      <LoadingRegion label={t('asset.metadataLoading')}>
+        <div className="dam-stack dam-stack--fill">
+          <Skeleton height={120} />
+          <Skeleton height={160} />
+        </div>
       </LoadingRegion>
     );
-  if (schemaQuery.error) return <p className="dam-hint">{t('asset.schemaFailed')}</p>;
+  if (schemaQuery.error)
+    return (
+      <EmptyState
+        titleAs="h2"
+        title={t('asset.schemaFailed')}
+        action={
+          <Button variant="secondary" onClick={() => void schemaQuery.refetch()}>
+            {t('library.retry')}
+          </Button>
+        }
+      />
+    );
 
+  const fields = schemaQuery.data.fields;
+  if (fields.length === 0) return <EmptyState titleAs="h2" title={t('asset.noMetadataFields')} />;
+
+  const missing = fields.filter((f) => f.required && isEmptyValue(draft.values[f.name])).length;
   return (
-    <form
-      className="dam-stack"
-      onSubmit={(e) => {
-        e.preventDefault();
-        update.mutate({ title: null, tags: null, metadata: values }, { onSuccess: () => setDirty(false) });
-      }}
-    >
-      <MetadataFields fields={schemaQuery.data.fields} values={values} onChange={setField} />
-      <Button type="submit" variant="primary" loading={update.isPending} disabled={!dirty}>
-        {t('asset.saveMetadata')}
-      </Button>
-      {update.isError && (
-        <p role="alert" className="dam-hint">
-          {update.error.message}
+    <div className="dam-stack dam-stack--fill">
+      {missing > 0 && (
+        <p className="dam-asset-note" role="note">
+          {t('asset.requiredMissing', { count: missing })}
         </p>
       )}
-    </form>
+      <MetadataFields
+        fields={fields}
+        values={draft.values}
+        onChange={draft.setField}
+        grouped
+        touched={draft.touched}
+        onTouch={draft.touch}
+      />
+    </div>
   );
 }

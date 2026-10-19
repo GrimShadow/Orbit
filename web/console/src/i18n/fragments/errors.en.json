@@ -1,0 +1,14 @@
+{
+  "notFound": {
+    "title": "Page not found",
+    "body": "The page you asked for does not exist, or it has moved. Check the address, or head back to somewhere familiar.",
+    "home": "Back to home",
+    "library": "Open the library"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "body": "An unexpected error occurred. Reload the page to continue.",
+    "reload": "Reload",
+    "home": "Go to home"
+  }
+}

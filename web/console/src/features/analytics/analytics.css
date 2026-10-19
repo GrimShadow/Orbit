@@ -1,0 +1,440 @@
+/* Dashboard analytics: the "not used" tracker, the period picker and the insight cards. */
+.dam-period {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-3);
+}
+.dam-period__custom {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-period__amount {
+  width: 5.5rem;
+}
+.dam-period__unit {
+  width: auto;
+}
+.dam-period__error {
+  color: var(--dam-danger);
+  font-size: var(--dam-text-sm);
+}
+
+.dam-unused {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+  min-width: 0;
+}
+.dam-unused__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--dam-space-3) var(--dam-space-5);
+}
+.dam-unused__titles {
+  min-width: 0;
+}
+.dam-unused__title {
+  margin: 0;
+  font-size: var(--dam-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.dam-unused__desc {
+  margin: 2px 0 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+.dam-unused__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3) var(--dam-space-4);
+  background: var(--dam-surface-2);
+  border-radius: var(--dam-radius);
+}
+.dam-unused__summary {
+  margin: 0;
+  min-width: 0;
+}
+.dam-unused__count {
+  font-size: var(--dam-text-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.dam-unused__filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-unused__filter .dam-select {
+  width: auto;
+}
+.dam-unused__selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-2) var(--dam-space-4);
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+  border-radius: var(--dam-radius);
+  font-weight: 600;
+  font-size: var(--dam-text-sm);
+}
+.dam-unused__selectionactions {
+  display: flex;
+  gap: var(--dam-space-2);
+}
+.dam-unused__titlecell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dam-unused__sub {
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-unused__idle {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.dam-unused__num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dam-unused__more {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--dam-brand-soft-text);
+  font-weight: 600;
+  font-size: var(--dam-text-sm);
+  text-decoration: none;
+}
+.dam-unused__more:hover {
+  text-decoration: underline;
+}
+.dam-unused__loadmore {
+  display: flex;
+  justify-content: center;
+}
+.dam-unused__foot {
+  margin: 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+}
+.dam-unusedpage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-5);
+}
+.dam-unusedpage__back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.dam-unusedpage__back:hover {
+  color: var(--dam-brand);
+}
+.dam-unusedpage__card {
+  padding: var(--dam-space-5);
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-lg);
+  box-shadow: var(--dam-shadow-sm);
+}
+
+@media (max-width: 640px) {
+  .dam-unused__bar {
+    align-items: stretch;
+  }
+  .dam-unused__filters {
+    width: 100%;
+  }
+  .dam-unusedpage__card {
+    padding: var(--dam-space-3);
+  }
+}
+
+/* Dashboard insight cards. */
+.dam-home__insights {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: var(--dam-space-5);
+  align-items: stretch;
+}
+.dam-home__insights:empty {
+  display: none;
+}
+.dam-home__split--even {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.dam-insight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+  min-width: 0;
+}
+.dam-insight__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--dam-space-1) var(--dam-space-3);
+}
+.dam-insight__hint {
+  margin: 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+.dam-insight__stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-5);
+}
+.dam-insight__sub {
+  margin: 0 0 var(--dam-space-2);
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dam-toplist {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-lg);
+  box-shadow: var(--dam-shadow-sm);
+  overflow: hidden;
+}
+.dam-toplist li + li {
+  border-top: 1px solid var(--dam-border-subtle);
+}
+.dam-toplist__row {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3) var(--dam-space-4);
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--dam-duration) var(--dam-ease);
+}
+.dam-toplist__row:hover {
+  background: var(--dam-surface-2);
+}
+.dam-toplist__rank {
+  flex: 0 0 1.25rem;
+  color: var(--dam-muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.dam-toplist__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-surface-2);
+  color: var(--dam-muted);
+}
+.dam-toplist__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.dam-toplist__count {
+  flex: 0 0 auto;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1100px) {
+  .dam-home__insights,
+  .dam-home__split--even {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The dashboard fits one screen on wide displays: a fixed-height grid whose cards scroll inside themselves rather
+ * than pushing the page down. Narrower screens and short windows fall back to a normal scrolling page. */
+.dam-home__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--dam-space-4);
+}
+.dam-home__grid > * {
+  min-width: 0;
+}
+.dam-insight__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+  min-height: 0;
+}
+.dam-insight__body--chart {
+  min-height: 200px;
+}
+.dam-insight__body--chart > .dam-bars {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+@media (min-width: 1100px) and (min-height: 640px) {
+  .dam-main:has(.dam-home--fit) {
+    padding-bottom: var(--dam-space-5);
+  }
+  .dam-home--fit {
+    height: calc(100dvh - var(--dam-topbar-h) - var(--dam-space-5) * 2);
+    gap: var(--dam-space-4);
+  }
+  .dam-home--fit .dam-stat__chart {
+    display: none;
+  }
+  .dam-home__grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-areas:
+      'usage health'
+      'unused activity';
+  }
+  .dam-home__grid--basic {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'health activity';
+  }
+  .dam-home__usage {
+    grid-area: usage;
+  }
+  .dam-home__health {
+    grid-area: health;
+  }
+  .dam-home__unused {
+    grid-area: unused;
+  }
+  .dam-home__activity {
+    grid-area: activity;
+  }
+  .dam-home__grid > .dam-insight {
+    height: 100%;
+    overflow: hidden;
+  }
+  .dam-home__grid .dam-insight__body {
+    flex: 1 1 auto;
+    overflow: auto;
+  }
+  .dam-home__grid .dam-insight__body--chart {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .dam-home__unused .dam-unused--compact {
+    height: 100%;
+    min-height: 0;
+  }
+  .dam-home__unused .dam-unused--compact .dam-table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+}
+.dam-unused--compact .dam-unused__desc,
+.dam-unused--compact .dam-unused__foot {
+  display: none;
+}
+
+/* Dense variants for the one-screen dashboard. */
+.dam-home--fit .dam-stat__hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (min-width: 1100px) and (min-height: 640px) {
+  .dam-home--fit {
+    gap: var(--dam-space-3);
+  }
+  .dam-home--fit .dam-home__stats {
+    gap: var(--dam-space-3);
+  }
+  .dam-home--fit .dam-stat {
+    align-items: center;
+    padding: var(--dam-space-3) var(--dam-space-4);
+  }
+  .dam-home--fit .dam-stat__icon {
+    width: 36px;
+    height: 36px;
+  }
+  .dam-home__grid {
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--dam-space-3);
+  }
+  .dam-home__grid > .dam-insight {
+    padding: var(--dam-space-3) var(--dam-space-4);
+    gap: var(--dam-space-2);
+  }
+  .dam-home__grid .dam-home__h2 {
+    font-size: var(--dam-text-md);
+  }
+  .dam-home__unused .dam-unused--compact {
+    gap: var(--dam-space-2);
+  }
+  .dam-unused--compact .dam-unused__bar {
+    flex-wrap: nowrap;
+    padding: var(--dam-space-2) var(--dam-space-3);
+  }
+  .dam-unused--compact .dam-unused__summary {
+    flex: 1 1 auto;
+    font-size: var(--dam-text-sm);
+    line-height: 1.3;
+  }
+  .dam-unused--compact .dam-unused__count {
+    font-size: var(--dam-text-md);
+  }
+  .dam-unused--compact .dam-unused__filters {
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+  }
+  .dam-unused--compact .dam-emptystate {
+    padding: var(--dam-space-3);
+    gap: var(--dam-space-1);
+  }
+  .dam-unused--compact .dam-emptystate__icon {
+    display: none;
+  }
+  .dam-unused--compact .dam-table td {
+    padding-block: var(--dam-space-2);
+  }
+}
+
+/* Short windows: drop the sub-headings above each breakdown bar (the legends name their own segments). */
+@media (min-width: 1100px) and (min-height: 640px) and (max-height: 820px) {
+  .dam-home__health .dam-insight__sub,
+  .dam-home__usage .dam-dist {
+    display: none;
+  }
+}

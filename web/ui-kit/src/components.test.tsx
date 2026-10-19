@@ -1,4 +1,4 @@
-import { render, screen, within, act } from '@testing-library/react';
+import { render, screen, within, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
 import { useState } from 'react';
@@ -6,6 +6,7 @@ import {
   Breadcrumb,
   Button,
   CardMenu,
+  type MenuItem,
   Drawer,
   FacetList,
   FileTypeIcon,
@@ -429,6 +430,50 @@ describe('accessibility (axe)', () => {
       expect(screen.getByRole('button', { name: 'Actions' })).toHaveFocus();
     });
 
+    it('portals the open menu out of the card so overflow/transform on the tile cannot clip it', async () => {
+      render(
+        <main>
+          <ThumbnailGrid items={[{ id: 'a1', title: 'Hero' }]} label="Assets" cardActions={() => actions(() => {})} />
+        </main>,
+      );
+      const card = screen.getByRole('listitem');
+      const trigger = screen.getByRole('button', { name: 'Actions for Hero' });
+      await userEvent.click(trigger);
+      const menu = screen.getByRole('menu', { name: 'Actions for Hero' });
+      expect(card).not.toContainElement(menu);
+      expect(menu.closest('.dam-popover')?.parentElement).toBe(screen.getByRole('main')); // a landmark, not <body>, yet outside the card
+      expect(trigger).toHaveAttribute('aria-controls', menu.closest('.dam-popover')?.id);
+      // Pressing the trigger again toggles it closed (the outside-click listener must not fire first and re-open it).
+      await userEvent.click(trigger);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('ignores scroll events that move nothing (they closed the menu the instant it opened) but closes when the page really scrolls', async () => {
+      render(
+        <main>
+          <ThumbnailGrid items={[{ id: 'a1', title: 'Hero' }]} label="Assets" cardActions={() => actions(() => {})} />
+        </main>,
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Actions for Hero' }));
+      expect(screen.getByRole('menu', { name: 'Actions for Hero' })).toBeInTheDocument();
+      // browsers emit scroll events for focus() inside a just-mounted fixed menu, scroll anchoring, etc.
+      act(() => {
+        document.dispatchEvent(new Event('scroll'));
+        window.dispatchEvent(new Event('scroll'));
+      });
+      expect(screen.getByRole('menu', { name: 'Actions for Hero' })).toBeInTheDocument();
+      // a genuine scroll (the trigger's position changes) dismisses it
+      const trigger = screen.getByRole('button', { name: 'Actions for Hero' });
+      const rect = trigger.getBoundingClientRect();
+      trigger.getBoundingClientRect = () =>
+        ({ ...rect, top: rect.top - 120, bottom: rect.bottom - 120, y: rect.y - 120 }) as DOMRect;
+      act(() => {
+        document.dispatchEvent(new Event('scroll'));
+      });
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+
     it('renders nothing when there are no actions', () => {
       const { container } = render(<CardMenu label="Actions" actions={[]} />);
       expect(container).toBeEmptyDOMElement();
@@ -447,6 +492,106 @@ describe('accessibility (axe)', () => {
       );
       expect(screen.getByRole('button', { name: 'Actions for Hero' })).toBeInTheDocument();
       expect(await axe(container)).toHaveNoViolations();
+    });
+  });
+
+  describe('context menu', () => {
+    const systems = (chosen: string[]): MenuItem[] => [
+      { key: 'canva', label: 'Canva', checked: true, onSelect: () => chosen.push('canva') },
+      { key: 'web', label: 'Web API', checked: false, onSelect: () => chosen.push('web') },
+    ];
+    const items = (chosen: string[]): MenuItem[] => [
+      { key: 'rename', label: 'Rename', onSelect: () => chosen.push('rename') },
+      { key: 'avail', label: 'Make available for', children: systems(chosen) },
+      { key: 'empty', label: 'Nothing here', children: [], emptyLabel: 'No systems configured' },
+      { key: 'delete', label: 'Delete', tone: 'danger', separatorBefore: true, onSelect: () => chosen.push('delete') },
+    ];
+    const grid = (chosen: string[]) => (
+      <main>
+        <ThumbnailGrid items={[{ id: 'a1', title: 'Hero' }]} label="Assets" cardActions={() => items(chosen)} />
+      </main>
+    );
+
+    it('opens at the pointer on right-click, instead of the browser menu', () => {
+      render(grid([]));
+      const card = screen.getByRole('listitem');
+      const notPrevented = fireEvent.contextMenu(card, { clientX: 120, clientY: 80 });
+      expect(notPrevented).toBe(false); // preventDefault was called
+      expect(screen.getByRole('menu', { name: 'Actions for Hero' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Rename' })).toHaveFocus();
+    });
+
+    it('does nothing (leaves the browser menu alone) when a card has no actions', () => {
+      render(<ThumbnailGrid items={[{ id: 'a1', title: 'Hero' }]} label="Assets" cardActions={() => []} />);
+      expect(fireEvent.contextMenu(screen.getByRole('listitem'))).toBe(true);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+
+    it('opens a submenu with check marks, toggles an entry, and closes', async () => {
+      const chosen: string[] = [];
+      render(grid(chosen));
+      fireEvent.contextMenu(screen.getByRole('listitem'), { clientX: 10, clientY: 10 });
+
+      const parent = screen.getByRole('menuitem', { name: 'Make available for' });
+      expect(parent).toHaveAttribute('aria-haspopup', 'menu');
+      await userEvent.click(parent);
+      const sub = screen.getByRole('menu', { name: 'Make available for' });
+      expect(within(sub).getByRole('menuitemcheckbox', { name: 'Canva' })).toHaveAttribute('aria-checked', 'true');
+      expect(within(sub).getByRole('menuitemcheckbox', { name: 'Web API' })).toHaveAttribute('aria-checked', 'false');
+
+      await userEvent.click(within(sub).getByRole('menuitemcheckbox', { name: 'Web API' }));
+      expect(chosen).toEqual(['web']);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+
+    it('is fully keyboard-operable: arrows move, Right opens a submenu, Left/Escape step back, Escape closes', async () => {
+      render(grid([]));
+      fireEvent.contextMenu(screen.getByRole('listitem'), { clientX: 10, clientY: 10 });
+      await userEvent.keyboard('{ArrowDown}');
+      expect(screen.getByRole('menuitem', { name: 'Make available for' })).toHaveFocus();
+
+      await userEvent.keyboard('{ArrowRight}');
+      expect(screen.getByRole('menuitemcheckbox', { name: 'Canva' })).toHaveFocus();
+      await userEvent.keyboard('{ArrowDown}');
+      expect(screen.getByRole('menuitemcheckbox', { name: 'Web API' })).toHaveFocus();
+
+      await userEvent.keyboard('{ArrowLeft}');
+      expect(screen.queryByRole('menuitemcheckbox', { name: 'Canva' })).not.toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Make available for' })).toHaveFocus();
+
+      await userEvent.keyboard('{Escape}');
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+
+    it('shows a disabled explanation for a submenu with nothing in it, and styles destructive actions', () => {
+      render(grid([]));
+      fireEvent.contextMenu(screen.getByRole('listitem'));
+      expect(screen.getByRole('menuitem', { name: 'No systems configured' })).toBeDisabled();
+      expect(screen.getByRole('menuitem', { name: 'Delete' })).toHaveClass('dam-menu__item--danger');
+    });
+
+    it('closes when clicking elsewhere', async () => {
+      render(grid([]));
+      fireEvent.contextMenu(screen.getByRole('listitem'));
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+      await userEvent.click(document.body);
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+
+    it("opens on a Tree node too, with that node's actions", () => {
+      const chosen: string[] = [];
+      render(
+        <Tree
+          nodes={[{ id: 'f1', label: 'Brand', children: [{ id: 'f2', label: 'Roadster' }] }]}
+          label="Folders"
+          defaultExpanded={['f1']}
+          nodeActions={(id) => [{ key: 'rename', label: `Rename ${id}`, onSelect: () => chosen.push(id) }]}
+          menuLabel={(name) => `Actions for ${name}`}
+        />,
+      );
+      fireEvent.contextMenu(screen.getByText('Roadster'));
+      expect(screen.getByRole('menu', { name: 'Actions for Roadster' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Rename f2' })).toBeInTheDocument(); // the child's menu, not its parent's
     });
   });
 });

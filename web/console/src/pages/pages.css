@@ -1,0 +1,683 @@
+/* Home, sign-in, account and full-page status screens. Tokens only; light and dark come from the --dam-* set. */
+
+/* ---- Home ---------------------------------------------------------------------------------------------------- */
+.dam-home {
+  --dam-home-max: 1680px;
+  container-type: inline-size;
+  max-width: var(--dam-home-max);
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-6);
+}
+.dam-home .dam-pagehead {
+  margin-bottom: 0;
+}
+.dam-home ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dam-home__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--dam-space-4);
+}
+.dam-home__stats > li {
+  display: flex;
+  min-width: 0;
+}
+.dam-home__stats > li > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dam-home__statlink {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--dam-radius-lg);
+}
+.dam-home__statlink .dam-stat {
+  height: 100%;
+  transition:
+    border-color var(--dam-duration) var(--dam-ease),
+    box-shadow var(--dam-duration) var(--dam-ease);
+}
+.dam-home__statlink:hover .dam-stat {
+  border-color: var(--dam-border);
+  box-shadow: var(--dam-shadow);
+}
+
+.dam-home__split {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--dam-space-6);
+  align-items: start;
+}
+.dam-home__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+  min-width: 0;
+}
+.dam-home__sectionhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--dam-space-3);
+}
+.dam-home__h2 {
+  margin: 0;
+  font-size: var(--dam-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.dam-home__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  color: var(--dam-brand-soft-text);
+  font-size: var(--dam-text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--dam-radius-sm);
+}
+.dam-home__more:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+[dir='rtl'] .dam-home__more svg,
+[dir='rtl'] .dam-home__chev {
+  transform: scaleX(-1);
+}
+
+/* Shared image treatment: a fixed-ratio frame, a tinted well with the file-type glyph when there is no thumbnail. */
+.dam-home__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dam-home__img--empty {
+  display: grid;
+  place-items: center;
+  background: var(--dam-surface-2);
+  color: var(--dam-muted);
+}
+.dam-home__img:not(.dam-home__img--empty) {
+  transition: transform var(--dam-duration-slow) var(--dam-ease-spring);
+}
+.dam-home__assettitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--dam-text-sm);
+  font-weight: 600;
+}
+.dam-home__assetmeta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+}
+
+.dam-home__reviews {
+  display: flex;
+  flex-direction: column;
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-lg);
+  box-shadow: var(--dam-shadow-sm);
+  overflow: hidden;
+}
+.dam-home__reviews li + li > .dam-home__review,
+.dam-home__reviews > div + div {
+  border-top: 1px solid var(--dam-border-subtle);
+}
+.dam-home__review {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3) var(--dam-space-4);
+  color: var(--dam-text);
+  text-decoration: none;
+  transition: background-color var(--dam-duration) var(--dam-ease);
+}
+a.dam-home__review:hover {
+  background: var(--dam-surface-2);
+}
+.dam-home__reviewthumb {
+  display: block;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-surface-2);
+}
+.dam-home__reviewtext {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dam-home__chev {
+  flex: 0 0 auto;
+  color: var(--dam-muted);
+}
+.dam-home__empty {
+  border: 1px dashed var(--dam-border);
+  border-radius: var(--dam-radius-lg);
+  background: var(--dam-surface);
+}
+.dam-home__empty .dam-emptystate {
+  padding-block: var(--dam-space-6);
+}
+.dam-home__note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3) var(--dam-space-4);
+  border: 1px dashed var(--dam-border);
+  border-radius: var(--dam-radius);
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+
+/* ---- Sign-in ------------------------------------------------------------------------------------------------- */
+.dam-login {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--dam-space-6);
+  align-items: center;
+  width: 100%;
+  max-width: 1080px;
+  min-height: calc(100dvh - var(--dam-topbar-h, 60px) - var(--dam-space-5) - var(--dam-space-8));
+  margin: 0 auto;
+}
+.dam-login__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--dam-space-5);
+  padding: var(--dam-space-8) var(--dam-space-4);
+  color: #fff;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.45);
+}
+/* The sign-in page is full-bleed photography: a fixed backdrop behind the whole page (top bar included), darkened on the
+ * text side so white copy stays readable over the bright part of the aurora. Same image in light and dark themes. */
+.dam-login__bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: #04110b;
+  background-position: center;
+  background-size: cover;
+}
+.dam-login__bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgb(2 12 7 / 0.78) 0%, rgb(2 12 7 / 0.4) 48%, rgb(2 12 7 / 0.1) 100%),
+    linear-gradient(0deg, rgb(2 12 7 / 0.35), transparent 40%);
+}
+body:has(.dam-login__bg) .dam-topbar {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom-color: transparent;
+  color: #fff;
+}
+/* The page already carries a large wordmark; the top bar keeps only the theme switcher. */
+body:has(.dam-login__bg) .dam-topbar__brand {
+  display: none;
+}
+.dam-login__panel .dam-logo {
+  color: #fff;
+}
+.dam-login__tagline {
+  margin: 0;
+  max-width: 22ch;
+  font-size: var(--dam-text-2xl);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.dam-login__features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dam-login__features li {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-3);
+  font-size: var(--dam-text-sm);
+  font-weight: 500;
+  max-width: 44ch;
+}
+.dam-login__feature-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--dam-radius);
+  background: rgb(255 255 255 / 0.14);
+  border: 1px solid rgb(255 255 255 / 0.28);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  text-shadow: none;
+}
+.dam-login__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-8) var(--dam-space-7);
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-xl);
+  box-shadow: var(--dam-shadow);
+}
+.dam-login__card .dam-logo {
+  color: var(--dam-brand);
+}
+.dam-login__title {
+  margin: var(--dam-space-2) 0 0;
+  font-size: var(--dam-text-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.dam-login__body {
+  margin: 0;
+  color: var(--dam-muted);
+  text-wrap: pretty;
+}
+.dam-login__action {
+  width: 100%;
+  height: 44px;
+  margin-top: var(--dam-space-3);
+  font-size: var(--dam-text-md);
+}
+.dam-login__error {
+  margin: 0;
+  color: var(--dam-danger);
+  font-size: var(--dam-text-sm);
+}
+.dam-login__note {
+  margin: 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+
+/* ---- Auth callback ------------------------------------------------------------------------------------------- */
+.dam-callback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--dam-space-2);
+  margin: var(--dam-space-8) auto;
+  padding: var(--dam-space-7) var(--dam-space-6);
+  max-width: 420px;
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-xl);
+  box-shadow: var(--dam-shadow-sm);
+  text-align: center;
+  color: var(--dam-brand);
+}
+.dam-callback__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+  margin: var(--dam-space-2) 0 0;
+  color: var(--dam-text);
+  font-weight: 650;
+}
+.dam-callback__hint {
+  margin: 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+
+/* ---- Full-page states (not found, crash, failed sign-in) ----------------------------------------------------- */
+.dam-statuspage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-7) var(--dam-space-4);
+  margin: 0 auto;
+  max-width: 560px;
+  text-align: center;
+}
+.dam-statuspage__body {
+  padding: 0;
+  max-width: 460px;
+}
+.dam-statuspage__title {
+  font-size: var(--dam-text-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.dam-statuspage__detail {
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+.dam-statusart {
+  width: min(260px, 70vw);
+  height: auto;
+}
+.dam-statusart__halo {
+  fill: var(--dam-brand-soft);
+}
+.dam-statusart__track {
+  stroke: var(--dam-border);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 6;
+  stroke-linecap: round;
+}
+.dam-statusart__planet,
+.dam-statusart__moon {
+  fill: var(--dam-brand);
+}
+.dam-statusart__ring,
+.dam-statusart__trail {
+  stroke: var(--dam-brand);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+.dam-statusart__trail {
+  stroke-width: 1.5;
+  stroke-dasharray: 2 4;
+  opacity: 0.6;
+}
+.dam-statusart__alert circle {
+  fill: var(--dam-tone-danger-bg);
+  stroke: var(--dam-surface);
+  stroke-width: 2;
+}
+.dam-statusart__alert path {
+  stroke: var(--dam-tone-danger-text);
+}
+/* The crash screen renders outside the shell, so it supplies its own page background and centring. */
+.dam-crash {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--dam-space-5);
+  background: var(--dam-bg);
+  color: var(--dam-text);
+}
+
+/* ---- Account ------------------------------------------------------------------------------------------------- */
+.dam-account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+}
+.dam-account__profile {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-4);
+  flex-wrap: wrap;
+}
+.dam-account .dam-avatar[data-size='lg'].dam-account__avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--dam-radius-lg);
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+  font-size: var(--dam-text-lg);
+}
+.dam-account__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.dam-account__name {
+  margin: 0;
+  font-size: var(--dam-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+.dam-account__email {
+  margin: 0;
+  color: var(--dam-muted);
+  overflow-wrap: anywhere;
+}
+.dam-account__warning {
+  display: flex;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-4);
+  border: 1px solid var(--dam-warning);
+  border-radius: var(--dam-radius-lg);
+  background: var(--dam-tone-warning-bg);
+  color: var(--dam-tone-warning-text);
+}
+.dam-account__warning svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.dam-account__warning p {
+  margin: 0;
+  font-size: var(--dam-text-sm);
+}
+.dam-account__warning .dam-account__warningtitle {
+  margin-bottom: 2px;
+  font-size: var(--dam-text-md);
+  font-weight: 650;
+}
+.dam-account__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--dam-space-4);
+  align-items: start;
+}
+.dam-account__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+}
+.dam-account__sectionhead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dam-space-3);
+}
+.dam-account__sectionicon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--dam-radius);
+  background: var(--dam-surface-2);
+  color: var(--dam-muted);
+}
+.dam-account__heading {
+  margin: 0;
+  font-size: var(--dam-text-md);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.dam-account__sectionhead .dam-hint {
+  margin: 2px 0 0;
+}
+.dam-account__facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+  margin: 0;
+}
+.dam-account__facts dt {
+  margin-bottom: var(--dam-space-1);
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dam-account__facts dd {
+  margin: 0;
+  min-width: 0;
+}
+.dam-account__id {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+}
+.dam-account__code,
+.dam-account__perm {
+  font-family: var(--dam-font-mono);
+  font-size: var(--dam-text-xs);
+}
+.dam-account__code {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-surface-2);
+  overflow-wrap: anywhere;
+}
+.dam-account__perm {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-surface-2);
+  color: var(--dam-text);
+}
+.dam-account__off {
+  margin-inline-start: var(--dam-space-2);
+  padding-inline-start: var(--dam-space-2);
+  border-inline-start: 1px solid currentColor;
+  font-weight: 500;
+}
+.dam-account__count {
+  margin: 0;
+  font-size: var(--dam-text-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.dam-account__details summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+  cursor: pointer;
+  color: var(--dam-brand-soft-text);
+  font-size: var(--dam-text-sm);
+  font-weight: 600;
+  border-radius: var(--dam-radius-sm);
+}
+.dam-account__perms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+  margin: var(--dam-space-3) 0 0;
+}
+.dam-account__perms dt {
+  margin-bottom: var(--dam-space-1);
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.dam-account__perms dd {
+  margin: 0;
+}
+.dam-account__skeletonbody {
+  margin-top: var(--dam-space-4);
+}
+.dam-account__error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--dam-space-2);
+}
+.dam-account__erroricon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--dam-space-1);
+  border-radius: var(--dam-radius-lg);
+  background: var(--dam-tone-danger-bg);
+  color: var(--dam-tone-danger-text);
+}
+.dam-account__error p {
+  margin: 0;
+}
+.dam-account__errortext {
+  font-weight: 600;
+}
+.dam-account__error .dam-btn {
+  margin-top: var(--dam-space-3);
+}
+
+/* ---- Responsive ---------------------------------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .dam-home__split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dam-home__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .dam-account__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dam-login {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    max-width: 520px;
+  }
+  .dam-login__panel {
+    padding: var(--dam-space-5) var(--dam-space-2) 0;
+    gap: var(--dam-space-4);
+  }
+  .dam-login__bg::after {
+    background: linear-gradient(180deg, rgb(2 12 7 / 0.7), rgb(2 12 7 / 0.35));
+  }
+  .dam-login__tagline {
+    font-size: var(--dam-text-xl);
+    max-width: none;
+  }
+  .dam-login__card {
+    padding: var(--dam-space-6) var(--dam-space-5);
+  }
+}
+@media (max-width: 640px) {
+  .dam-home {
+    gap: var(--dam-space-5);
+  }
+  .dam-home__stats {
+    gap: var(--dam-space-3);
+  }
+  .dam-home__stats .dam-stat {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: var(--dam-space-3);
+  }
+  .dam-home__stats .dam-stat__body {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}

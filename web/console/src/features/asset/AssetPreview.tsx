@@ -1,6 +1,20 @@
+import { useRecordUsage } from '../analytics/analyticsApi';
+import { ArrowSquareOut, CaretLeft, CaretRight, Copy, Play } from '@phosphor-icons/react';
+import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LoadingRegion, Skeleton } from '../../ui';
-import { useDeliveryLink } from './assetApi';
+import { relativeTime } from '../../lib/relativeTime';
+import {
+  EmptyState,
+  FileTypeIcon,
+  IconButton,
+  Info,
+  LoadingRegion,
+  SegmentedControl,
+  Skeleton,
+  useToast,
+  WarningCircle,
+} from '../../ui';
+import { useAssetRenditions, useDeliveryLink } from './assetApi';
 
 interface AssetPreviewProps {
   assetId: string;
@@ -9,48 +23,390 @@ interface AssetPreviewProps {
   status: string;
 }
 
-/** A preview player for image/video/PDF (spec Step 1.8: "preview player for image/video/PDF"); anything else falls back
- * to a plain download link. Renditions are watermarked by the delivery origin itself while the asset is unpublished
- * (ADR-0006) - the console never needs to know or show that separately.
+type Zoom = 'fit' | 'actual';
+
+/** The preview stage: a neutral, viewport-sized surface the asset is shown on, with a small floating toolbar. Renditions
+ * are watermarked by the delivery origin itself while the asset is unpublished (ADR-0006) - the console never needs to
+ * know or show that separately.
  *
- * `original` is only asked for once the asset is published: the delivery origin rejects the *entire* link request
- * with a 409 if `original` is requested for an unpublished asset (its bytes can't be shared unwatermarked at all -
- * ADR-0006/0007), so asking for it alongside `preview` up front would fail the whole request and hide the
- * perfectly-available watermarked preview behind it. */
+ * What is asked for depends on the kind of asset and on whether it is published, because the delivery origin rejects the
+ * *entire* link request with a 409 when it is asked for something an unpublished asset may not have (ADR-0006/0007):
+ * `original` (its bytes cannot be shared unwatermarked at all) and every video transcode (watermarking moving pictures is
+ * not implemented) - and, for the same reason, every `pdf_pages-{n}` raster. So an unpublished image or document asks for the
+ * watermarked `preview` only (page 1 of a document), and an unpublished video for its `poster` still; `original`, the
+ * playable transcodes and the per-page rasters join once it is published. */
 export function AssetPreview({ assetId, type, title, status }: AssetPreviewProps) {
-  const { t } = useTranslation();
-  const renditions = status === 'published' ? ['preview', 'original'] : ['preview'];
-  const linkQuery = useDeliveryLink(assetId, renditions, true);
-
-  if (linkQuery.isPending)
-    return (
-      <LoadingRegion label={t('asset.previewLoading')}>
-        <Skeleton height={320} />
-      </LoadingRegion>
-    );
-  if (linkQuery.error || !linkQuery.data) return <p className="dam-hint">{t('asset.previewUnavailable')}</p>;
-
-  const src = linkQuery.data.links.preview ?? linkQuery.data.links.original;
-  if (!src) return <p className="dam-hint">{t('asset.previewUnavailable')}</p>;
-
+  const published = status === 'published';
   switch (type) {
     case 'image':
-      return <img className="dam-asset-preview__image" src={src} alt={title} />;
+      return <ImageStage assetId={assetId} title={title} published={published} />;
     case 'video':
-      return (
-        // eslint-disable-next-line jsx-a11y/media-has-caption -- generated renditions carry no caption track (yet)
-        <video className="dam-asset-preview__video" src={src} controls>
-          {t('asset.previewNoVideo')}
-        </video>
-      );
+      return <VideoStage assetId={assetId} title={title} published={published} />;
     case 'document':
     case 'manual':
-      return <iframe className="dam-asset-preview__frame" src={src} title={title} />;
+      return <PagedStage assetId={assetId} title={title} published={published} />;
     default:
-      return (
-        <a className="dam-btn dam-btn--secondary" href={src} download>
-          {t('asset.downloadOriginal')}
-        </a>
-      );
+      return <OtherStage assetId={assetId} type={type} published={published} />;
   }
+}
+
+// ---- shared frame -------------------------------------------------------------------------------------------------
+
+function Stage({
+  children,
+  toolbar,
+  note,
+  zoom,
+  onKeyDown,
+}: {
+  children: ReactNode;
+  toolbar?: ReactNode;
+  note?: string;
+  zoom?: Zoom;
+  onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="dam-stage" data-zoom={zoom}>
+      {/* The canvas scrolls at 100%, so it is a focusable region (keyboard users can pan it with the arrow keys). */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- a scrollable region must be focusable (axe: scrollable-region-focusable) */}
+      <div className="dam-stage__canvas" role="region" aria-label={t('asset.stage.label')} tabIndex={0} onKeyDown={onKeyDown}>
+        {children}
+      </div>
+      {note && (
+        <p className="dam-stage__note" role="note">
+          <Info size={16} weight="fill" aria-hidden="true" />
+          {note}
+        </p>
+      )}
+      {toolbar && (
+        <div className="dam-stage__toolbar" role="toolbar" aria-label={t('asset.stage.tools')}>
+          {toolbar}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StageSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <div className="dam-stage">
+      <LoadingRegion label={t('asset.previewLoading')}>
+        <div className="dam-stage__loading">
+          <Skeleton height="100%" />
+        </div>
+      </LoadingRegion>
+    </div>
+  );
+}
+
+function StageMessage({
+  icon,
+  title,
+  description,
+  action,
+}: {
+  icon: ReactNode;
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="dam-stage">
+      <div className="dam-stage__canvas dam-stage__canvas--message">
+        <EmptyState icon={icon} title={title} description={description} action={action} titleAs="p" />
+      </div>
+    </div>
+  );
+}
+
+/** Open-in-new-tab and copy-link, both pointing at the best delivery link there is (the original once published). */
+function LinkTools({
+  assetId,
+  href,
+  expiresAt,
+  isOriginal,
+}: {
+  assetId: string;
+  href: string | undefined;
+  expiresAt: string | undefined;
+  /** Only a link to the real file counts as use; a watermarked draft preview or poster is just looking. */
+  isOriginal: boolean;
+}) {
+  const { t, i18n } = useTranslation();
+  const { push } = useToast();
+  const record = useRecordUsage();
+  if (!href) return null;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(href);
+      if (isOriginal) record(assetId, 'share', 'original');
+      push({
+        title: t('asset.stage.linkCopied'),
+        message: expiresAt ? t('asset.stage.linkExpires', { time: relativeTime(expiresAt, i18n.language) }) : undefined,
+        tone: 'success',
+      });
+    } catch {
+      push({ title: t('asset.stage.copyFailed'), tone: 'error' });
+    }
+  };
+
+  return (
+    <>
+      <a
+        className="dam-btn dam-btn--ghost dam-btn--icon dam-btn--sm"
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => isOriginal && record(assetId, 'download', 'original')}
+        aria-label={t('asset.stage.openNewTab')}
+        title={t('asset.stage.openNewTab')}
+      >
+        <ArrowSquareOut size={16} weight="bold" aria-hidden="true" />
+      </a>
+      <IconButton size="sm" label={t('asset.stage.copyLink')} onClick={() => void copy()}>
+        <Copy size={16} weight="bold" aria-hidden="true" />
+      </IconButton>
+    </>
+  );
+}
+
+function ZoomTool({ zoom, onChange }: { zoom: Zoom; onChange: (z: Zoom) => void }) {
+  const { t } = useTranslation();
+  return (
+    <SegmentedControl
+      label={t('asset.stage.zoom')}
+      value={zoom}
+      onChange={(v) => onChange(v as Zoom)}
+      options={[
+        { value: 'fit', label: t('asset.stage.fit') },
+        { value: 'actual', label: t('asset.stage.actual') },
+      ]}
+    />
+  );
+}
+
+// ---- image --------------------------------------------------------------------------------------------------------
+
+function ImageStage({
+  assetId,
+  title,
+  published,
+  note,
+  page,
+}: {
+  assetId: string;
+  title: string;
+  published: boolean;
+  /** Why this is less than the whole asset (shown quietly over the stage). */
+  note?: string;
+  /** A document page rather than a photo: no checkerboard, a paper-like shadow. */
+  page?: boolean;
+}) {
+  const { t } = useTranslation();
+  const linkQuery = useDeliveryLink(assetId, published ? ['preview', 'original'] : ['preview'], true);
+  const [zoom, setZoom] = useState<Zoom>('fit');
+  const [broken, setBroken] = useState(false);
+
+  if (linkQuery.isPending) return <StageSkeleton />;
+  const links = linkQuery.data?.links;
+  const src = links?.preview ?? links?.original;
+  if (linkQuery.error || !src || broken) return <StageMessage icon={<WarningCircle />} title={t('asset.previewUnavailable')} />;
+
+  return (
+    <Stage
+      zoom={zoom}
+      note={note}
+      toolbar={
+        <>
+          <ZoomTool zoom={zoom} onChange={setZoom} />
+          <LinkTools
+            assetId={assetId}
+            href={links?.original ?? src}
+            expiresAt={linkQuery.data?.expiresAt}
+            isOriginal={Boolean(links?.original)}
+          />
+        </>
+      }
+    >
+      <img
+        className={`dam-stage__img ${page ? 'dam-stage__img--page' : 'dam-stage__img--checker'}`}
+        src={src}
+        alt={title}
+        onError={() => setBroken(true)}
+      />
+    </Stage>
+  );
+}
+
+// ---- video --------------------------------------------------------------------------------------------------------
+
+function VideoStage({ assetId, title, published }: { assetId: string; title: string; published: boolean }) {
+  const { t } = useTranslation();
+  // `mobile` is the full-length 720p transcode; `preview` is capped at a few seconds and only the fallback.
+  const linkQuery = useDeliveryLink(assetId, published ? ['mobile', 'preview', 'poster', 'original'] : ['poster'], true);
+  const [broken, setBroken] = useState(false);
+
+  if (linkQuery.isPending) return <StageSkeleton />;
+  const links = linkQuery.data?.links;
+  const poster = links?.poster;
+  const src = links?.mobile ?? links?.preview ?? links?.original;
+
+  if (published && src && !linkQuery.error)
+    return (
+      <Stage
+        toolbar={
+          <LinkTools
+            assetId={assetId}
+            href={links?.original ?? src}
+            expiresAt={linkQuery.data?.expiresAt}
+            isOriginal={Boolean(links?.original)}
+          />
+        }
+      >
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption -- generated renditions carry no caption track (yet) */}
+        <video className="dam-stage__video" src={src} poster={poster} controls preload="metadata">
+          {t('asset.previewNoVideo')}
+        </video>
+      </Stage>
+    );
+
+  // Unpublished (or no playable rendition yet): the watermarked poster still, and a quiet note about why it does not play.
+  if (linkQuery.error || !poster || broken)
+    return (
+      <StageMessage icon={<WarningCircle />} title={t('asset.previewUnavailable')} description={t('asset.stage.videoDraft')} />
+    );
+  return (
+    <Stage
+      note={t('asset.stage.videoDraft')}
+      toolbar={<LinkTools assetId={assetId} href={poster} expiresAt={linkQuery.data?.expiresAt} isOriginal={false} />}
+    >
+      <img className="dam-stage__img" src={poster} alt={title} onError={() => setBroken(true)} />
+      <span className="dam-stage__play" aria-hidden="true">
+        <Play size={28} weight="fill" />
+      </span>
+    </Stage>
+  );
+}
+
+// ---- documents (PDF pages) ----------------------------------------------------------------------------------------
+
+function PagedStage({ assetId, title, published }: { assetId: string; title: string; published: boolean }) {
+  const { t } = useTranslation();
+  const renditionsQuery = useAssetRenditions(assetId);
+  if (renditionsQuery.isPending) return <StageSkeleton />;
+  const pages = (renditionsQuery.data ?? [])
+    .filter((r) => r.profile === 'pdf_pages' && (r.pageNo ?? 0) > 0)
+    .map((r) => r.pageNo as number)
+    .sort((a, b) => a - b);
+  // Only a published document is served page by page: the delivery origin has no watermarked page rasters (ADR-0007), so a
+  // draft shows its watermarked first page (`preview`). The same fallback covers a file with no page rasters at all (an
+  // Office file, or ingest has not got to it yet).
+  if (pages.length === 0 || !published)
+    return (
+      <ImageStage
+        assetId={assetId}
+        title={title}
+        published={published}
+        page
+        note={!published && pages.length > 1 ? t('asset.stage.pdfDraft') : undefined}
+      />
+    );
+  return <PdfStage assetId={assetId} title={title} pages={pages} />;
+}
+
+function PdfStage({ assetId, title, pages }: { assetId: string; title: string; pages: number[] }) {
+  const { t } = useTranslation();
+  const [index, setIndex] = useState(0);
+  const [zoom, setZoom] = useState<Zoom>('fit');
+  const [broken, setBroken] = useState(false);
+  const pageName = (i: number) => `pdf_pages-${pages[i]}`;
+  const linkQuery = useDeliveryLink(assetId, [pageName(index), 'original'], true);
+  // Warm the next page's link so turning the page does not wait on a round trip.
+  useDeliveryLink(assetId, [pageName(Math.min(index + 1, pages.length - 1))], pages.length > 1 && index < pages.length - 1);
+
+  const go = (next: number) => {
+    setBroken(false);
+    setIndex(Math.min(Math.max(next, 0), pages.length - 1));
+  };
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === 'ArrowRight' && zoom === 'fit') go(index + 1);
+    else if (e.key === 'ArrowLeft' && zoom === 'fit') go(index - 1);
+  };
+
+  const pager = (
+    <div className="dam-stage__pager">
+      <IconButton size="sm" label={t('asset.stage.prevPage')} disabled={index === 0} onClick={() => go(index - 1)}>
+        <CaretLeft size={16} weight="bold" aria-hidden="true" />
+      </IconButton>
+      <span className="dam-stage__pagelabel" aria-live="polite">
+        {t('asset.stage.pageOf', { page: index + 1, total: pages.length })}
+      </span>
+      <IconButton size="sm" label={t('asset.stage.nextPage')} disabled={index === pages.length - 1} onClick={() => go(index + 1)}>
+        <CaretRight size={16} weight="bold" aria-hidden="true" />
+      </IconButton>
+    </div>
+  );
+
+  if (linkQuery.isPending) return <StageSkeleton />;
+  const links = linkQuery.data?.links;
+  const src = links?.[pageName(index)];
+  if (linkQuery.error || !src || broken)
+    return (
+      <Stage toolbar={pages.length > 1 ? pager : undefined}>
+        <EmptyState icon={<WarningCircle />} title={t('asset.previewUnavailable')} titleAs="p" />
+      </Stage>
+    );
+
+  return (
+    <Stage
+      zoom={zoom}
+      onKeyDown={onKeyDown}
+      toolbar={
+        <>
+          {pages.length > 1 && pager}
+          <ZoomTool zoom={zoom} onChange={setZoom} />
+          <LinkTools
+            assetId={assetId}
+            href={links?.original ?? src}
+            expiresAt={linkQuery.data?.expiresAt}
+            isOriginal={Boolean(links?.original)}
+          />
+        </>
+      }
+    >
+      <img
+        className="dam-stage__img dam-stage__img--page"
+        src={src}
+        alt={t('asset.stage.pageAlt', { title, page: index + 1 })}
+        onError={() => setBroken(true)}
+      />
+    </Stage>
+  );
+}
+
+// ---- everything else ----------------------------------------------------------------------------------------------
+
+function OtherStage({ assetId, type, published }: { assetId: string; type: string; published: boolean }) {
+  const { t } = useTranslation();
+  // No rendition exists for these kinds; the only thing to offer is the file itself, and only once it is published.
+  const linkQuery = useDeliveryLink(assetId, ['original'], published);
+  const original = linkQuery.data?.links.original;
+  return (
+    <StageMessage
+      icon={<FileTypeIcon type={type} />}
+      title={t('asset.stage.noPreview')}
+      description={published ? undefined : t('asset.stage.noPreviewDraft')}
+      action={
+        original ? (
+          <a className="dam-btn dam-btn--secondary" href={original} download>
+            {t('asset.downloadOriginal')}
+          </a>
+        ) : undefined
+      }
+    />
+  );
 }

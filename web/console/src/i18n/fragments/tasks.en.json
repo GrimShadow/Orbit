@@ -1,0 +1,119 @@
+{
+  "tasks": {
+    "title": "Tasks",
+    "description": "Assets waiting for your decision, and the decisions you have made.",
+    "viewLabel": "Show",
+    "pending": "Pending",
+    "decided": "Decided",
+    "scopeLabel": "Whose tasks",
+    "mine": "Mine",
+    "everyone": "Everyone",
+    "summaryWaiting_one": "{{count}} task waiting for you",
+    "summaryWaiting_other": "{{count}} tasks waiting for you",
+    "summaryOverdue": "{{count}} overdue",
+    "listPending": "Pending tasks",
+    "listDecided": "Decided tasks",
+    "loading": "Loading tasks",
+    "stepLine": "{{workflow}} · {{step}}",
+    "assignedTo": "Assigned to {{who}}",
+    "due": {
+      "in": "Due in {{duration}}",
+      "overdue": "Overdue by {{duration}}",
+      "none": "No deadline"
+    },
+    "escalated": "Escalated",
+    "escalatedHint": "This task missed its deadline and was also offered to the escalation group.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveWithComment": "Approve with a comment",
+    "decisionFor": "Decision for {{title}}",
+    "decision": {
+      "approve": "Approved",
+      "reject": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "by": "by {{name}}",
+    "dialog": {
+      "approveTitle": "Approve “{{title}}”",
+      "rejectTitle": "Reject “{{title}}”",
+      "approveIntro": "Approving moves this on to the next step, or completes the approval if this is the last one.",
+      "rejectIntro": "Rejecting stops the approval. Your reason is saved with the asset so the author knows what to change.",
+      "commentOptional": "Comment (optional)",
+      "commentRequired": "Reason for rejecting",
+      "commentRequiredError": "Say why you are rejecting this asset.",
+      "counter": "{{count}} / {{max}}",
+      "cancel": "Cancel",
+      "confirmApprove": "Approve",
+      "confirmReject": "Reject asset"
+    },
+    "toast": {
+      "approved": "Approved “{{title}}”",
+      "rejected": "Rejected “{{title}}”",
+      "failed": "Couldn't record your decision"
+    },
+    "empty": {
+      "pendingTitle": "You're all caught up",
+      "pendingBody": "Nothing is waiting for your decision. New tasks show up here as soon as an asset is submitted for review.",
+      "decidedTitle": "No decisions yet",
+      "decidedBody": "Tasks you approve or reject are listed here.",
+      "everyonePendingTitle": "No open tasks",
+      "everyonePendingBody": "Nobody has anything waiting for a decision.",
+      "everyoneDecidedTitle": "No decisions yet",
+      "everyoneDecidedBody": "Decisions made by anyone in the workspace are listed here."
+    },
+    "error": "Couldn't load tasks.",
+    "retry": "Try again",
+    "loadMore": "Load more",
+    "badge": {
+      "pending_one": "{{count}} pending",
+      "pending_other": "{{count}} pending",
+      "overdue": "{{count}} overdue"
+    }
+  },
+  "assetWorkflow": {
+    "title": "Approval",
+    "stepsLabel": "Approval steps",
+    "workflow": "Workflow: {{name}}",
+    "started": "Submitted {{when}}",
+    "startedBy": "Submitted by {{name}} {{when}}",
+    "state": {
+      "done": "Done",
+      "active": "In progress",
+      "waiting": "Waiting",
+      "skipped": "Skipped"
+    },
+    "mode": {
+      "any": "Any one approver",
+      "all": "Everyone must approve"
+    },
+    "sla_one": "{{count}} hour to decide",
+    "sla_other": "{{count}} hours to decide",
+    "roles": "{{roles}}",
+    "namedPeople_one": "{{count}} named reviewer",
+    "namedPeople_other": "{{count}} named reviewers",
+    "taskCancelled": "Cancelled",
+    "yourTurn": "Your decision is needed here.",
+    "awaiting": "Awaiting approval: {{step}}",
+    "awaitingGeneric": "Awaiting approval",
+    "outcome": {
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Withdrawn",
+      "approvedWhen": "Approved {{when}}",
+      "rejectedWhen": "Rejected {{when}}",
+      "cancelledWhen": "Withdrawn {{when}}"
+    }
+  },
+  "home": {
+    "stats": {
+      "tasks": "Open tasks",
+      "tasksHintNone": "Nothing waiting for you",
+      "tasksOverdue": "{{count}} overdue",
+      "tasksNoneOverdue": "None overdue",
+      "tasksSla": "{{percent}}% on time",
+      "tasksSlaTitle": "{{percent}}% of tasks decided within their SLA, last 30 days",
+      "tasksFailed": "Couldn't load",
+      "totalPublished": "{{count}} published"
+    }
+  }
+}

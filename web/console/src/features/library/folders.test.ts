@@ -18,16 +18,16 @@ function folder(overrides: Partial<FolderDto>): FolderDto {
 describe('buildFolderTree', () => {
   it('nests children under their parent', () => {
     const tree = buildFolderTree([
-      folder({ id: 'f1', name: 'brand', label: 'Brand', parentId: null }),
-      folder({ id: 'f2', name: 'roadster', label: 'Roadster', parentId: 'f1' }),
+      folder({ id: 'f1', name: 'Brand', label: 'brand', parentId: null }),
+      folder({ id: 'f2', name: 'Roadster', label: 'roadster', parentId: 'f1' }),
     ]);
     expect(tree).toEqual([{ id: 'f1', label: 'Brand', children: [{ id: 'f2', label: 'Roadster', children: [] }] }]);
   });
 
   it('sorts siblings by name', () => {
     const tree = buildFolderTree([
-      folder({ id: 'b', name: 'sedan', label: 'Sedan', parentId: null }),
-      folder({ id: 'a', name: 'coupe', label: 'Coupe', parentId: null }),
+      folder({ id: 'b', name: 'Sedan', label: 'sedan', parentId: null }),
+      folder({ id: 'a', name: 'Coupe', label: 'coupe', parentId: null }),
     ]);
     expect(tree.map((n) => n.id)).toEqual(['a', 'b']);
   });

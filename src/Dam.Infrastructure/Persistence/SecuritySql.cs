@@ -159,4 +159,24 @@ public static class SecuritySql
     public const string CollectionGrants = """
         GRANT SELECT, INSERT, UPDATE, DELETE ON collections TO dam_app;
         """;
+
+    /// <summary>Usage events are append-only; the per-asset summary is upserted. Neither is ever deleted by the app.</summary>
+    public const string UsageGrants = """
+        GRANT SELECT, INSERT ON usage_events TO dam_app;
+        GRANT SELECT, INSERT, UPDATE ON asset_usage TO dam_app;
+        """;
+
+    /// <summary>Definitions and bindings are edited freely (and a definition may be deleted); instances and tasks are history and
+    /// are never deleted by the app.</summary>
+    public const string WorkflowGrants = """
+        GRANT SELECT, INSERT, UPDATE, DELETE ON workflow_definitions, workflow_bindings TO dam_app;
+        GRANT SELECT, INSERT, UPDATE ON workflow_instances, workflow_tasks TO dam_app;
+        """;
+
+    /// <summary>The workflow SLA job (Step 2.3) finds overdue tasks across every tenant through the system connection, read-only,
+    /// the same way the publish/expire and retention jobs find assets; it then marks each breach through a tenant-scoped scope.</summary>
+    public const string WorkflowSystemGrants = """
+        GRANT SELECT ON workflow_tasks TO dam_system;
+        CREATE POLICY system_read_workflow_tasks ON workflow_tasks FOR SELECT TO dam_system USING (true);
+        """;
 }

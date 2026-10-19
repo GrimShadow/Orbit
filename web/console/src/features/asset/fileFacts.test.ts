@@ -62,6 +62,11 @@ describe('buildFileFacts', () => {
     expect(summaryLine(v)).toBe('JPEG · 1920 × 1080 · 406.3 KB');
   });
 
+  it('leaves out an unspecified colour space instead of showing "Undefined"', () => {
+    const v = version({ technicalMetadata: { image: { width: 10, height: 10, exif: { 'Color Space': 'Undefined' } } } });
+    expect(get(buildFileFacts(asset, v, 'en', t), 'image', 'colorSpace')).toBeUndefined();
+  });
+
   it('describes a video with its audio track', () => {
     const v = version({
       mime: 'video/mp4',

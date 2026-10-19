@@ -1,0 +1,29 @@
+{
+  "search": {
+    "queryPlaceholder": "शीर्षक, टैग या प्रकार से खोजें",
+    "clearAll": "सब हटाएँ",
+    "queryChip": "खोज",
+    "resultCount_one": "{{count}} परिणाम",
+    "resultCount_other": "{{count}} परिणाम",
+    "resultCountFor_one": "“{{query}}” के लिए {{count}} परिणाम",
+    "resultCountFor_other": "“{{query}}” के लिए {{count}} परिणाम",
+    "browseAll": "सभी एसेट देखे जा रहे हैं",
+    "noResults.title": "इस खोज से कोई एसेट मेल नहीं खाता",
+    "noResults.description": "वर्तनी जाँचें, कोई अधिक सामान्य शब्द आज़माएँ, या कुछ फ़िल्टर हटाएँ।",
+    "clearSearch": "खोज हटाएँ",
+    "emptyLibrary.title": "अभी खोजने के लिए कुछ नहीं है",
+    "emptyLibrary.description": "आपके अपलोड किए एसेट यहाँ दिखेंगे, खोजने के लिए तैयार।",
+    "filtersButton": "फ़िल्टर",
+    "filtersButtonCount": "फ़िल्टर ({{count}})",
+    "done": "पूर्ण",
+    "loading": "खोज जारी है",
+    "failedHint": "अपना कनेक्शन जाँचें और फिर कोशिश करें।",
+    "noFacets": "परिणाम मिलने पर फ़िल्टर यहाँ दिखेंगे।",
+    "showingMore_one": "{{count}} परिणाम दिख रहा है",
+    "showingMore_other": "{{count}} परिणाम दिख रहे हैं",
+    "showingAll_one": "सभी {{count}} परिणाम दिख रहा है",
+    "showingAll_other": "सभी {{count}} परिणाम दिख रहे हैं",
+    "closeFilters": "फ़िल्टर बंद करें",
+    "clearField": "खोज का फ़ील्ड साफ़ करें"
+  }
+}

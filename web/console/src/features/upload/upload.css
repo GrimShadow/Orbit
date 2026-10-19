@@ -1,14 +1,9 @@
+/* Upload: drop zone, file queue, destination/details cards, sticky action bar, progress and results. Tokens only. */
+
 .dam-upload {
   display: flex;
   flex-direction: column;
   gap: var(--dam-space-5);
-}
-.dam-upload__header h1 {
-  margin: 0 0 var(--dam-space-1);
-}
-.dam-upload__header p {
-  margin: 0;
-  max-width: 70ch;
 }
 .dam-upload__formwrap {
   display: flex;
@@ -16,13 +11,13 @@
   gap: var(--dam-space-5);
 }
 
-/* Drop zone */
+/* ---- Drop zone ----------------------------------------------------------------------------------------------------- */
 .dam-dropzone {
   position: relative;
   border: 2px dashed var(--dam-border);
-  border-radius: var(--dam-radius-lg);
-  background: var(--dam-surface);
-  padding: var(--dam-space-8, 48px) var(--dam-space-6);
+  border-radius: var(--dam-radius-xl);
+  background: var(--dam-surface-raised);
+  padding: var(--dam-space-8) var(--dam-space-6);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -30,32 +25,40 @@
   gap: var(--dam-space-3);
   transition:
     border-color var(--dam-duration) var(--dam-ease),
-    background-color var(--dam-duration) var(--dam-ease);
+    background-color var(--dam-duration) var(--dam-ease),
+    transform var(--dam-duration) var(--dam-ease-spring);
 }
 .dam-dropzone:hover {
   border-color: var(--dam-brand);
 }
 .dam-dropzone--active {
   border-color: var(--dam-brand);
-  background: var(--dam-surface-2);
+  border-style: solid;
+  background: var(--dam-brand-soft);
+  transform: scale(1.005);
 }
 .dam-dropzone--compact {
   flex-direction: row;
   justify-content: center;
-  padding: var(--dam-space-4) var(--dam-space-5);
+  padding: var(--dam-space-3) var(--dam-space-5);
+  border-radius: var(--dam-radius-lg);
 }
 .dam-dropzone__icon {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 999px;
-  background: var(--dam-surface-2);
-  color: var(--dam-brand);
+  width: 72px;
+  height: 72px;
+  border-radius: var(--dam-radius-xl);
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+}
+.dam-dropzone--active .dam-dropzone__icon {
+  background: var(--dam-surface-raised);
 }
 .dam-dropzone--compact .dam-dropzone__icon {
   width: 40px;
   height: 40px;
+  border-radius: var(--dam-radius);
 }
 .dam-dropzone__label {
   display: flex;
@@ -65,6 +68,7 @@
 }
 .dam-dropzone__label strong {
   font-size: var(--dam-text-lg);
+  letter-spacing: -0.01em;
 }
 .dam-dropzone--compact .dam-dropzone__label {
   align-items: flex-start;
@@ -73,11 +77,22 @@
 .dam-dropzone--compact .dam-dropzone__label strong {
   font-size: var(--dam-text-md);
 }
+.dam-dropzone__kinds {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--dam-space-2);
+  margin: var(--dam-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
 .dam-dropzone__detail {
   max-width: 60ch;
 }
-
-/* Visually hidden but still focusable/clickable, so keyboard and screen-reader users get the native file picker. */
+/* The visible button is decoration; the transparent input over the whole zone is the real control. */
+.dam-dropzone__choose {
+  pointer-events: none;
+}
 .dam-dropzone__input {
   position: absolute;
   inset: 0;
@@ -87,19 +102,27 @@
   cursor: pointer;
 }
 .dam-dropzone:focus-within {
-  outline: 3px solid var(--dam-focus);
-  outline-offset: 2px;
+  outline: 2px solid var(--dam-focus);
+  outline-offset: 3px;
 }
 
 .dam-upload__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dam-space-2);
   margin: 0;
   padding: var(--dam-space-2) var(--dam-space-3);
-  border-radius: var(--dam-radius-sm);
-  background: var(--dam-surface-2);
+  border-radius: var(--dam-radius);
+  background: var(--dam-tone-info-bg);
+  color: var(--dam-tone-info-text);
   font-size: var(--dam-text-sm);
 }
+.dam-upload__notice svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
 
-/* Queue + side panel */
+/* ---- Queue + side panel -------------------------------------------------------------------------------------------- */
 .dam-upload__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -122,7 +145,9 @@
 .dam-upload__card h2,
 .dam-upload__progresscard h2 {
   margin: 0;
-  font-size: var(--dam-text-lg);
+  font-size: var(--dam-text-md);
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 .dam-upload__side {
   display: flex;
@@ -133,32 +158,57 @@
 .dam-upload__card {
   display: flex;
   flex-direction: column;
-  gap: var(--dam-space-3);
-  padding: var(--dam-space-4) var(--dam-space-5);
-  background: var(--dam-surface);
-  border: 1px solid var(--dam-border);
-  border-radius: var(--dam-radius);
+  gap: var(--dam-space-4);
 }
 .dam-upload__card > .dam-hint {
-  margin: 0;
+  margin: calc(-1 * var(--dam-space-2)) 0 0;
+}
+.dam-upload__accordion {
+  display: flex;
+  flex-direction: column;
 }
 .dam-upload__details {
-  border-top: 1px solid var(--dam-border);
-  padding-top: var(--dam-space-3);
+  border-top: 1px solid var(--dam-border-subtle);
 }
 .dam-upload__details summary {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--dam-space-3);
+  min-height: 52px;
   cursor: pointer;
+  list-style: none;
   font-weight: 600;
+  color: var(--dam-text);
+}
+.dam-upload__details summary::-webkit-details-marker {
+  display: none;
+}
+.dam-upload__details-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.dam-upload__details-title .dam-hint {
+  font-weight: 400;
+  font-size: var(--dam-text-xs);
+}
+.dam-upload__details-caret {
+  flex: 0 0 auto;
+  color: var(--dam-muted);
+  transition: transform var(--dam-duration) var(--dam-ease);
+}
+.dam-upload__details[open] .dam-upload__details-caret {
+  transform: rotate(180deg);
 }
 .dam-upload__details-body {
-  margin-top: var(--dam-space-3);
-  align-items: stretch;
+  padding: var(--dam-space-1) 0 var(--dam-space-4);
+}
+.dam-upload__details-body > .dam-hint {
+  margin: 0;
 }
 
+/* ---- Rows ---------------------------------------------------------------------------------------------------------- */
 .dam-queue {
   list-style: none;
   margin: 0;
@@ -168,17 +218,21 @@
   gap: var(--dam-space-2);
 }
 .dam-queue__row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: var(--dam-space-3);
+  gap: var(--dam-space-1) var(--dam-space-3);
   padding: var(--dam-space-3);
-  background: var(--dam-surface);
-  border: 1px solid var(--dam-border);
+  background: var(--dam-surface-raised);
+  border: 1px solid var(--dam-border-subtle);
   border-radius: var(--dam-radius);
+  box-shadow: var(--dam-shadow-sm);
+}
+.dam-queue__row--result {
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 .dam-queue__row--problem {
   border-color: var(--dam-danger);
-  background: color-mix(in srgb, var(--dam-danger) 6%, var(--dam-surface));
 }
 .dam-queue__thumb {
   flex: 0 0 auto;
@@ -195,7 +249,6 @@
   object-fit: cover;
 }
 .dam-queue__main {
-  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -215,95 +268,85 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--dam-space-2) var(--dam-space-3);
+  gap: var(--dam-space-1) var(--dam-space-3);
   color: var(--dam-muted);
-  font-size: var(--dam-text-sm);
+  font-size: var(--dam-text-xs);
   font-variant-numeric: tabular-nums;
 }
 .dam-queue__filename {
-  max-width: 28ch;
+  max-width: 32ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .dam-queue__type {
-  width: auto;
-  min-width: 0;
-  padding-block: 2px;
-  font-size: var(--dam-text-sm);
+  min-width: 112px;
 }
-.dam-queue__problem {
-  margin: 0;
-  color: var(--dam-danger);
-  font-size: var(--dam-text-sm);
-}
-.dam-queue__remove {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 32px;
+.dam-queue__type .dam-select {
   height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--dam-muted);
-  cursor: pointer;
-  transition: color var(--dam-duration) var(--dam-ease);
+  min-height: 32px;
 }
-.dam-queue__remove:hover {
-  color: var(--dam-danger);
+.dam-queue__alert {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dam-space-2);
+  margin: var(--dam-space-1) 0 0;
+  padding: var(--dam-space-2) var(--dam-space-3);
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-tone-danger-bg);
+  color: var(--dam-tone-danger-text);
+  font-size: var(--dam-text-sm);
 }
-.dam-queue__remove:focus-visible {
-  outline: 3px solid var(--dam-focus);
+.dam-queue__alert svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
 }
 .dam-queue__progress {
   width: 100%;
+  height: 6px;
 }
 .dam-queue__status {
-  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--dam-space-2);
 }
-.dam-queue__ok {
-  color: var(--dam-success);
-}
-.dam-queue__bad {
-  color: var(--dam-danger);
-}
 
-/* Sticky action bar: the summary and the Upload button stay in reach however long the list gets. */
+/* ---- Sticky action bar --------------------------------------------------------------------------------------------- */
 .dam-upload__bar {
   position: sticky;
-  bottom: var(--dam-space-3);
-  z-index: 5;
+  bottom: var(--dam-space-4);
+  z-index: var(--dam-z-sticky);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--dam-space-3);
   padding: var(--dam-space-3) var(--dam-space-4);
-  background: var(--dam-surface);
+  background: var(--dam-surface-raised);
   border: 1px solid var(--dam-border);
-  border-radius: var(--dam-radius);
-  box-shadow: var(--dam-shadow);
+  border-radius: var(--dam-radius-lg);
+  box-shadow: var(--dam-shadow-lg);
 }
 .dam-upload__summary {
   margin: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--dam-space-2) var(--dam-space-4);
+  gap: var(--dam-space-1) var(--dam-space-4);
 }
 .dam-upload__problemcount {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dam-space-1);
   color: var(--dam-danger);
   font-size: var(--dam-text-sm);
+  font-weight: 500;
 }
 
-/* Results */
+/* ---- Progress + results -------------------------------------------------------------------------------------------- */
 .dam-upload__results {
   display: flex;
   flex-direction: column;
@@ -312,45 +355,67 @@
 .dam-upload__progresscard {
   display: flex;
   flex-direction: column;
-  gap: var(--dam-space-2);
-  padding: var(--dam-space-4) var(--dam-space-5);
-  background: var(--dam-surface);
-  border: 1px solid var(--dam-border);
-  border-radius: var(--dam-radius);
+  gap: var(--dam-space-3);
 }
 .dam-upload__progresscard progress {
   width: 100%;
-  height: 10px;
+  height: 12px;
+  border-radius: 999px;
 }
 .dam-upload__progresscard p {
   margin: 0;
 }
-.dam-upload__done {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--dam-space-3);
-  align-items: center;
+.dam-upload__summarycard {
+  padding-block: var(--dam-space-4);
 }
-.dam-upload__form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--dam-space-4);
-  align-items: flex-end;
+.dam-upload__summarycard .dam-emptystate {
+  max-width: 560px;
+  padding-block: var(--dam-space-5);
 }
 
 @media (max-width: 640px) {
   .dam-dropzone {
     padding: var(--dam-space-6) var(--dam-space-4);
   }
-  /* Only result rows (which carry a status column) stack; a queue row keeps its thumbnail beside the title. */
-  .dam-queue__row:has(.dam-queue__status) {
-    flex-wrap: wrap;
+  .dam-dropzone__icon {
+    width: 60px;
+    height: 60px;
   }
-  .dam-queue__status {
-    flex-basis: 100%;
+  /* A queue row keeps its thumbnail beside the title; the type picker and remove button drop under them. */
+  .dam-queue__row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .dam-queue__row--queued .dam-queue__type {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: var(--dam-space-1);
+  }
+  .dam-queue__row--queued > .dam-btn--icon {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: start;
+  }
+  .dam-queue__row--result {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .dam-queue__row--result .dam-queue__status {
+    grid-column: 2;
     justify-content: flex-start;
   }
+}
+@media (max-width: 1023px) {
+  /* Clear of the fixed phone tab bar. */
   .dam-upload__bar {
-    bottom: 0;
+    bottom: calc(60px + env(safe-area-inset-bottom) + var(--dam-space-3));
   }
+}
+
+/* Before any file is added the Destination card sits beside the drop zone, so where files will go is never hidden. */
+.dam-upload__layout--empty {
+  align-items: stretch;
+}
+.dam-upload__dest {
+  color: var(--dam-brand-soft-text);
+  font-weight: 600;
+  font-size: var(--dam-text-sm);
 }

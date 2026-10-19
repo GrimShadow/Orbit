@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { FileTypeIcon, XCircle } from '../../ui';
+import { Badge, CaretDown, FileTypeIcon, IconButton, WarningCircle, X } from '../../ui';
 import { formatBytes } from '../../lib/format';
 import { typeChoices, type QueueItem } from './uploadQueue';
 
@@ -31,7 +31,7 @@ export function QueueRow({ item, onTitle, onType, onRemove }: QueueRowProps) {
   const choices = typeChoices(name);
 
   return (
-    <li className={`dam-queue__row${item.problem ? ' dam-queue__row--problem' : ''}`}>
+    <li className={`dam-queue__row dam-queue__row--queued${item.problem ? ' dam-queue__row--problem' : ''}`}>
       <FileThumb type={item.type} previewUrl={item.previewUrl} />
       <div className="dam-queue__main">
         <input
@@ -47,9 +47,13 @@ export function QueueRow({ item, onTitle, onType, onRemove }: QueueRowProps) {
             {name}
           </span>
           <span>{formatBytes(item.file.size)}</span>
-          {choices.length > 1 ? (
+        </div>
+      </div>
+      <div className="dam-queue__type">
+        {choices.length > 1 ? (
+          <span className="dam-select-wrap">
             <select
-              className="dam-select dam-queue__type"
+              className="dam-select"
               aria-label={t('upload.typeFor', { name })}
               value={item.type}
               onChange={(e) => onType(e.target.value)}
@@ -60,19 +64,21 @@ export function QueueRow({ item, onTitle, onType, onRemove }: QueueRowProps) {
                 </option>
               ))}
             </select>
-          ) : (
-            <span className="dam-badge">{t(`library.type.${item.type}`)}</span>
-          )}
-        </div>
-        {item.problem && (
-          <p className="dam-queue__problem" role="alert">
-            {t(`upload.problem.${item.problem}`, { type: t(`library.type.${item.type}`) })}
-          </p>
+            <CaretDown size={14} weight="bold" aria-hidden="true" className="dam-select__chevron" />
+          </span>
+        ) : (
+          <Badge>{t(`library.type.${item.type}`)}</Badge>
         )}
       </div>
-      <button type="button" className="dam-queue__remove" aria-label={t('upload.removeFile', { name })} onClick={onRemove}>
-        <XCircle size={20} weight="fill" aria-hidden="true" />
-      </button>
+      <IconButton label={t('upload.removeFile', { name })} onClick={onRemove}>
+        <X size={16} weight="bold" aria-hidden="true" />
+      </IconButton>
+      {item.problem && (
+        <p className="dam-queue__alert" role="alert">
+          <WarningCircle size={16} weight="fill" aria-hidden="true" />
+          <span>{t(`upload.problem.${item.problem}`, { type: t(`library.type.${item.type}`) })}</span>
+        </p>
+      )}
     </li>
   );
 }

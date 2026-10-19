@@ -19,7 +19,10 @@ public static class DependencyInjection
         services.AddScoped<Content.TemplateApplier>();
         services.AddScoped<Assets.AssetMetadataBuilder>();
         services.AddScoped<Assets.UploadStarter>();
-        services.AddScoped<IWorkflowGate, Assets.AlwaysApprovedWorkflowGate>();
+        services.AddScoped<IWorkflowGate, Workflow.WorkflowGate>();
+        services.AddScoped<Workflow.WorkflowRuntime>();
+        services.AddScoped<Workflow.WorkflowTaskAccess>();
+        services.AddScoped<Workflow.WorkflowTaskMapper>();
         services.AddValidatorsFromAssembly(asm, includeInternalTypes: true);
 
         foreach (var t in asm.GetTypes().Where(t => t is { IsAbstract: false, IsInterface: false }))

@@ -39,7 +39,7 @@ public sealed record SchemaUpdateResultDto(
 public sealed record ValidationResultDto(bool Valid, int SchemaVersion);
 
 public sealed record TemplateDto(string Id, string Name, string Description, IReadOnlyList<string> Requires,
-    int Vocabularies, int Terms, int Schemas, int Folders);
+    int Vocabularies, int Terms, int Schemas, int Folders, int Workflows);
 
 public sealed record TemplateApplyResultDto(
-    IReadOnlyList<string> Applied, int VocabulariesCreated, int TermsCreated, int SchemasCreated, int SchemasExtended, int FoldersCreated);
+    IReadOnlyList<string> Applied, int VocabulariesCreated, int TermsCreated, int SchemasCreated, int SchemasExtended, int FoldersCreated, int WorkflowsCreated);

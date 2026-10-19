@@ -5,6 +5,9 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { AuthProvider } from './auth/AuthProvider';
 import './i18n';
+import { applyTheme, readTheme } from './shell/theme';
+
+applyTheme(readTheme()); // before the first render, so a saved choice never flashes the other theme
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

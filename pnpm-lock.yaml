@@ -83,6 +83,9 @@ importers:
       '@dam/ui-kit':
         specifier: workspace:^
         version: link:../ui-kit
+      '@phosphor-icons/react':
+        specifier: ^2.1.10
+        version: 2.1.10(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@tanstack/react-query':
         specifier: '5'
         version: 5.103.2(react@18.3.1)

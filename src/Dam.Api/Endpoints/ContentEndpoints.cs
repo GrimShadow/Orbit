@@ -101,7 +101,7 @@ public static class ContentEndpoints
         // ---- template packs
         var templates = v1.MapGroup("/templates").WithTags("Templates");
         templates.MapGet("", (IDispatcher d, CancellationToken ct) => Run(d, new ListTemplatesQuery(), v => Task.FromResult(Results.Ok(v)), ct))
-            .WithName("ListTemplates").WithSummary("Starter packs: vocabularies, metadata schemas and folders").Produces<IReadOnlyList<TemplateDto>>();
+            .WithName("ListTemplates").WithSummary("Starter packs: vocabularies, metadata schemas, folders and workflows").Produces<IReadOnlyList<TemplateDto>>();
         templates.MapPost("/{id}/apply", (string id, IDispatcher d, CancellationToken ct) =>
                 Run(d, new ApplyTemplateCommand(id), v => Task.FromResult(Results.Ok(v)), ct))
             .WithName("ApplyTemplate").WithSummary("Add a pack's content. Additive and repeatable: nothing existing is changed or removed").Produces<TemplateApplyResultDto>();

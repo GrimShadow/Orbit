@@ -221,7 +221,7 @@ public sealed class MoveAssetHandler(
 /// <summary>Soft delete: the asset becomes "deleted" and disappears from normal views; retention decides when it is purged.</summary>
 public sealed record DeleteAssetCommand(Guid Id) : ICommand<Guid>;
 
-public sealed class DeleteAssetHandler(IRepository<Asset> assets, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz, IClock clock)
+public sealed class DeleteAssetHandler(IRepository<Asset> assets, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz, Workflow.WorkflowRuntime runtime, IClock clock)
     : IRequestHandler<DeleteAssetCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(DeleteAssetCommand c, CancellationToken ct)
@@ -229,6 +229,7 @@ public sealed class DeleteAssetHandler(IRepository<Asset> assets, IRepository<Fo
         var (asset, path) = await AssetAccess.LoadAsync(assets, folders, q, c.Id, ct);
         if (asset is null || !await authz.CanAsync(Permissions.AssetsRead, asset.ToResource(path), ct)) return Error.NotFound("Asset not found.");
         if (!await authz.CanAsync(Permissions.AssetsDelete, asset.ToResource(path), ct)) return Error.Forbidden();
+        if (asset.Status == AssetStatuses.InReview) await runtime.CancelRunningAsync(asset.Id, AssetStatuses.Deleted, "The asset was deleted.", ct);
         asset.ChangeStatus(AssetStatuses.Deleted, "Deleted by a user", clock.UtcNow);
         return asset.Id;
     }

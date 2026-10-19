@@ -1,6 +1,10 @@
 import { Check } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
+import { Badge, type BadgeTone } from './Badge';
 import { CardMenu, type CardAction } from './CardMenu';
+import { ContextMenu } from './Menu';
+import { Skeleton } from './Skeleton';
 
 export interface Thumb {
   id: string;
@@ -8,6 +12,8 @@ export interface Thumb {
   subtitle?: string;
   imageUrl?: string;
   badge?: string;
+  /** Colour of the badge (see `Badge`); neutral when omitted. */
+  badgeTone?: BadgeTone;
   /** Shown inline before the subtitle - typically a small file-type glyph (see `FileTypeIcon`). */
   icon?: ReactNode;
   /** A secondary metadata line below the subtitle, e.g. a relative "Updated 6 days ago". */
@@ -24,6 +30,8 @@ interface ThumbnailGridProps {
   /** Per-card quick actions, shown behind a "..." menu on the card; omit (or return none) for no menu. */
   cardActions?: (id: string) => CardAction[];
   menuLabel?: (title: string) => string;
+  /** Called when a card's menu (button or right-click) opens - e.g. to load what its items depend on. */
+  onMenuOpen?: (id: string) => void;
 }
 
 export function ThumbnailGrid({
@@ -35,13 +43,25 @@ export function ThumbnailGrid({
   selectLabel = (t) => `Select ${t}`,
   cardActions,
   menuLabel = (t) => `Actions for ${t}`,
+  onMenuOpen,
 }: ThumbnailGridProps) {
+  const [context, setContext] = useState<{ id: string; x: number; y: number } | null>(null);
+  const contextItem = context ? items.find((i) => i.id === context.id) : undefined;
   return (
-    <ul className="dam-grid" aria-label={label}>
+    <ul className={`dam-grid${(selectedIds?.length ?? 0) > 0 ? ' dam-grid--selecting' : ''}`} aria-label={label}>
       {items.map((t) => {
         const isSelected = selectedIds?.includes(t.id) ?? false;
         return (
-          <li key={t.id} className={`dam-thumb${isSelected ? ' dam-thumb--selected' : ''}`}>
+          <li
+            key={t.id}
+            className={`dam-thumb${isSelected ? ' dam-thumb--selected' : ''}`}
+            onContextMenu={(e) => {
+              if (!cardActions || cardActions(t.id).length === 0) return;
+              e.preventDefault();
+              onMenuOpen?.(t.id);
+              setContext({ id: t.id, x: e.clientX, y: e.clientY });
+            }}
+          >
             {onToggleSelect && (
               <label className="dam-thumb__select-wrap">
                 <input
@@ -54,7 +74,7 @@ export function ThumbnailGrid({
                 <Check weight="bold" className="dam-thumb__select-check" aria-hidden="true" />
               </label>
             )}
-            {cardActions && <CardMenu label={menuLabel(t.title)} actions={cardActions(t.id)} />}
+            {cardActions && <CardMenu label={menuLabel(t.title)} actions={cardActions(t.id)} onOpen={() => onMenuOpen?.(t.id)} />}
             <button type="button" className="dam-thumb__open" onClick={() => onOpen?.(t.id)}>
               {t.imageUrl ? (
                 <img className="dam-thumb__img" src={t.imageUrl} alt="" loading="lazy" />
@@ -70,12 +90,53 @@ export function ThumbnailGrid({
                   </div>
                 )}
                 {t.meta && <div className="dam-thumb__metaline">{t.meta}</div>}
-                {t.badge && <span className="dam-badge">{t.badge}</span>}
+                {t.badge && (
+                  <Badge tone={t.badgeTone} size="sm">
+                    {t.badge}
+                  </Badge>
+                )}
               </div>
             </button>
           </li>
         );
       })}
+      {context && contextItem && cardActions && (
+        <ContextMenu
+          x={context.x}
+          y={context.y}
+          label={menuLabel(contextItem.title)}
+          items={cardActions(context.id)}
+          onClose={() => setContext(null)}
+        />
+      )}
     </ul>
+  );
+}
+
+/** Placeholder cards with the same footprint as `ThumbnailGrid` cards, so content replaces them without the page
+ * jumping. Announces `label` once to assistive tech. */
+export function ThumbnailGridSkeleton({ count = 10, label = 'Loading' }: { count?: number; label?: string }) {
+  return (
+    <div role="status" aria-live="polite">
+      <span className="dam-sr-only">{label}</span>
+      <ul className="dam-grid" aria-hidden="true">
+        {Array.from({ length: count }, (_, i) => (
+          <li key={i} className="dam-thumb dam-thumb--skeleton">
+            <div className="dam-thumb__skel-img">
+              <Skeleton height="100%" />
+            </div>
+            <div className="dam-thumb__meta">
+              <Skeleton height={14} width="70%" />
+              <div className="dam-thumb__skel-line">
+                <Skeleton height={12} width="40%" />
+              </div>
+              <div className="dam-thumb__skel-line">
+                <Skeleton height={18} width={56} />
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

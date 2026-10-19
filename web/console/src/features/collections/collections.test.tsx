@@ -95,7 +95,51 @@ describe('CollectionsPage', () => {
   it('shows an empty message when there are none', async () => {
     mockApi((call) => (call.pathname === '/api/v1/collections' && call.method === 'GET' ? json([]) : undefined));
     renderAt('/collections');
-    expect(await screen.findByText('No collections yet.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'No collections yet' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'New collection' }).length).toBeGreaterThan(0);
+  });
+
+  it('shows a cover from the first assets of a static collection and a count', async () => {
+    mockApi(
+      (call) =>
+        call.pathname === '/api/v1/collections' && call.method === 'GET'
+          ? json([collection({ assetIds: ['a1', 'a2'] })])
+          : undefined,
+      { a1: 'https://cdn.test/a1-thumb.webp', a2: 'https://cdn.test/a2-thumb.webp' },
+    );
+    const { container } = renderAt('/collections');
+    await screen.findByRole('link', { name: 'Campaign hero shots' });
+    await waitFor(() => expect(container.querySelectorAll('.dam-cover img')).toHaveLength(2));
+    expect(screen.getByText(/2 assets/)).toBeInTheDocument();
+  });
+
+  it('creates an empty static collection from the New collection dialog and opens it', async () => {
+    let created: { name: string; type: string; assetIds: string[] } | undefined;
+    mockApi((call) => {
+      if (call.pathname === '/api/v1/collections' && call.method === 'GET') return json([]);
+      if (call.pathname === '/api/v1/collections' && call.method === 'POST') {
+        return (async () => {
+          created = (await call.json()) as typeof created;
+          return json(collection({ id: 'c9', name: created!.name, assetIds: [] }), 201);
+        })();
+      }
+      if (call.pathname === '/api/v1/collections/c9' && call.method === 'GET')
+        return json(collection({ id: 'c9', name: 'Spring review', assetIds: [] }));
+      if (call.pathname === '/api/v1/collections/c9/assets') return json({ hits: [], total: 0, facets: [], nextCursor: null });
+      return undefined;
+    });
+    renderAt('/collections');
+    await screen.findByRole('heading', { name: 'No collections yet' });
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'New collection' })[0]!);
+    const dialog = await screen.findByRole('dialog', { name: 'New collection' });
+    expect(within(dialog).getByRole('button', { name: 'Create' })).toBeDisabled();
+    await userEvent.type(within(dialog).getByLabelText('Name'), 'Spring review');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => expect(created).toMatchObject({ name: 'Spring review', type: 'static', assetIds: [] }));
+    expect(await screen.findByRole('heading', { name: 'Spring review' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'This collection is empty' })).toBeInTheDocument();
   });
 
   it('deletes a collection after confirming', async () => {
@@ -111,7 +155,8 @@ describe('CollectionsPage', () => {
     renderAt('/collections');
     await screen.findByRole('link', { name: 'Campaign hero shots' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Campaign hero shots' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete…' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete this collection?' });
     expect(
       within(dialog).getByText('This deletes "Campaign hero shots" for everyone it is shared with. This cannot be undone.'),
@@ -166,10 +211,11 @@ describe('CollectionDetailPage', () => {
     expect(await screen.findByRole('heading', { name: 'Campaign hero shots' })).toBeInTheDocument();
     expect(await screen.findByText('Hero shot')).toBeInTheDocument();
 
+    await userEvent.click(screen.getByRole('button', { name: 'Rename collection' }));
     const nameInput = screen.getByLabelText('Name');
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, 'Renamed collection');
-    await userEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByRole('heading', { name: 'Renamed collection' })).toBeInTheDocument();
   });
@@ -235,7 +281,7 @@ describe('CollectionDetailPage', () => {
     renderAt('/collections/c1');
     await screen.findByRole('heading', { name: 'Campaign hero shots' });
 
-    await userEvent.selectOptions(screen.getByLabelText('Visibility'), 'Tenant');
+    await userEvent.click(within(screen.getByRole('group', { name: 'Visibility' })).getByRole('button', { name: 'Tenant' }));
     await waitFor(() => expect(visibility).toBe('tenant'));
   });
 
@@ -250,7 +296,8 @@ describe('CollectionDetailPage', () => {
     renderAt('/collections/c1');
     await screen.findByRole('heading', { name: 'Campaign hero shots' });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete…' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete this collection?' });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
 

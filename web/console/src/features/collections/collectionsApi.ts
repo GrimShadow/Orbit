@@ -1,5 +1,5 @@
 import { unwrap, type components } from '@dam/sdk-js';
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApiClient } from '../../api/apiClient';
 import type { SearchRequestBody } from '../search/searchApi';
 
@@ -27,6 +27,21 @@ export function useCollectionContents(id: string, cursor: string | undefined) {
     queryKey: ['collections', id, 'assets', cursor],
     queryFn: async () =>
       unwrap(await api.GET('/api/v1/collections/{id}/assets', { params: { path: { id }, query: { cursor, limit: 50 } } })),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Accumulating variant of `useCollectionContents`: "Load more" appends the next page of hits. */
+export function useCollectionContentsInfinite(id: string) {
+  const api = useApiClient();
+  return useInfiniteQuery({
+    queryKey: ['collections', id, 'assets', 'infinite'],
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }) =>
+      unwrap(
+        await api.GET('/api/v1/collections/{id}/assets', { params: { path: { id }, query: { cursor: pageParam, limit: 50 } } }),
+      ),
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
     placeholderData: keepPreviousData,
   });
 }

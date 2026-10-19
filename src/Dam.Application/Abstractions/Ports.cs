@@ -50,10 +50,19 @@ public interface IOutbox { Task EnqueueAsync(IEnumerable<DomainEvent> events, Ca
 /// <summary>Lets handlers raise events that are not tied to a tracked aggregate. Drained by the outbox behaviour.</summary>
 public interface IEventCollector { void Raise(DomainEvent e); }
 
-/// <summary>Whether an asset has completed whatever approval workflow applies to it (spec Phase 2.3 "Workflow engine": Create →
-/// Review → Approve → Publish). No workflow engine exists yet, so this is a seam: publishing's guard reads it today and will
-/// need no change once a real workflow lands. The default implementation always answers yes.</summary>
+/// <summary>Whether an asset may be published as far as its approval workflow is concerned (spec Step 2.3, ADR-0030): yes when
+/// no workflow applies to it or its latest one is not still running. Publishing's guard reads this.</summary>
 public interface IWorkflowGate { Task<bool> IsApprovedAsync(Guid assetId, CancellationToken ct); }
+
+/// <summary>Database-level help for the workflow engine. Several people can decide tasks of one instance at the same moment
+/// (two assignees of an <c>any</c> step, the last two tasks of an <c>all</c> step) and each decision depends on what the others
+/// decided, so decisions on one instance must run one after another.</summary>
+public interface IWorkflowStore
+{
+    /// <summary>Waits for and takes a lock on the instance that lasts until the caller's transaction ends. Read the instance's
+    /// tasks only after this returns, so they reflect every decision that committed meanwhile.</summary>
+    Task LockInstanceAsync(Guid instanceId, CancellationToken ct);
+}
 
 /// <summary>Work that runs on a schedule, resolved by <see cref="Key"/> when its trigger fires (host: Dam.Scheduler).</summary>
 public interface IScheduledJob
@@ -68,6 +77,16 @@ public interface IJobScheduler
     Task ScheduleOnceAsync(string scheduleId, string jobKey, DateTimeOffset at, IReadOnlyDictionary<string, string>? data = null, CancellationToken ct = default);
     Task ScheduleCronAsync(string scheduleId, string jobKey, string cron, IReadOnlyDictionary<string, string>? data = null, CancellationToken ct = default);
     Task<bool> CancelAsync(string scheduleId, CancellationToken ct = default);
+}
+
+/// <summary>Appends usage events and keeps each asset's usage summary (<c>asset_usage</c>) in step, atomically, inside the
+/// caller's transaction. Done in one statement rather than through the change tracker because many requests record events for
+/// the same hot assets at once: counters must be incremented in the database, and a re-sent clientEventId must lose a race
+/// quietly instead of failing the batch.</summary>
+public interface IUsageStore
+{
+    /// <returns>How many of <paramref name="events"/> were stored; the rest repeated an already-recorded clientEventId.</returns>
+    Task<int> AppendAsync(IReadOnlyList<Dam.Domain.Assets.UsageEvent> events, CancellationToken ct);
 }
 
 /// <summary>Generic aggregate access. Handlers query with LINQ and materialise through <see cref="IQueryExecutor"/>.</summary>

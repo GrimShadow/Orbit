@@ -30,6 +30,8 @@ var scheduler = app.Services.GetRequiredService<IJobScheduler>();
 await scheduler.ScheduleCronAsync("system.heartbeat", HeartbeatJob.JobKey, "0 * * * * ?");
 // Every 15s: comfortably inside the spec's "publish fires within 60s of publish_at".
 await scheduler.ScheduleCronAsync("assets.publish_expire", PublishExpireJob.JobKey, cfg["DAM_SCHEDULE_POLL_CRON"] ?? "0/15 * * * * ?");
+// Every 30s: a missed workflow SLA shows in the API well within a minute of the due time (spec Step 2.3).
+await scheduler.ScheduleCronAsync("workflow.sla", WorkflowSlaJob.JobKey, cfg["DAM_WORKFLOW_SLA_POLL_CRON"] ?? "0/30 * * * * ?");
 // Hourly: archive/purge have no tight SLA, and each check involves a policy join across every tenant.
 await scheduler.ScheduleCronAsync("assets.retention", RetentionJob.JobKey, cfg["DAM_RETENTION_POLL_CRON"] ?? "0 0 * * * ?");
 app.Run();

@@ -1,11 +1,14 @@
+import { CaretDown, CaretUp, CaretUpDown } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { Skeleton } from './Skeleton';
 
 export interface Column<T> {
   key: string;
-  header: string;
+  header: ReactNode;
   render?: (row: T) => ReactNode;
   sortable?: boolean;
+  /** Extra class for this column's header and cells (e.g. `dam-col--hide-sm` to drop it on phones). */
+  className?: string;
 }
 export interface SortState {
   key: string;
@@ -57,8 +60,9 @@ export function Table<T>({
             {columns.map((c) => {
               const active = sort?.key === c.key;
               const ariaSort = active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined;
+              const SortIcon = active ? (sort.direction === 'asc' ? CaretUp : CaretDown) : CaretUpDown;
               return (
-                <th key={c.key} scope="col" aria-sort={c.sortable ? (ariaSort ?? 'none') : undefined}>
+                <th key={c.key} scope="col" className={c.className} aria-sort={c.sortable ? (ariaSort ?? 'none') : undefined}>
                   {c.sortable && onSortChange ? (
                     <button
                       type="button"
@@ -66,7 +70,7 @@ export function Table<T>({
                       onClick={() => onSortChange({ key: c.key, direction: active && sort.direction === 'asc' ? 'desc' : 'asc' })}
                     >
                       {c.header}
-                      <span aria-hidden="true">{active ? (sort.direction === 'asc' ? '▲' : '▼') : '↕'}</span>
+                      <SortIcon size={12} weight="bold" aria-hidden="true" className="dam-sort__icon" />
                     </button>
                   ) : (
                     c.header
@@ -86,29 +90,36 @@ export function Table<T>({
                     </td>
                   )}
                   {columns.map((c) => (
-                    <td key={c.key}>
+                    <td key={c.key} className={c.className}>
                       <Skeleton height={16} />
                     </td>
                   ))}
                 </tr>
               ))
-            : rows.map((r) => (
-                <tr key={getRowId(r)}>
-                  {onToggleSelect && (
-                    <td>
-                      <input
-                        type="checkbox"
-                        aria-label={selectLabel(r)}
-                        checked={selectedIds?.includes(getRowId(r)) ?? false}
-                        onChange={(e) => onToggleSelect(getRowId(r), e.target.checked)}
-                      />
-                    </td>
-                  )}
-                  {columns.map((c) => (
-                    <td key={c.key}>{cell(r, c)}</td>
-                  ))}
-                </tr>
-              ))}
+            : rows.map((r) => {
+                const id = getRowId(r);
+                const selected = selectedIds?.includes(id) ?? false;
+                return (
+                  <tr key={id} className={selected ? 'dam-table__row--selected' : undefined}>
+                    {onToggleSelect && (
+                      <td>
+                        <input
+                          type="checkbox"
+                          className="dam-check__input"
+                          aria-label={selectLabel(r)}
+                          checked={selected}
+                          onChange={(e) => onToggleSelect(id, e.target.checked)}
+                        />
+                      </td>
+                    )}
+                    {columns.map((c) => (
+                      <td key={c.key} className={c.className}>
+                        {cell(r, c)}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
         </tbody>
       </table>
       {!loading && rows.length === 0 && <div className="dam-empty">{emptyMessage}</div>}
