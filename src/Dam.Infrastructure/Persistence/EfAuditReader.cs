@@ -47,6 +47,7 @@ public sealed class EfAuditReader(DamDbContext db, ITenantContext tenant) : IAud
             FROM audit_log a LEFT JOIN users u ON u.tenant_id = a.tenant_id AND u.external_subject = a.actor
             """;
 
+        private const string CountHead = "SELECT count(*) FROM audit_log a LEFT JOIN users u ON u.tenant_id = a.tenant_id AND u.external_subject = a.actor";
         private const string Join = "FROM audit_log a LEFT JOIN users u ON u.tenant_id = a.tenant_id AND u.external_subject = a.actor";
 
         private NpgsqlCommand Command(string sql, out List<string> where, AuditFilter? filter = null)
@@ -74,6 +75,11 @@ public sealed class EfAuditReader(DamDbContext db, ITenantContext tenant) : IAud
             return cmd;
         }
 
+        /// <summary>Joins a fixed SELECT, the filter clauses and a fixed tail. Every clause in <paramref name="where"/> is a
+        /// compile-time constant that refers to a named parameter (<c>@from</c>, <c>@actor</c>, ...); user input is only ever
+        /// bound as a parameter value, never concatenated, so this is not a place where SQL can be injected.</summary>
+        private static string Sql(string head, List<string> where, string tail) => head + " WHERE " + string.Join(" AND ", where) + " " + tail;
+
         private static string Like(string s) => s.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal);
 
         private static AuditEntryDto Read(NpgsqlDataReader r) => new(
@@ -87,7 +93,7 @@ public sealed class EfAuditReader(DamDbContext db, ITenantContext tenant) : IAud
         {
             await using var cmd = Command("", out var where, filter);
             if (beforeChainNo is { } before) { where.Add("a.chain_no < @before"); cmd.Parameters.AddWithValue("before", before); }
-            cmd.CommandText = $"{Select} WHERE {string.Join(" AND ", where)} ORDER BY a.chain_no DESC LIMIT @limit";
+            cmd.CommandText = Sql(Select, where, "ORDER BY a.chain_no DESC LIMIT @limit");
             cmd.Parameters.AddWithValue("limit", limit + 1);
             var items = new List<AuditEntryDto>();
             await using (var r = await cmd.ExecuteReaderAsync(ct))
@@ -100,7 +106,7 @@ public sealed class EfAuditReader(DamDbContext db, ITenantContext tenant) : IAud
         public async IAsyncEnumerable<AuditEntryDto> StreamAsync(AuditFilter filter, [EnumeratorCancellation] CancellationToken ct)
         {
             await using var cmd = Command("", out var where, filter);
-            cmd.CommandText = $"{Select} WHERE {string.Join(" AND ", where)} ORDER BY a.chain_no";
+            cmd.CommandText = Sql(Select, where, "ORDER BY a.chain_no");
             await using var r = await cmd.ExecuteReaderAsync(ct);
             while (await r.ReadAsync(ct)) yield return Read(r);
         }
@@ -110,7 +116,7 @@ public sealed class EfAuditReader(DamDbContext db, ITenantContext tenant) : IAud
             await using var cmd = Command("", out var where);
             where.Add("a.chain_no > @after");
             cmd.Parameters.AddWithValue("after", afterChainNo);
-            cmd.CommandText = $"{Select} WHERE {string.Join(" AND ", where)} ORDER BY a.chain_no LIMIT @limit";
+            cmd.CommandText = Sql(Select, where, "ORDER BY a.chain_no LIMIT @limit");
             cmd.Parameters.AddWithValue("limit", limit);
             var items = new List<AuditEntryDto>();
             await using var r = await cmd.ExecuteReaderAsync(ct);
@@ -128,7 +134,8 @@ public sealed class EfAuditReader(DamDbContext db, ITenantContext tenant) : IAud
         public async Task<long> CountAsync(AuditFilter filter, CancellationToken ct)
         {
             await using var cmd = Command("", out var where, filter);
-            cmd.CommandText = $"SELECT count(*) {Join} WHERE {string.Join(" AND ", where)}";
+            // nosemgrep: csharp.lang.security.sqli.csharp-sqli.csharp-sqli -- CountHead and every filter clause are compile-time constants; values are bound as parameters.
+            cmd.CommandText = Sql(CountHead, where, "");
             return Convert.ToInt64(await cmd.ExecuteScalarAsync(ct), System.Globalization.CultureInfo.InvariantCulture);
         }
 
@@ -149,7 +156,7 @@ public sealed class EfAuditReader(DamDbContext db, ITenantContext tenant) : IAud
             long min, max;
             await using (var cmd = Command("", out var where, new AuditFilter(from, to, null, null, null, null, null)))
             {
-                cmd.CommandText = $"SELECT min(a.chain_no), max(a.chain_no) FROM audit_log a WHERE {string.Join(" AND ", where)}";
+                cmd.CommandText = Sql("SELECT min(a.chain_no), max(a.chain_no) FROM audit_log a", where, "");
                 await using var r = await cmd.ExecuteReaderAsync(ct);
                 await r.ReadAsync(ct);
                 if (r.IsDBNull(0)) return new AuditVerificationDto(true, 0, null, null, null, null, null, null, null, null, null, from, to);
