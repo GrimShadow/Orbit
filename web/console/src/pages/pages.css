@@ -190,10 +190,12 @@ a.dam-home__review:hover {
 
 /* ---- Sign-in ------------------------------------------------------------------------------------------------- */
 .dam-login {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: var(--dam-space-5);
-  align-items: stretch;
+  gap: var(--dam-space-6);
+  align-items: center;
   width: 100%;
   max-width: 1080px;
   min-height: calc(100dvh - var(--dam-topbar-h, 60px) - var(--dam-space-5) - var(--dam-space-8));
@@ -201,43 +203,45 @@ a.dam-home__review:hover {
 }
 .dam-login__panel {
   position: relative;
-  isolation: isolate;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: var(--dam-space-5);
-  padding: var(--dam-space-8) var(--dam-space-7);
-  overflow: hidden;
-  border: 1px solid var(--dam-border-subtle);
-  border-radius: var(--dam-radius-xl);
-  background: linear-gradient(155deg, var(--dam-brand-soft), var(--dam-surface) 78%);
-  color: var(--dam-text);
+  padding: var(--dam-space-8) var(--dam-space-4);
+  color: #fff;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.45);
 }
-/* Two concentric rings echo the logo's orbit; they sit behind the content and never carry meaning. */
-.dam-login__panel::before,
-.dam-login__panel::after {
+/* The sign-in page is full-bleed photography: a fixed backdrop behind the whole page (top bar included), darkened on the
+ * text side so white copy stays readable over the bright part of the aurora. Same image in light and dark themes. */
+.dam-login__bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: #04110b;
+  background-position: center;
+  background-size: cover;
+}
+.dam-login__bg::after {
   content: '';
   position: absolute;
-  z-index: -1;
-  border: 1px solid color-mix(in srgb, var(--dam-brand) 30%, transparent);
-  border-radius: 50%;
-  pointer-events: none;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgb(2 12 7 / 0.78) 0%, rgb(2 12 7 / 0.4) 48%, rgb(2 12 7 / 0.1) 100%),
+    linear-gradient(0deg, rgb(2 12 7 / 0.35), transparent 40%);
 }
-.dam-login__panel::before {
-  width: 420px;
-  height: 420px;
-  inset-block-end: -190px;
-  inset-inline-end: -150px;
+body:has(.dam-login__bg) .dam-topbar {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom-color: transparent;
+  color: #fff;
 }
-.dam-login__panel::after {
-  width: 260px;
-  height: 260px;
-  inset-block-end: -110px;
-  inset-inline-end: -70px;
-  background: color-mix(in srgb, var(--dam-brand) 8%, transparent);
+/* The page already carries a large wordmark; the top bar keeps only the theme switcher. */
+body:has(.dam-login__bg) .dam-topbar__brand {
+  display: none;
 }
 .dam-login__panel .dam-logo {
-  color: var(--dam-brand-soft-text);
+  color: #fff;
 }
 .dam-login__tagline {
   margin: 0;
@@ -271,9 +275,11 @@ a.dam-home__review:hover {
   width: 36px;
   height: 36px;
   border-radius: var(--dam-radius);
-  background: var(--dam-surface-raised);
-  border: 1px solid var(--dam-border-subtle);
-  color: var(--dam-brand-soft-text);
+  background: rgb(255 255 255 / 0.14);
+  border: 1px solid rgb(255 255 255 / 0.28);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  text-shadow: none;
 }
 .dam-login__card {
   display: flex;
@@ -645,8 +651,11 @@ a.dam-home__review:hover {
     max-width: 520px;
   }
   .dam-login__panel {
-    padding: var(--dam-space-6) var(--dam-space-5);
+    padding: var(--dam-space-5) var(--dam-space-2) 0;
     gap: var(--dam-space-4);
+  }
+  .dam-login__bg::after {
+    background: linear-gradient(180deg, rgb(2 12 7 / 0.7), rgb(2 12 7 / 0.35));
   }
   .dam-login__tagline {
     font-size: var(--dam-text-xl);
@@ -670,9 +679,5 @@ a.dam-home__review:hover {
   .dam-home__stats .dam-stat__body {
     grid-column: 1 / -1;
     grid-row: 2;
-  }
-  .dam-login__panel::before,
-  .dam-login__panel::after {
-    display: none;
   }
 }

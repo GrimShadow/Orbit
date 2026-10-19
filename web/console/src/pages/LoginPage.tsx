@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { Button, Logo } from '@dam/ui-kit';
+import loginBackdrop from './assets/login-bg.jpg';
 import './pages.css';
 import { usePageTitle } from './usePageTitle';
 
@@ -36,6 +37,7 @@ export function LoginPage() {
 
   return (
     <div className="dam-login">
+      <div className="dam-login__bg" aria-hidden="true" style={{ backgroundImage: `url(${loginBackdrop})` }} />
       <aside className="dam-login__panel" aria-label={t('login.panel')}>
         <Logo size={36} />
         <p className="dam-login__tagline">{t('login.tagline')}</p>
