@@ -14,7 +14,9 @@ RUN pnpm --filter @dam/console build
 FROM nginxinc/nginx-unprivileged:1.29-alpine
 # Pull OS security fixes that the pinned base image lags behind on (needs root; the image drops to uid 101 below).
 USER root
-RUN apk upgrade --no-cache
+# CI passes today's date so the layer cache cannot replay this step forever (a fix published later would never land).
+ARG SECURITY_REFRESH=none
+RUN echo "security updates as of: $SECURITY_REFRESH" && apk upgrade --no-cache
 COPY web/console/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /repo/web/console/dist /usr/share/nginx/html
 USER 101
