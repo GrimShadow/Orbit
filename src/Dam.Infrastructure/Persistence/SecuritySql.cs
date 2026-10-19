@@ -194,4 +194,11 @@ public static class SecuritySql
         GRANT SELECT ON webhook_deliveries TO dam_system;
         CREATE POLICY system_read_webhook_deliveries ON webhook_deliveries FOR SELECT TO dam_system USING (true);
         """;
+
+    /// <summary>Comments are never deleted by the app (a delete erases the text and sets deleted_at); a comment's mention rows are replaced when its
+    /// text is edited and removed when it is deleted.</summary>
+    public const string CommentGrants = """
+        GRANT SELECT, INSERT, UPDATE ON comments TO dam_app;
+        GRANT SELECT, INSERT, DELETE ON comment_mentions TO dam_app;
+        """;
 }

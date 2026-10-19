@@ -317,6 +317,10 @@
 .dam-asset-layout__side .dam-tablist {
   overflow-x: auto;
 }
+/* Five tabs (with a count on Comments) have to fit the 360-420px column: a touch less padding than the kit's default. */
+.dam-asset-layout__side .dam-tab {
+  padding-inline: var(--dam-space-2);
+}
 .dam-metasection {
   display: flex;
   flex-direction: column;

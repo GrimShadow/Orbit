@@ -13,6 +13,8 @@ public static class NotificationCategories
     public const string WorkflowOutcome = "workflow_outcome";
     public const string Sla = "sla";
     public const string AssetLifecycle = "asset_lifecycle";
+    public const string Mention = "mention";
+    public const string Comments = "comments";
 
     public static readonly IReadOnlyList<NotificationCategory> All =
     [
@@ -20,6 +22,8 @@ public static class NotificationCategories
         new(WorkflowOutcome, "Outcome of my submissions", "An asset you submitted or own is approved or rejected.", true, false),
         new(Sla, "Overdue approvals", "An approval you can decide has passed its deadline.", true, true),
         new(AssetLifecycle, "Asset expiry and archiving", "An asset you own expires or is archived.", true, false),
+        new(Mention, "Mentions", "Someone mentions you in a comment on an asset you can see.", true, true),
+        new(Comments, "Comments and replies", "Someone replies to your comment, comments on an asset you own or submitted, or resolves your comment.", true, false),
     ];
 
     public static NotificationCategory? Find(string key) => All.FirstOrDefault(c => c.Key == key);

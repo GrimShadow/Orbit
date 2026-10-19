@@ -1,8 +1,11 @@
 using System.Text.Json;
 using Dam.Application.Abstractions;
+using Dam.Application.Comments;
 using Dam.Application.Workflow;
 using Dam.Domain.Assets;
 using Dam.Domain.Authorization;
+using Dam.Domain.Comments;
+using Dam.Domain.Notifications;
 using Dam.Domain.Identity;
 using Dam.Domain.Workflow;
 
@@ -79,20 +82,34 @@ public sealed class UserProfiles(
 /// asset, not barred by the distinct-approvers rule). Nobody who could not see or decide it is told about it.</item>
 /// <item><c>workflow.task.completed</c>: whoever submitted the asset and the asset's owner, except the person who decided.</item>
 /// <item><c>asset.status.changed</c> to expired or archived: the asset's owner.</item>
+/// <item><c>comment.added</c>: the people it mentions (category <c>mention</c>), and, in category <c>comments</c>, the author of the thread on a reply or the
+/// asset's owner and submitter on a new thread. Each person is told once per comment, a mention taking precedence; the author never; only people who
+/// can read the asset.</item>
+/// <item><c>comment.edited</c>: people the edit newly mentions. <c>comment.resolved</c>: the thread's author, when someone else resolved it.</item>
 /// </list>
 /// </summary>
 public sealed class NotificationPlanner(
     IRepository<WorkflowTask> tasks, IRepository<WorkflowInstance> instances, IRepository<Asset> assets, IRepository<User> users,
+    IRepository<Comment> comments, IRepository<CommentMention> mentions, AssetReaders readers,
     WorkflowTaskAccess access, UserProfiles profiles, IQueryExecutor q)
 {
-    public async Task<NotificationPlan?> PlanAsync(string eventName, JsonElement payload, CancellationToken ct) => eventName switch
+    /// <summary>The notifications one event gives rise to: usually none or one, two for a comment that mentions people and also concerns others.</summary>
+    public async Task<IReadOnlyList<NotificationPlan>> PlanAsync(string eventName, JsonElement payload, CancellationToken ct)
     {
-        "workflow.task.created" => await TaskEventAsync(payload, breached: false, ct),
-        "workflow.sla.breached" => await TaskEventAsync(payload, breached: true, ct),
-        "workflow.task.completed" => await CompletedAsync(payload, ct),
-        "asset.status.changed" => await LifecycleAsync(payload, ct),
-        _ => null,
-    };
+        switch (eventName)
+        {
+            case "workflow.task.created": return One(await TaskEventAsync(payload, breached: false, ct));
+            case "workflow.sla.breached": return One(await TaskEventAsync(payload, breached: true, ct));
+            case "workflow.task.completed": return One(await CompletedAsync(payload, ct));
+            case "asset.status.changed": return One(await LifecycleAsync(payload, ct));
+            case "comment.added": return await CommentAddedAsync(payload, ct);
+            case CommentEdited.EventName: return One(await CommentEditedAsync(payload, ct));
+            case "comment.resolved": return One(await CommentResolvedAsync(payload, ct));
+            default: return [];
+        }
+    }
+
+    private static IReadOnlyList<NotificationPlan> One(NotificationPlan? plan) => plan is null ? [] : [plan];
 
     private async Task<NotificationPlan?> TaskEventAsync(JsonElement payload, bool breached, CancellationToken ct)
     {
@@ -162,6 +179,77 @@ public sealed class NotificationPlanner(
         return content is null || recipients.Count == 0 ? null : new NotificationPlan(content, recipients);
     }
 
+    // ---- comments (ADR-0032) -------------------------------------------------------------------------------------
+
+    private async Task<IReadOnlyList<NotificationPlan>> CommentAddedAsync(JsonElement payload, CancellationToken ct)
+    {
+        if (!TryGuid(payload, "CommentId", out var commentId)) return [];
+        var comment = await q.FirstOrDefaultAsync(comments.Query().Where(c => c.Id == commentId), ct);
+        if (comment is null || comment.IsDeleted) return [];
+        var loaded = await access.LoadAssetsAsync([comment.AssetId], ct);
+        if (!loaded.TryGetValue(comment.AssetId, out var a)) return [];
+        var authorName = await NameAsync(comment.AuthorId, ct);
+        var excerpt = CommentText.Excerpt(comment.Body);
+
+        var named = await q.ToListAsync(mentions.Query().Where(m => m.CommentId == commentId).Select(m => m.UserId), ct);
+        var candidates = new List<Guid>();
+        if (comment.ParentId is { } parentId)
+        {
+            var parentAuthor = await q.FirstOrDefaultAsync(comments.Query().Where(c => c.Id == parentId && c.DeletedAt == null).Select(c => (Guid?)c.AuthorId), ct);
+            if (parentAuthor is { } pa) candidates.Add(pa);
+        }
+        else
+        {
+            if (a.Asset.OwnerId is { } owner) candidates.Add(owner);
+            var submitter = await q.FirstOrDefaultAsync(instances.Query().Where(i => i.AssetId == a.Asset.Id && i.StartedBy != null)
+                .OrderByDescending(i => i.StartedAt).ThenByDescending(i => i.Id).Select(i => i.StartedBy), ct);
+            if (submitter is { } sb) candidates.Add(sb);
+        }
+        // Only people who are active and could open the asset are ever told; the same check as the mention picker uses.
+        var eligible = (await readers.ReadersAsync(a.Asset, a.Path, named.Concat(candidates).Where(u => u != comment.AuthorId), ct)).Keys.ToHashSet();
+        var (mentioned, others) = CommentRecipients.Split(comment.AuthorId, named.Where(eligible.Contains), candidates.Where(eligible.Contains));
+
+        var plans = new List<NotificationPlan>();
+        if (mentioned.Count > 0)
+            plans.Add(new NotificationPlan(NotificationRules.Mention("comment.added", a.Asset.Id, a.Asset.Title, comment.Id, authorName, excerpt), mentioned));
+        if (others.Count > 0)
+            plans.Add(new NotificationPlan(comment.ParentId is null
+                ? NotificationRules.NewComment(a.Asset.Id, a.Asset.Title, comment.Id, authorName, excerpt, comment.AnchorType is not null)
+                : NotificationRules.Reply(a.Asset.Id, a.Asset.Title, comment.Id, authorName, excerpt), others));
+        return plans;
+    }
+
+    private async Task<NotificationPlan?> CommentEditedAsync(JsonElement payload, CancellationToken ct)
+    {
+        if (!TryGuid(payload, "CommentId", out var commentId) || !payload.TryGetProperty("AddedMentions", out var added) || added.ValueKind != JsonValueKind.Array) return null;
+        var comment = await q.FirstOrDefaultAsync(comments.Query().Where(c => c.Id == commentId), ct);
+        if (comment is null || comment.IsDeleted) return null;
+        var loaded = await access.LoadAssetsAsync([comment.AssetId], ct);
+        if (!loaded.TryGetValue(comment.AssetId, out var a)) return null;
+        var ids = added.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String && e.TryGetGuid(out _)).Select(e => e.GetGuid()).Where(u => u != comment.AuthorId).ToList();
+        var recipients = (await readers.ReadersAsync(a.Asset, a.Path, ids, ct)).Keys.ToList();
+        if (recipients.Count == 0) return null;
+        return new NotificationPlan(NotificationRules.Mention(CommentEdited.EventName, a.Asset.Id, a.Asset.Title, comment.Id, await NameAsync(comment.AuthorId, ct), CommentText.Excerpt(comment.Body)), recipients);
+    }
+
+    private async Task<NotificationPlan?> CommentResolvedAsync(JsonElement payload, CancellationToken ct)
+    {
+        if (!TryGuid(payload, "CommentId", out var commentId) || !TryGuid(payload, "ResolvedBy", out var resolver)) return null;
+        var comment = await q.FirstOrDefaultAsync(comments.Query().Where(c => c.Id == commentId), ct);
+        if (comment is null || comment.IsDeleted || comment.AuthorId == resolver) return null;
+        var loaded = await access.LoadAssetsAsync([comment.AssetId], ct);
+        if (!loaded.TryGetValue(comment.AssetId, out var a)) return null;
+        var recipients = (await readers.ReadersAsync(a.Asset, a.Path, [comment.AuthorId], ct)).Keys.ToList();
+        if (recipients.Count == 0) return null;
+        return new NotificationPlan(NotificationRules.ThreadResolved(a.Asset.Id, a.Asset.Title, comment.Id, await NameAsync(resolver, ct), CommentText.Excerpt(comment.Body)), recipients);
+    }
+
+    private async Task<string?> NameAsync(Guid userId, CancellationToken ct)
+    {
+        var u = await q.FirstOrDefaultAsync(users.Query().Where(x => x.Id == userId).Select(x => new { x.DisplayName, x.Email }), ct);
+        return u is null ? null : string.IsNullOrWhiteSpace(u.DisplayName) ? u.Email : u.DisplayName;
+    }
+
     /// <summary>What to say about any catalogue event in a chat channel, which is not addressed to a person.</summary>
     public async Task<(string Title, string Body, string LinkPath)> DescribeAsync(string eventName, JsonElement payload, CancellationToken ct)
     {
@@ -189,5 +277,20 @@ public sealed class NotificationPlanner(
     {
         id = Guid.Empty;
         return e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var p) && p.TryGetGuid(out id);
+    }
+}
+
+/// <summary>
+/// Who is told about a new comment (ADR-0032), once the people who could not see the asset have been left out: the people it mentions, and the
+/// others concerned (the thread's author on a reply; the asset's owner and submitter on a new thread). The author is never told; a person
+/// who is mentioned is told as mentioned only, so each person gets one notification per comment, the strongest reason winning.
+/// </summary>
+public static class CommentRecipients
+{
+    public static (List<Guid> Mentioned, List<Guid> Others) Split(Guid author, IEnumerable<Guid> mentions, IEnumerable<Guid> concerned)
+    {
+        var mentioned = mentions.Where(u => u != author).Distinct().ToList();
+        var others = concerned.Where(u => u != author && !mentioned.Contains(u)).Distinct().ToList();
+        return (mentioned, others);
     }
 }

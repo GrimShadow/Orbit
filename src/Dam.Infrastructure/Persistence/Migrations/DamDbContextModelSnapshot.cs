@@ -640,6 +640,123 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.ToTable("usage_events", (string)null);
                 });
 
+            modelBuilder.Entity("Dam.Domain.Comments.Comment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AnchorJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("anchor");
+
+                    b.Property<string>("AnchorType")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("anchor_type");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("body");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateTimeOffset?>("EditedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("edited_at");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_id");
+
+                    b.Property<bool>("Resolved")
+                        .HasColumnType("boolean")
+                        .HasColumnName("resolved");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<Guid?>("ResolvedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_by");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid?>("VersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("version_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_comments");
+
+                    b.HasIndex("AssetId")
+                        .HasDatabaseName("ix_comments_asset_id");
+
+                    b.HasIndex("ParentId")
+                        .HasDatabaseName("ix_comments_parent_id")
+                        .HasFilter("parent_id IS NOT NULL");
+
+                    b.HasIndex("VersionId")
+                        .HasDatabaseName("ix_comments_version_id");
+
+                    b.HasIndex("TenantId", "AssetId", "AnchorType")
+                        .HasDatabaseName("ix_comments_tenant_id_asset_id_anchor_type")
+                        .HasFilter("anchor_type IS NOT NULL");
+
+                    b.HasIndex("TenantId", "AssetId", "CreatedAt")
+                        .HasDatabaseName("ix_comments_tenant_id_asset_id_created_at");
+
+                    b.HasIndex("TenantId", "AssetId", "Resolved")
+                        .HasDatabaseName("ix_comments_tenant_id_asset_id_resolved");
+
+                    b.ToTable("comments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_comments_anchor_type", "anchor_type IS NULL OR anchor_type IN ('region','point','timecode')");
+                        });
+                });
+
+            modelBuilder.Entity("Dam.Domain.Comments.CommentMention", b =>
+                {
+                    b.Property<Guid>("CommentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("comment_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("CommentId", "UserId")
+                        .HasName("pk_comment_mentions");
+
+                    b.HasIndex("TenantId", "UserId")
+                        .HasDatabaseName("ix_comment_mentions_tenant_id_user_id");
+
+                    b.ToTable("comment_mentions", (string)null);
+                });
+
             modelBuilder.Entity("Dam.Domain.Content.Collection", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2189,6 +2306,38 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_usage_events_assets_asset_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Comments.Comment", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_comments_assets_asset_id");
+
+                    b.HasOne("Dam.Domain.Comments.Comment", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_comments_comments_parent_id");
+
+                    b.HasOne("Dam.Domain.Assets.AssetVersion", null)
+                        .WithMany()
+                        .HasForeignKey("VersionId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_comments_asset_versions_version_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Comments.CommentMention", b =>
+                {
+                    b.HasOne("Dam.Domain.Comments.Comment", null)
+                        .WithMany()
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_comment_mentions_comments_comment_id");
                 });
 
             modelBuilder.Entity("Dam.Domain.Webhooks.WebhookDelivery", b =>

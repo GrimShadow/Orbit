@@ -69,6 +69,27 @@ public static class NotificationRules
         _ => null,
     };
 
+    /// <summary>The console deep link to a comment: the asset page, which opens the thread.</summary>
+    public static string CommentPath(Guid assetId, Guid commentId) => $"{AssetPath(assetId)}?comment={commentId}";
+
+    private static string Subject(string title) => string.IsNullOrWhiteSpace(title) ? "an asset" : $"'{Short(title)}'";
+    private static string Who(string? name) => string.IsNullOrWhiteSpace(name) ? "Someone" : name.Trim();
+
+    /// <param name="eventType">comment.added, or comment.edited when an edit added the mention.</param>
+    /// <param name="excerpt">A short plain-text excerpt (mention tokens already shown as @Name).</param>
+    public static NotificationContent Mention(string eventType, Guid assetId, string assetTitle, Guid commentId, string? authorName, string excerpt) =>
+        new(eventType, NotificationCategories.Mention, $"{Who(authorName)} mentioned you on {Subject(assetTitle)}", excerpt, CommentPath(assetId, commentId), assetId);
+
+    public static NotificationContent Reply(Guid assetId, string assetTitle, Guid commentId, string? authorName, string excerpt) =>
+        new("comment.added", NotificationCategories.Comments, $"{Who(authorName)} replied to your comment on {Subject(assetTitle)}", excerpt, CommentPath(assetId, commentId), assetId);
+
+    public static NotificationContent NewComment(Guid assetId, string assetTitle, Guid commentId, string? authorName, string excerpt, bool annotation) =>
+        new("comment.added", NotificationCategories.Comments,
+            $"{Who(authorName)} {(annotation ? "added an annotation to" : "commented on")} {Subject(assetTitle)}", excerpt, CommentPath(assetId, commentId), assetId);
+
+    public static NotificationContent ThreadResolved(Guid assetId, string assetTitle, Guid commentId, string? resolverName, string excerpt) =>
+        new("comment.resolved", NotificationCategories.Comments, $"{Who(resolverName)} resolved your comment on {Subject(assetTitle)}", excerpt, CommentPath(assetId, commentId), assetId);
+
     /// <summary>A one-line description of any catalogue event, for chat channels (which hear about everything they subscribe to).</summary>
     public static (string Title, string Body) Describe(string eventName, string? assetTitle, string? detail)
     {
@@ -89,6 +110,9 @@ public static class NotificationRules
             "workflow.task.created" => "Approval needed",
             "workflow.task.completed" => "Approval decided",
             "workflow.sla.breached" => "Approval overdue",
+            "comment.added" => "New comment",
+            "comment.resolved" => "Comment thread resolved",
+            "comment.reopened" => "Comment thread reopened",
             _ => eventName,
         };
         var subject = string.IsNullOrWhiteSpace(assetTitle) ? "" : Short(assetTitle);

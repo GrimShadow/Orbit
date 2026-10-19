@@ -28,7 +28,8 @@ public sealed class NotificationConsumer(
     public const string InApp = "in_app", Email = "email", Chat = "chat";
 
     public override string Name => "notifications";
-    public override IReadOnlyList<string> RoutingKeys => EventCatalogue.SourceEvents;
+    // Public events, plus the one internal event that can notify (an edit that newly mentions someone).
+    public override IReadOnlyList<string> RoutingKeys { get; } = [.. EventCatalogue.SourceEvents, Dam.Domain.Comments.CommentEdited.EventName];
 
     public override async Task HandleAsync(EventEnvelope message, CancellationToken ct)
     {
@@ -36,7 +37,7 @@ public sealed class NotificationConsumer(
         var payload = doc.RootElement;
         var failures = new List<Exception>();
 
-        if (await planner.PlanAsync(message.Name, payload, ct) is { } plan)
+        foreach (var plan in await planner.PlanAsync(message.Name, payload, ct))
             await NotifyPeopleAsync(message, payload, plan, failures, ct);
 
         await PostToChannelsAsync(message, payload, failures, ct);
