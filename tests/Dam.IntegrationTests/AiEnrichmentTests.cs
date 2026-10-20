@@ -26,8 +26,14 @@ public sealed class AiEnrichmentTests(PostgresFixture pg, RabbitFixture mq, Sear
 
     private Dictionary<string, string?> AiEnvironment() => new()
     {
-        ["DAM_AI_PROVIDER"] = "self-hosted", ["DAM_AI_SIDECAR_URL"] = _sidecar.Url, ["DAM_AI_BASE_URL"] = _openAi.Url + "/v1", ["DAM_AI_API_KEY"] = _openAi.ExpectedKey,
-        ["DAM_AI_RETRY_BASE_MS"] = "1", ["DAM_AI_RETRIES"] = "2", ["DAM_AI_FAILURE_THRESHOLD"] = "1000", ["DAM_AI_EMBEDDING_MODEL"] = "embed-x",
+        ["DAM_AI_PROVIDER"] = "self-hosted",
+        ["DAM_AI_SIDECAR_URL"] = _sidecar.Url,
+        ["DAM_AI_BASE_URL"] = _openAi.Url + "/v1",
+        ["DAM_AI_API_KEY"] = _openAi.ExpectedKey,
+        ["DAM_AI_RETRY_BASE_MS"] = "1",
+        ["DAM_AI_RETRIES"] = "2",
+        ["DAM_AI_FAILURE_THRESHOLD"] = "1000",
+        ["DAM_AI_EMBEDDING_MODEL"] = "embed-x",
     };
 
     public override async Task InitializeAsync()
@@ -48,7 +54,9 @@ public sealed class AiEnrichmentTests(PostgresFixture pg, RabbitFixture mq, Sear
     {
         var settings = new Dictionary<string, string?>(AiEnvironment())
         {
-            ["DAM_SCAN_MODE"] = "off", ["DAM_OPENSEARCH_URL"] = os.Url, ["DAM_FFPROBE_PATH"] = "ffprobe",
+            ["DAM_SCAN_MODE"] = "off",
+            ["DAM_OPENSEARCH_URL"] = os.Url,
+            ["DAM_FFPROBE_PATH"] = "ffprobe",
         };
         return StartWorker(settings, renditions: true, indexing: true, ai: true);
     }
