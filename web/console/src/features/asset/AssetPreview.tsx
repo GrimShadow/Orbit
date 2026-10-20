@@ -1,5 +1,5 @@
 import { useRecordUsage } from '../analytics/analyticsApi';
-import { ArrowSquareOut, CaretLeft, CaretRight, Copy, Play } from '@phosphor-icons/react';
+import { ArrowSquareOut, CaretLeft, CaretRight, Copy, Play, Prohibit } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { relativeTime } from '../../lib/relativeTime';
@@ -22,6 +22,8 @@ import {
   useToast,
   WarningCircle,
 } from '../../ui';
+import { rightsBlockReasons } from '../rights/asset/rightsFormat';
+import { useAssetRights } from '../rights/rightsApi';
 import { useAssetRenditions, useDeliveryLink } from './assetApi';
 
 interface AssetPreviewProps {
@@ -44,17 +46,23 @@ type Zoom = 'fit' | 'actual';
  * watermarked `preview` only (page 1 of a document), and an unpublished video for its `poster` still; `original`, the
  * playable transcodes and the per-page rasters join once it is published. */
 export function AssetPreview({ assetId, type, title, status }: AssetPreviewProps) {
-  const published = status === 'published';
+  // A licence that requires watermarks withholds the original, video transcodes and PDF pages even once published, exactly as
+  // for a draft (ADR-0033): ask only for what may be served, or the origin refuses the whole request.
+  const rights = useAssetRights(assetId, status === 'published');
+  // One quick answer is awaited (not the retries after a failure): a rights lookup that cannot be had must not hide the preview.
+  if (status === 'published' && rights.isPending && rights.failureCount === 0) return <StageSkeleton />;
+  const held = status === 'published' && !!rights.data?.watermarkRequired;
+  const published = status === 'published' && !held;
   switch (type) {
     case 'image':
       return <ImageStage assetId={assetId} title={title} published={published} />;
     case 'video':
-      return <VideoStage assetId={assetId} title={title} published={published} />;
+      return <VideoStage assetId={assetId} title={title} published={published} held={held} />;
     case 'document':
     case 'manual':
-      return <PagedStage assetId={assetId} title={title} published={published} />;
+      return <PagedStage assetId={assetId} title={title} published={published} held={held} />;
     default:
-      return <OtherStage assetId={assetId} type={type} published={published} />;
+      return <OtherStage assetId={assetId} type={type} published={published} held={held} />;
   }
 }
 
@@ -140,6 +148,23 @@ function StageMessage({
     </div>
   );
 }
+
+/** What to say when there is nothing to show. A licence that does not currently allow previews (the link request answered
+ * 403 `rights_restricted`) gets a calm message with the server's reason; a picture that failed to load after a link was
+ * granted (an old link, a licence that just changed) says what to try; anything else is the plain "unavailable". */
+function unavailableProps(t: ReturnType<typeof useTranslation>['t'], error: unknown, broken = false) {
+  const reasons = rightsBlockReasons(error);
+  if (reasons) return { icon: <Prohibit />, title: t('rightsAsset.stage.title'), description: reasons.join(' ') };
+  return {
+    icon: <WarningCircle />,
+    title: t('asset.previewUnavailable'),
+    ...(broken && !error ? { description: t('rightsAsset.stage.loadFailed') } : {}),
+  };
+}
+
+/** The quiet note for an asset shown as less than the whole: "once published" for a draft, the licence for a held one. */
+const lessNote = (t: ReturnType<typeof useTranslation>['t'], key: 'videoDraft' | 'pdfDraft' | 'noPreviewDraft', held?: boolean) =>
+  t(held ? `rightsAsset.stage.${key}` : `asset.stage.${key}`);
 
 /** Open-in-new-tab and copy-link, both pointing at the best delivery link there is (the original once published). */
 function LinkTools({
@@ -236,7 +261,7 @@ function ImageStage({
   if (linkQuery.isPending) return <StageSkeleton />;
   const links = linkQuery.data?.links;
   const src = links?.preview ?? links?.original;
-  if (linkQuery.error || !src || broken) return <StageMessage icon={<WarningCircle />} title={t('asset.previewUnavailable')} />;
+  if (linkQuery.error || !src || broken) return <StageMessage {...unavailableProps(t, linkQuery.error, broken)} />;
 
   return (
     <Stage
@@ -270,7 +295,7 @@ function ImageStage({
 
 // ---- video --------------------------------------------------------------------------------------------------------
 
-function VideoStage({ assetId, title, published }: { assetId: string; title: string; published: boolean }) {
+function VideoStage({ assetId, title, published, held }: { assetId: string; title: string; published: boolean; held?: boolean }) {
   const { t } = useTranslation();
   // `mobile` is the full-length 720p transcode; `preview` is capped at a few seconds and only the fallback.
   const linkQuery = useDeliveryLink(assetId, published ? ['mobile', 'preview', 'poster', 'original'] : ['poster'], true);
@@ -311,12 +336,10 @@ function VideoStage({ assetId, title, published }: { assetId: string; title: str
 
   // Unpublished (or no playable rendition yet): the watermarked poster still, and a quiet note about why it does not play.
   if (linkQuery.error || !poster || broken)
-    return (
-      <StageMessage icon={<WarningCircle />} title={t('asset.previewUnavailable')} description={t('asset.stage.videoDraft')} />
-    );
+    return <StageMessage description={lessNote(t, 'videoDraft', held)} {...unavailableProps(t, linkQuery.error)} />;
   return (
     <Stage
-      note={t('asset.stage.videoDraft')}
+      note={lessNote(t, 'videoDraft', held)}
       toolbar={
         <>
           {/* Video comments are timecodes, which need a player: say why the button is off. */}
@@ -335,7 +358,7 @@ function VideoStage({ assetId, title, published }: { assetId: string; title: str
 
 // ---- documents (PDF pages) ----------------------------------------------------------------------------------------
 
-function PagedStage({ assetId, title, published }: { assetId: string; title: string; published: boolean }) {
+function PagedStage({ assetId, title, published, held }: { assetId: string; title: string; published: boolean; held?: boolean }) {
   const { t } = useTranslation();
   const renditionsQuery = useAssetRenditions(assetId);
   if (renditionsQuery.isPending) return <StageSkeleton />;
@@ -353,7 +376,7 @@ function PagedStage({ assetId, title, published }: { assetId: string; title: str
         title={title}
         published={published}
         page
-        note={!published && pages.length > 1 ? t('asset.stage.pdfDraft') : undefined}
+        note={!published && pages.length > 1 ? lessNote(t, 'pdfDraft', held) : undefined}
       />
     );
   return <PdfStage assetId={assetId} title={title} pages={pages} />;
@@ -419,7 +442,7 @@ function PdfStage({ assetId, title, pages }: { assetId: string; title: string; p
   if (linkQuery.error || !src || broken)
     return (
       <Stage toolbar={pages.length > 1 ? pager : undefined}>
-        <EmptyState icon={<WarningCircle />} title={t('asset.previewUnavailable')} titleAs="p" />
+        <EmptyState {...unavailableProps(t, linkQuery.error, broken)} titleAs="p" />
       </Stage>
     );
 
@@ -456,7 +479,7 @@ function PdfStage({ assetId, title, pages }: { assetId: string; title: string; p
 
 // ---- everything else ----------------------------------------------------------------------------------------------
 
-function OtherStage({ assetId, type, published }: { assetId: string; type: string; published: boolean }) {
+function OtherStage({ assetId, type, published, held }: { assetId: string; type: string; published: boolean; held?: boolean }) {
   const { t } = useTranslation();
   // No rendition exists for these kinds; the only thing to offer is the file itself, and only once it is published.
   const linkQuery = useDeliveryLink(assetId, ['original'], published);
@@ -465,7 +488,7 @@ function OtherStage({ assetId, type, published }: { assetId: string; type: strin
     <StageMessage
       icon={<FileTypeIcon type={type} />}
       title={t('asset.stage.noPreview')}
-      description={published ? undefined : t('asset.stage.noPreviewDraft')}
+      description={published ? undefined : lessNote(t, 'noPreviewDraft', held)}
       action={
         original ? (
           <a className="dam-btn dam-btn--secondary" href={original} download>

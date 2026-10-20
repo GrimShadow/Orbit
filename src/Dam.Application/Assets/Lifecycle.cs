@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Dam.Application.Abstractions;
 using Dam.Application.Content;
+using Dam.Application.Licensing;
 using Dam.Application.Messaging;
 using Dam.Application.Workflow;
 using Dam.Domain.Assets;
@@ -16,7 +17,7 @@ namespace Dam.Application.Assets;
 /// Moves an asset along its lifecycle (spec A4.2): submit, approve, reject, publish, withdraw, expire, archive. The state
 /// machine itself (which actions are legal from which status) lives in <see cref="AssetLifecycle"/>; this handler adds the
 /// guards the spec calls for on top: permission, required metadata complete (submit, publish) and workflow approved
-/// (publish) — "rights valid" is not checked yet, since no Rights entity exists (spec Phase 2.5).
+/// (publish) and rights valid (publish; ADR-0033): an asset whose licence has ended or not yet begun cannot be published.
 /// <para>When a workflow applies to the asset (ADR-0030), submit also starts it and approving or rejecting is done through its
 /// tasks instead of directly; withdrawing cancels it. When none applies, nothing about the transitions changes.</para>
 /// </summary>
@@ -33,7 +34,7 @@ public sealed class TransitionAssetValidator : AbstractValidator<TransitionAsset
 
 public sealed class TransitionAssetHandler(
     IRepository<Asset> assets, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz,
-    AssetMetadataBuilder builder, IWorkflowGate workflow, WorkflowRuntime runtime, IClock clock)
+    AssetMetadataBuilder builder, IWorkflowGate workflow, WorkflowRuntime runtime, RightsGuard rightsGuard, IClock clock)
     : IRequestHandler<TransitionAssetCommand, AssetDto>
 {
     // The response is built from the asset just transitioned, not read back afterwards: some actions (e.g. approve) move
@@ -56,6 +57,9 @@ public sealed class TransitionAssetHandler(
         }
         if (c.Action == AssetLifecycle.Publish && !await workflow.IsApprovedAsync(asset.Id, ct))
             return Error.Conflict("This asset has not completed its approval workflow.");
+
+        if (c.Action == AssetLifecycle.Publish && RightsGuard.OutOfForceMessage(await rightsGuard.CheckAsync(asset, null, null, ct)) is { } outOfForce)
+            return Error.Conflict($"{outOfForce} Renew the licence or assign other rights before publishing.");
 
         var reason = c.Reason ?? DefaultReason(c.Action);
         if (c.Action == AssetLifecycle.Submit)

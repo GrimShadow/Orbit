@@ -1,0 +1,361 @@
+/* Rights on the asset page: the panel, the availability check, the picker, header chip. Tokens only; light and dark. */
+
+/* ---- Panel --------------------------------------------------------------------------------------------------------- */
+.dam-rights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+}
+.dam-rights__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dam-space-2);
+}
+.dam-rights__head .dam-metasection__title {
+  margin: 0;
+}
+.dam-rights__head .dam-metasection__title:focus-visible {
+  border-radius: var(--dam-radius-sm);
+}
+.dam-rights__controls {
+  display: flex;
+  gap: var(--dam-space-1);
+}
+.dam-rights__identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+}
+.dam-rights__name {
+  margin: 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.dam-rights__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dam-space-2);
+}
+.dam-rights__facts .dam-hint,
+.dam-rights__empty .dam-hint {
+  margin: var(--dam-space-1) 0 0;
+}
+.dam-rights__facts .dam-badge {
+  height: auto;
+  min-height: 22px;
+  padding-block: 3px;
+  white-space: normal;
+  text-align: start;
+  line-height: 1.25;
+}
+.dam-rights__notes {
+  white-space: pre-wrap;
+}
+.dam-rights__empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-1);
+  align-items: flex-start;
+}
+.dam-rights__empty p {
+  margin: 0;
+}
+.dam-rights__empty-title {
+  font-weight: 650;
+}
+.dam-rights__subtitle {
+  margin: 0;
+  font-size: var(--dam-text-sm);
+  font-weight: 650;
+}
+.dam-rights-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---- Availability check -------------------------------------------------------------------------------------------- */
+.dam-rights-check {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+  padding-top: var(--dam-space-3);
+  border-top: 1px solid var(--dam-border-subtle);
+}
+.dam-rights-check .dam-hint {
+  margin: 0;
+}
+.dam-rights-check__form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--dam-space-3);
+  align-items: start;
+}
+.dam-rights-check__form > .dam-btn {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.dam-rights-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+  padding: var(--dam-space-3);
+  border-radius: var(--dam-radius);
+  border: 1px solid transparent;
+}
+.dam-rights-result--allowed {
+  background: var(--dam-tone-success-bg);
+  color: var(--dam-tone-success-text);
+}
+.dam-rights-result--denied {
+  background: var(--dam-tone-danger-bg);
+  color: var(--dam-tone-danger-text);
+}
+.dam-rights-result p {
+  margin: 0;
+}
+.dam-rights-result__verdict {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+}
+.dam-rights-result__context,
+.dam-rights-result__note {
+  font-size: var(--dam-text-sm);
+}
+.dam-rights-result__reasons {
+  margin: 0;
+  padding-inline-start: var(--dam-space-4);
+  font-size: var(--dam-text-sm);
+}
+.dam-rights-result .dam-facts__row {
+  border-bottom-color: color-mix(in srgb, currentColor 20%, transparent);
+}
+.dam-rights-result .dam-facts dt {
+  color: inherit;
+  opacity: 0.85;
+}
+
+/* ---- Picker and dialogs -------------------------------------------------------------------------------------------- */
+.dam-rights-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+}
+.dam-rights-dialog > p {
+  margin: 0;
+}
+.dam-rights-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--dam-space-2);
+}
+.dam-rights-dialog__link {
+  margin-inline-end: auto;
+  font-size: var(--dam-text-sm);
+}
+.dam-rights-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+}
+.dam-rights-picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+  max-height: min(340px, 45dvh);
+  overflow-y: auto;
+  padding: 2px;
+}
+.dam-rights-picker__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+}
+.dam-rights-picker__empty {
+  margin: 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+.dam-rights-opt {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3);
+  border: 1px solid var(--dam-border);
+  border-radius: var(--dam-radius);
+  background: var(--dam-surface);
+  cursor: pointer;
+}
+.dam-rights-opt:hover {
+  background: var(--dam-surface-2);
+}
+.dam-rights-opt:has(input:checked) {
+  border-color: var(--dam-brand);
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+}
+.dam-rights-opt:has(input:focus-visible) {
+  outline: 2px solid var(--dam-focus);
+  outline-offset: 2px;
+}
+.dam-rights-opt[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+.dam-rights-opt input {
+  margin-top: 3px;
+  accent-color: var(--dam-brand);
+}
+.dam-rights-opt__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.dam-rights-opt__name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.dam-rights-opt__meta,
+.dam-rights-opt__reason {
+  font-size: var(--dam-text-sm);
+  color: var(--dam-muted);
+}
+.dam-rights-opt:has(input:checked) .dam-rights-opt__meta {
+  color: inherit;
+}
+.dam-rights-opt__reason {
+  color: var(--dam-tone-danger-text);
+}
+.dam-rights-opt__chips {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--dam-space-1);
+}
+@media (max-width: 520px) {
+  .dam-rights-opt {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .dam-rights-opt__chips {
+    grid-column: 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .dam-rights-check__form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- Header chip and blocked Publish ------------------------------------------------------------------------------- */
+.dam-rights-licence {
+  gap: 4px;
+}
+.dam-rights-licence--link {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+.dam-rights-licence--link:hover {
+  filter: brightness(0.96);
+}
+.dam-lifecycle--blocked {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.dam-lifecycle__blocked {
+  flex: 1 1 100%;
+  max-width: 420px;
+  margin: 0;
+  padding: var(--dam-space-2) var(--dam-space-3);
+  border-radius: var(--dam-radius);
+  background: var(--dam-tone-warning-bg);
+  color: var(--dam-tone-warning-text);
+  font-size: var(--dam-text-sm);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--dam-space-1) var(--dam-space-3);
+}
+.dam-linkbtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---- Bulk assign --------------------------------------------------------------------------------------------------- */
+.dam-rights-bulk__count {
+  margin: 0;
+  font-weight: 650;
+}
+.dam-rights-bulk__check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dam-space-2);
+}
+.dam-rights-bulk__check input {
+  margin-top: 3px;
+  accent-color: var(--dam-brand);
+}
+.dam-rights-bulk__check .dam-hint {
+  display: block;
+}
+.dam-rights-bulk__note {
+  margin: 0;
+  padding: var(--dam-space-2) var(--dam-space-3);
+  border-radius: var(--dam-radius);
+  background: var(--dam-tone-info-bg);
+  color: var(--dam-tone-info-text);
+  font-size: var(--dam-text-sm);
+}
+.dam-rights-bulk__totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--dam-space-2);
+  margin: 0;
+}
+.dam-rights-bulk__total {
+  padding: var(--dam-space-3);
+  border-radius: var(--dam-radius);
+  background: var(--dam-surface-2);
+  text-align: center;
+}
+.dam-rights-bulk__total dt {
+  font-size: var(--dam-text-sm);
+  color: var(--dam-muted);
+}
+.dam-rights-bulk__total dd {
+  margin: 0;
+  font-size: var(--dam-text-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.dam-rights-bulk__total--bad dd {
+  color: var(--dam-danger);
+}
+.dam-rights-bulk__reasons {
+  margin: var(--dam-space-2) 0 0;
+  padding-inline-start: var(--dam-space-4);
+  font-size: var(--dam-text-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-1);
+}
+.dam-rights-bulk__summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--dam-text-sm);
+}

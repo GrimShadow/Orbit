@@ -1,7 +1,10 @@
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using Dam.Application.Abstractions;
+using Dam.Domain.Ai;
 using Dam.Domain.Authorization;
+using Dam.Infrastructure.Ai;
 using Dam.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -34,10 +37,17 @@ public interface ISearchIndexWriter
     Task DeleteAsync(Guid assetId, CancellationToken ct);
 }
 
-public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, DamDbContext db, ITenantContext tenant, IClock clock, ILogger<OpenSearchIndexService> log)
-    : ISearchIndexAdmin, ISearchIndexWriter
+public sealed class OpenSearchIndexService(
+    IOpenSearchLowLevelClient client, DamDbContext db, ITenantContext tenant, IClock clock, ILogger<OpenSearchIndexService> log, AiOptions? ai = null)
+    : ISearchIndexAdmin, ISearchIndexWriter, IVectorIndexInspector
 {
     private const int ReindexBatchSize = 500;
+    private const int MaxIndexedTextChars = 200_000;
+
+    private readonly VectorDimensions _dims = new((ai ?? new AiOptions()).TextDim, (ai ?? new AiOptions()).ImageDim);
+
+    /// <summary>The vector sizes each live backing index was built with (an index's mapping never changes size, so this never goes stale).</summary>
+    private static readonly ConcurrentDictionary<string, (int? Text, int? Image)> LiveDims = new();
 
     public async Task EnsureIndexAsync(CancellationToken ct)
     {
@@ -50,7 +60,9 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
         // *type* changed is rejected by OpenSearch's put-mapping API - that needs a real reindex, not a merge, so it is
         // logged and left for ReindexAsync rather than silently failing the whole request.
         var schemas = await TenantSchemaIndex.LoadAsync(db, ct);
-        var body = new Dictionary<string, object?> { ["properties"] = new Dictionary<string, object?> { ["metadata"] = new Dictionary<string, object?> { ["properties"] = IndexMappingBuilder.BuildMetadataProperties(schemas.MergedFields(log)) } } };
+        var properties = new Dictionary<string, object?> { ["metadata"] = new Dictionary<string, object?> { ["properties"] = IndexMappingBuilder.BuildMetadataProperties(schemas.MergedFields(log)) } };
+        foreach (var (name, mapping) in IndexMappingBuilder.BuildExtractProperties()) properties[name] = mapping;   // an index made before AI enrichment gains the new fields
+        var body = new Dictionary<string, object?> { ["properties"] = properties };
         var response = await client.DoRequestAsync<StringResponse>(HttpMethod.PUT, $"/{current}/_mapping", ct, Body(body));
         if (!response.Success)
             log.LogWarning("Could not merge the search mapping for tenant {Tenant} (index {Index}): {Error}. A reindex will pick up the change.", tenant.TenantId, current, response.Body);
@@ -76,7 +88,11 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
         var schemas = await TenantSchemaIndex.LoadAsync(db, ct);
         var taxonomy = await TenantTaxonomyIndex.LoadAsync(db, ct);
         var collections = await TenantCollectionIndex.LoadAsync(db, ct);
-        var doc = SearchDocumentBuilder.Build(asset, folder, schemas, taxonomy, collections);
+        var aiData = (await LoadAiAsync([asset], ct)).GetValueOrDefault(asset.Id);
+        // Vectors only go into an index built for the configured sizes; an older one (made before AI, or before the sizes changed) takes the text and waits for a reindex.
+        if (aiData is not null && (aiData.TextVector is not null || aiData.ImageVector is not null) && await LiveVectorsMismatchAsync(alias, ct))
+            aiData = aiData with { TextVector = null, ImageVector = null };
+        var doc = SearchDocumentBuilder.Build(asset, folder, schemas, taxonomy, collections, aiData);
 
         var response = await client.DoRequestAsync<StringResponse>(HttpMethod.PUT, $"/{alias}/_doc/{assetId}", ct, Body(doc));
         if (!response.Success) throw new InvalidOperationException($"Could not index asset {assetId}: {response.Body}");
@@ -99,7 +115,7 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
         var collections = await TenantCollectionIndex.LoadAsync(db, ct);
         var newIndex = IndexNaming.BackingIndex(slug, clock.UtcNow);
 
-        var create = await client.DoRequestAsync<StringResponse>(HttpMethod.PUT, $"/{newIndex}", ct, Body(IndexMappingBuilder.BuildIndexBody(schemas.MergedFields(log))));
+        var create = await client.DoRequestAsync<StringResponse>(HttpMethod.PUT, $"/{newIndex}", ct, Body(IndexMappingBuilder.BuildIndexBody(schemas.MergedFields(log), _dims)));
         if (!create.Success) throw new InvalidOperationException($"Could not create index {newIndex}: {create.Body}");
 
         var count = await BulkLoadAsync(newIndex, schemas, taxonomy, collections, ct);
@@ -132,11 +148,12 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
             var folderIds = page.Where(a => a.FolderId != null).Select(a => a.FolderId!.Value).Distinct().ToList();
             var folders = await db.Folders.AsNoTracking().Where(f => folderIds.Contains(f.Id)).ToDictionaryAsync(f => f.Id, ct);
 
+            var aiByAsset = await LoadAiAsync(page, ct);
             var sb = new StringBuilder();
             foreach (var asset in page)
             {
                 var folder = asset.FolderId is { } fid && folders.TryGetValue(fid, out var f) ? f : null;
-                var doc = SearchDocumentBuilder.Build(asset, folder, schemas, taxonomy, collections);
+                var doc = SearchDocumentBuilder.Build(asset, folder, schemas, taxonomy, collections, aiByAsset.GetValueOrDefault(asset.Id));
                 sb.Append(JsonSerializer.Serialize(new Dictionary<string, object?> { ["index"] = new Dictionary<string, object?> { ["_index"] = index, ["_id"] = asset.Id } })).Append('\n');
                 sb.Append(JsonSerializer.Serialize(doc)).Append('\n');
             }
@@ -147,6 +164,74 @@ public sealed class OpenSearchIndexService(IOpenSearchLowLevelClient client, Dam
             after = page[^1].Id;
         }
         return total;
+    }
+
+    /// <summary>
+    /// The AI-derived data for the current version of each asset: extracted text, the transcript and the stored vectors (read from the database, so a reindex
+    /// never asks the AI provider again). Vectors stored with another size than the configured one are left out (they would be refused), with a warning.
+    /// </summary>
+    private async Task<Dictionary<Guid, AiIndexData>> LoadAiAsync(IReadOnlyList<Dam.Domain.Assets.Asset> assets, CancellationToken ct)
+    {
+        var result = new Dictionary<Guid, AiIndexData>();
+        var versions = assets.Where(a => a.CurrentVersionId != null).ToDictionary(a => a.Id, a => a.CurrentVersionId!.Value);
+        if (versions.Count == 0) return result;
+        var ids = versions.Keys.ToList();
+        var extracts = (await db.AssetExtracts.AsNoTracking().Where(e => ids.Contains(e.AssetId)).ToListAsync(ct))
+            .Where(e => versions[e.AssetId] == e.VersionId).ToDictionary(e => e.AssetId);
+        var vectors = (await db.AssetEmbeddings.AsNoTracking().Where(e => ids.Contains(e.AssetId)).ToListAsync(ct))
+            .Where(e => versions[e.AssetId] == e.VersionId).ToLookup(e => e.AssetId);
+
+        foreach (var id in ids)
+        {
+            extracts.TryGetValue(id, out var x);
+            float[]? text = null, image = null;
+            foreach (var v in vectors[id])
+            {
+                var expected = v.Kind == EmbeddingKinds.Text ? _dims.Text : _dims.Image;
+                if (v.Dim != expected)
+                {
+                    log.LogWarning("Asset {Asset} has a {Kind} vector of {Dim} dimensions but {Expected} are configured; it is left out of the index until the asset is enriched again", id, v.Kind, v.Dim, expected);
+                    continue;
+                }
+                if (v.Kind == EmbeddingKinds.Text) text = v.ToVector(); else image = v.ToVector();
+            }
+            if (x is null && text is null && image is null) continue;
+            result[id] = new AiIndexData(Clip(x?.OcrText), Clip(x?.TranscriptText), x?.TranscriptSegments ?? [], text, image);
+        }
+        return result;
+    }
+
+    private static string? Clip(string? s) => s is { Length: > MaxIndexedTextChars } ? s[..MaxIndexedTextChars] : s;
+
+    private async Task<bool> LiveVectorsMismatchAsync(string alias, CancellationToken ct)
+    {
+        var index = await CurrentBackingIndexAsync(alias, ct);
+        if (index is null) return false;
+        var live = await LiveDimensionsAsync(index, ct);
+        return (live.Text is { } t && t != _dims.Text) || (live.Image is { } i && i != _dims.Image);
+    }
+
+    private async Task<(int? Text, int? Image)> LiveDimensionsAsync(string index, CancellationToken ct)
+    {
+        if (LiveDims.TryGetValue(index, out var known)) return known;
+        var response = await client.DoRequestAsync<StringResponse>(HttpMethod.GET, $"/{index}/_mapping", ct);
+        if (!response.Success) return (null, null);
+        using var doc = JsonDocument.Parse(response.Body);
+        var props = doc.RootElement.EnumerateObject().FirstOrDefault().Value;
+        int? Dim(string field) =>
+            props.ValueKind == JsonValueKind.Object && props.TryGetProperty("mappings", out var m) && m.TryGetProperty("properties", out var p)
+            && p.TryGetProperty(field, out var f) && f.TryGetProperty("dimension", out var d) && d.TryGetInt32(out var n) ? n : null;
+        var dims = (Dim(IndexMappingBuilder.VectorTextField), Dim(IndexMappingBuilder.VectorImageField));
+        LiveDims[index] = dims;
+        return dims;
+    }
+
+    public async Task<VectorIndexInfo> InspectAsync(CancellationToken ct)
+    {
+        var alias = await TenantIndexResolver.AliasAsync(db, tenant, ct);
+        var index = await CurrentBackingIndexAsync(alias, ct);
+        var live = index is null ? (null, null) : await LiveDimensionsAsync(index, ct);
+        return new VectorIndexInfo(_dims.Text, _dims.Image, live.Item1, live.Item2);
     }
 
     /// <summary>The alias's one current backing index, or null when the alias does not exist yet.</summary>

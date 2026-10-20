@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Amazon.S3.Model;
 using Dam.Infrastructure;
+using Dam.Infrastructure.Ai;
 using Dam.Infrastructure.Consumers;
 using Dam.Infrastructure.Delivery;
 using Dam.Infrastructure.Ingest;
@@ -61,7 +62,8 @@ public abstract class PipelineTestBase(PostgresFixture pg, RabbitFixture mq) : A
     /// <param name="renditions">Register the rendition consumer. Leave it out to exercise on-demand rendering.</param>
     /// <param name="indexing">Register the search index consumer (spec Step 1.7). Off by default: most pipeline tests
     /// have nothing to do with search and would otherwise need an OpenSearch URL they never use.</param>
-    protected IHost StartWorker(Dictionary<string, string?>? settings = null, bool renditions = true, bool indexing = false)
+    /// <param name="ai">Register the AI enrichment consumer and the index rebuild consumer (ADR-0035). Needs <paramref name="indexing"/>, and DAM_AI_* settings in <paramref name="settings"/>.</param>
+    protected IHost StartWorker(Dictionary<string, string?>? settings = null, bool renditions = true, bool indexing = false, bool ai = false)
     {
         var b = Host.CreateApplicationBuilder();
         b.Logging.SetMinimumLevel(LogLevel.Warning);
@@ -92,6 +94,7 @@ public abstract class PipelineTestBase(PostgresFixture pg, RabbitFixture mq) : A
         b.Services.AddEventConsumer<PerceptualHashConsumer>();
         if (renditions) b.Services.AddEventConsumer<RenditionConsumer>();
         if (indexing) b.Services.AddEventConsumer<IndexConsumer>();
+        if (ai) b.Services.AddDamAiWorker(cfg);
         b.Services.AddOutboxRelay(Pg.SystemConnection);
         return b.Build();
     }

@@ -7,7 +7,7 @@ public sealed record AssetDto(
     int MetadataSchemaVersion, IReadOnlyList<string> TaxonomyTerms, IReadOnlyList<string> Tags,
     IReadOnlyDictionary<string, string[]> Attributes, Guid? OwnerId, Guid? CurrentVersionId, string? ChecksumSha256,
     string StatusReason, DateTimeOffset? PublishAt, DateTimeOffset? ExpireAt, Guid? RetentionPolicyId, bool LegalHold,
-    DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+    DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, Guid? RightsId);
 
 /// <param name="ArchiveAfterDays">Days after an asset expires before the retention job archives it. Null: never auto-archived.</param>
 /// <param name="DeleteAfterDays">Days after an asset is archived before the retention job purges it (deletes its file bytes).
@@ -60,9 +60,16 @@ public sealed record TransformRequest(int? W, int? H, string? Fit, string? Fmt, 
 /// <param name="Renditions">Named renditions to allow ("thumb", "preview", "web", "web_jpeg", "mobile", "original"). Ignored when Transform is given.</param>
 /// <param name="TtlSeconds">How long the link works. Defaults to one hour; the server caps it.</param>
 /// <param name="Ip">Only this client address may use the link.</param>
-public sealed record CreateLinkRequest(IReadOnlyList<string>? Renditions, int? TtlSeconds, string? Ip, TransformRequest? Transform);
+/// <param name="Channel">The channel the link is for (for example signage). When given, the asset's rights must cover it (403 otherwise), and the signed link records it so the fetch is attributed to it and re-checked.</param>
+/// <param name="Region">The region the link is for; checked like the channel.</param>
+public sealed record CreateLinkRequest(IReadOnlyList<string>? Renditions, int? TtlSeconds, string? Ip, TransformRequest? Transform)
+{
+    // Properties rather than constructor parameters with defaults: the generated client then types them as optional, so callers written before they existed still compile.
+    public string? Channel { get; init; }
+    public string? Region { get; init; }
+}
 
-/// <param name="Watermarked">True when the asset is not published: every image served by these links carries a watermark.</param>
+/// <param name="Watermarked">True when the asset is not published or its rights require a watermark: every image served by these links carries one.</param>
 /// <param name="Links">Rendition name (or "transform") to a signed URL on the delivery origin or CDN.</param>
 public sealed record DeliveryLinkDto(DateTimeOffset ExpiresAt, bool Watermarked, IReadOnlyDictionary<string, string> Links);
 

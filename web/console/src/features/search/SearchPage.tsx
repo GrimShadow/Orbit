@@ -11,6 +11,9 @@ import {
   Images,
   MagnifyingGlass,
   PageHeader,
+  Rows,
+  SegmentedControl,
+  SquaresFour,
   ThumbnailGrid,
   ThumbnailGridSkeleton,
   UploadSimple,
@@ -25,7 +28,11 @@ import { toAssetThumb } from '../library/assetThumb';
 import { useDocumentTitle } from '../library/useDocumentTitle';
 import { useCreateSmartCollection } from '../collections/collectionsApi';
 import { NameCollectionDialog } from '../collections/NameCollectionDialog';
+import { SearchList } from './SearchList';
 import { SEARCH_FACET_FIELDS, useSearchInfinite, type SearchResultDto } from './searchApi';
+import { HitMatchInfo, hasMatchInfo } from './smart/MatchInfo';
+import { ExampleQueries, FallbackNote, SmartToggle } from './smart/SmartControls';
+import { useSmartSearch } from './smart/smartSearch';
 import './search.css';
 
 const DEBOUNCE_MS = 250;
@@ -45,15 +52,30 @@ function toFacets(t: (key: string) => string, result: SearchResultDto | undefine
 }
 
 /** The global, cross-folder query surface (spec Step 1.8e), distinct from the library screen's folder-scoped browsing
- * (ADR-0012). The query text and the facet filters live in the URL (`?q=&type=&status=`) - the shell's global search
- * box lands here with `?q=` - and the page runs with nothing chosen as a browse-all over everything the caller can
- * see. The current query can be saved as a named smart collection ("saved search", ADR-0018). */
+ * (ADR-0012). The query text, the facet filters, the view and Smart search live in the URL
+ * (`?q=&type=&status=&view=list&smart=0|1`) - the shell's global search box lands here with `?q=` - and the page runs
+ * with nothing chosen as a browse-all over everything the caller can see. Smart search (ADR-0035) is offered only when
+ * the organisation's AI can do it (`GET /ai/capabilities`); hits then say why they matched, and spoken matches link to
+ * the moment in the recording. The current query can be saved as a named smart collection ("saved search", ADR-0018);
+ * collections only store the text search, so a saved search is saved without `semantic`. */
 export function SearchPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { push } = useToast();
   useDocumentTitle(t('search.title'));
   const [params, setParams] = useSearchParams();
+  const smart = useSmartSearch();
+  const view = params.get('view') === 'list' ? 'list' : 'grid';
+  const setView = (next: string) =>
+    setParams(
+      (prev) => {
+        const p = new URLSearchParams(prev);
+        if (next === 'list') p.set('view', 'list');
+        else p.delete('view');
+        return p;
+      },
+      { replace: true },
+    );
 
   const q = params.get('q') ?? '';
   const filters = useMemo(() => {
@@ -127,9 +149,11 @@ export function SearchPage() {
     sort: null,
     highlight: false,
     similarTo: null,
+    semantic: smart.on,
     limit: 50,
   };
-  const searchQuery = useSearchInfinite(body);
+  // Wait for the capabilities answer (cached for a minute) so the first search is not run twice, once without Smart search.
+  const searchQuery = useSearchInfinite(body, { enabled: smart.ready });
   const pages = searchQuery.data?.pages;
   const hits = useMemo(() => pages?.flatMap((p) => p.hits) ?? [], [pages]);
   const total = pages?.[0]?.total ?? 0;
@@ -139,6 +163,10 @@ export function SearchPage() {
   const createSmart = useCreateSmartCollection();
   const facets = toFacets(t, pages?.[0], filters);
   const busy = searchQuery.isPlaceholderData;
+  // `semantic` on the answer says a hybrid search really ran; hits carry `matchedBy` either way. On a plain keyword search every
+  // hit matched on text, so a lone "Text" chip would be noise there.
+  const ranSmart = pages?.[0]?.semantic === true;
+  const fallbackReason = smart.on && pages?.[0] && !ranSmart ? pages[0].semanticFallback : null;
 
   const activeFilterCount = Object.values(filters).reduce((n, v) => n + v.length, 0);
   const chips: FilterChip[] = [
@@ -186,8 +214,8 @@ export function SearchPage() {
       ) : (
         <EmptyState
           icon={<MagnifyingGlass size={28} />}
-          title={t('search.noResults.title')}
-          description={t('search.noResults.description')}
+          title={ranSmart ? t('smartSearch.noResults.title') : t('search.noResults.title')}
+          description={ranSmart ? t('smartSearch.noResults.description') : t('search.noResults.description')}
           action={
             <>
               {activeFilterCount > 0 && (
@@ -225,7 +253,7 @@ export function SearchPage() {
           type="search"
           className="dam-search__input"
           aria-label={t('search.queryLabel')}
-          placeholder={t('search.queryPlaceholder')}
+          placeholder={smart.on ? t('smartSearch.queryPlaceholder') : t('search.queryPlaceholder')}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           enterKeyHint="search"
@@ -235,10 +263,14 @@ export function SearchPage() {
             <X size={14} weight="bold" aria-hidden="true" />
           </button>
         )}
+        {smart.available && <SmartToggle on={smart.on} onChange={smart.setOn} />}
         <Button className="dam-search__filterbtn" variant="secondary" size="sm" onClick={() => setFiltersOpen(true)}>
           {activeFilterCount > 0 ? t('search.filtersButtonCount', { count: activeFilterCount }) : t('search.filtersButton')}
         </Button>
       </div>
+
+      {smart.on && !q && <ExampleQueries onPick={setDraft} />}
+      <FallbackNote reason={fallbackReason} />
 
       <FilterChips chips={chips} onClear={clearAll} clearLabel={t('search.clearAll')} />
 
@@ -272,8 +304,31 @@ export function SearchPage() {
             <div className={`dam-search__results${busy ? ' dam-search__results--busy' : ''}`} aria-busy={busy || undefined}>
               {noResults}
               {hits.length > 0 && (
+                <div className="dam-search__resultsbar">
+                  <SegmentedControl
+                    label={t('library.view')}
+                    value={view}
+                    onChange={setView}
+                    options={[
+                      {
+                        value: 'grid',
+                        label: t('library.viewGrid'),
+                        icon: <SquaresFour size={16} weight="bold" aria-hidden="true" />,
+                      },
+                      { value: 'list', label: t('library.viewList'), icon: <Rows size={16} weight="bold" aria-hidden="true" /> },
+                    ]}
+                  />
+                </div>
+              )}
+              {hits.length > 0 && view === 'list' && (
+                <SearchList hits={hits} thumbnails={thumbnails} actions={itemActions} quietText={!ranSmart} />
+              )}
+              {hits.length > 0 && view === 'grid' && (
                 <ThumbnailGrid
-                  items={hits.map((h) => toAssetThumb(t, i18n.language, h, thumbnails[h.id]))}
+                  items={hits.map((h) => ({
+                    ...toAssetThumb(t, i18n.language, h, thumbnails[h.id]),
+                    footer: hasMatchInfo(h, !ranSmart) ? <HitMatchInfo hit={h} quietText={!ranSmart} /> : undefined,
+                  }))}
                   label={t('search.resultsLabel')}
                   onOpen={(id) => navigate(`/library/assets/${id}`)}
                   cardActions={(id) => {
@@ -338,7 +393,7 @@ export function SearchPage() {
         onClose={() => setSaveOpen(false)}
         onSave={(name) =>
           createSmart.mutate(
-            { name, query: { ...body, cursor: null } },
+            { name, query: { ...body, semantic: false, cursor: null } },
             {
               onSuccess: () => {
                 setSaveOpen(false);

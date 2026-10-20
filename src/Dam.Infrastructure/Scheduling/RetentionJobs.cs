@@ -115,8 +115,22 @@ public sealed class PublishExpireJob(IServiceScopeFactory scopeFactory, NpgsqlDa
 
     public async Task RunAsync(IReadOnlyDictionary<string, string> data, CancellationToken ct)
     {
-        var toPublish = await FindAsync("SELECT id, tenant_id FROM assets WHERE status = 'approved' AND publish_at IS NOT NULL AND publish_at <= now() LIMIT 500", ct);
-        await ForEachAsync(toPublish, (_, _, asset, _) => Task.FromResult(Fire(asset, AssetLifecycle.Publish, "Published automatically (scheduled).")), ct);
+        // An asset whose licence has ended or not begun is not published on schedule (ADR-0033): it stays approved, as a person's publish would be refused.
+        var toPublish = await FindAsync("""
+            SELECT a.id, a.tenant_id FROM assets a
+            WHERE a.status = 'approved' AND a.publish_at IS NOT NULL AND a.publish_at <= now()
+              AND NOT EXISTS (SELECT 1 FROM rights r WHERE r.id = a.rights_id
+                              AND (r.valid_to < (now() AT TIME ZONE 'UTC')::date OR r.valid_from > (now() AT TIME ZONE 'UTC')::date))
+            LIMIT 500
+            """, ct);
+        await ForEachAsync(toPublish, async (_, db, asset, c) =>
+        {
+            // Checked again with the job's own clock, in the tenant's scope: the SQL above uses the database's.
+            if (asset.RightsId is { } rightsId && await db.Rights.AsNoTracking().FirstOrDefaultAsync(r => r.Id == rightsId, c) is { } rights
+                && rights.Validity(Dam.Domain.Licensing.RightsRules.Today(clock.UtcNow)).Status is Dam.Domain.Licensing.RightsStatuses.Expired or Dam.Domain.Licensing.RightsStatuses.NotYetValid)
+                return false;
+            return Fire(asset, AssetLifecycle.Publish, "Published automatically (scheduled).");
+        }, ct);
 
         var toExpire = await FindAsync("SELECT id, tenant_id FROM assets WHERE status = 'published' AND expire_at IS NOT NULL AND expire_at <= now() LIMIT 500", ct);
         await ForEachAsync(toExpire, (_, _, asset, _) => Task.FromResult(Fire(asset, AssetLifecycle.Expire, "Expired automatically (scheduled).")), ct);
@@ -180,6 +194,11 @@ public sealed class RetentionJob(IServiceScopeFactory scopeFactory, NpgsqlDataSo
             var versions = await db.AssetVersions.Where(v => v.AssetId == asset.Id).Select(v => new { v.Bucket, v.StorageKey }).ToListAsync(c);
             var renditions = await db.Renditions.Where(r => r.AssetId == asset.Id).Select(r => new { r.Bucket, r.StorageKey }).ToListAsync(c);
             asset.ChangeStatus(to, "Purged by retention policy.", clock.UtcNow);
+            // What the AI derived from the files goes with them (vectors are large); the rows would also follow the asset through their foreign keys.
+            await db.AssetEmbeddings.Where(e => e.AssetId == asset.Id).ExecuteDeleteAsync(c);
+            await db.AssetExtracts.Where(e => e.AssetId == asset.Id).ExecuteDeleteAsync(c);
+            await db.AiSuggestions.Where(e => e.AssetId == asset.Id).ExecuteDeleteAsync(c);
+            await db.AiRuns.Where(e => e.AssetId == asset.Id).ExecuteDeleteAsync(c);
             filesToDelete.AddRange(versions.Select(v => (v.Bucket, v.StorageKey)));
             filesToDelete.AddRange(renditions.Select(r => (r.Bucket, r.StorageKey)));
             purged++;
@@ -205,7 +224,7 @@ public sealed class RetentionJob(IServiceScopeFactory scopeFactory, NpgsqlDataSo
 
 public static class RetentionSchedulingRegistration
 {
-    /// <summary>Registers the cross-tenant jobs (publish/expire, retention, workflow SLA) and the read-only system connection they discover candidates through
+    /// <summary>Registers the cross-tenant jobs (publish/expire, retention, workflow SLA, rights expiry) and the read-only system connection they discover candidates through
     /// (env: DAM_DB_SYSTEM_CONNECTION) — not the full outbox relay, since a scheduler host relays nothing itself.</summary>
     public static IServiceCollection AddDamRetentionScheduling(this IServiceCollection services, string systemConnectionString)
     {
@@ -213,6 +232,7 @@ public static class RetentionSchedulingRegistration
         services.AddScheduledJob<PublishExpireJob>();
         services.AddScheduledJob<RetentionJob>();
         services.AddScheduledJob<WorkflowSlaJob>();
+        services.AddScheduledJob<RightsExpiryJob>();
         return services;
     }
 }

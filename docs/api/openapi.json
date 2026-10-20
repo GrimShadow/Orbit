@@ -432,6 +432,309 @@
         }
       }
     },
+    "/api/v1/assets/{id}/rights": {
+      "get": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "The rights assigned to an asset (rights is null when none), for anyone who can read the asset. licensor and notes are filled only for callers with rights.manage",
+        "operationId": "GetAssetRights",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetRightsDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "Assigns the asset\u0027s rights, or clears them with rightsId null. Re-derives the asset\u0027s access attributes (its channel and region narrowed by the licence) and re-indexes it. Needs rights.manage on the asset; a published asset cannot be put under a licence that is not in force (409)",
+        "operationId": "SetAssetRights",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAssetRightsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetRightsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/rights/check": {
+      "get": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "May the asset be used on this channel in this region? Checks the licence\u0027s validity today, the licence\u0027s channels and regions, and the asset\u0027s effective access attributes. Both parameters are optional. Needs assets.read",
+        "operationId": "CheckAssetRights",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RightsCheckDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/ai": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "What the AI found for the asset\u0027s current version: status, the run and its steps, suggestions (tags, language), text read from the picture or pages (clipped at 20,000 characters), the transcript, and whether the semantic-search vectors exist. Needs assets.read",
+        "operationId": "GetAssetAi",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetAiDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/ai/enrich": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Runs the AI again for the asset\u0027s current version (202; poll GET /assets/{id}/ai). Decided suggestions stay decided. 409 when AI is off for the tenant, the asset has no file, or a run is in progress. Needs assets.update",
+        "operationId": "EnrichAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetAiDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/ai/suggestions/{suggestionId}/accept": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Accepts a suggestion. A tag is added to the asset\u0027s tags through the normal update path (audited, re-indexed); a language is written to the asset\u0027s \u0027language\u0027 metadata field when its schema has one that accepts it, otherwise only the acceptance is recorded (see notes). Needs assets.update",
+        "operationId": "AcceptAiSuggestion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "suggestionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiDecisionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/ai/suggestions/{suggestionId}/reject": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Rejects a suggestion; it is not proposed again. Needs assets.update",
+        "operationId": "RejectAiSuggestion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "suggestionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiDecisionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/ai/suggestions/accept-all": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Accepts every pending suggestion of a kind (query parameter kind: tag, the default, or language) for the current version. Tags beyond the asset\u0027s 50-tag limit stay pending. Needs assets.update",
+        "operationId": "AcceptAllAiSuggestions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiDecisionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tenants/current": {
       "get": {
         "tags": [
@@ -3073,7 +3376,7 @@
         "tags": [
           "Search"
         ],
-        "summary": "Query, filters, facets, sort, highlight and similar_to over every asset the caller may read",
+        "summary": "Query, filters, facets, sort, highlight, similar_to and (with semantic) hybrid text-plus-meaning search over every asset the caller may read. Hits report matchedBy and, for recordings, transcriptMatches",
         "operationId": "SearchAssets",
         "requestBody": {
           "content": {
@@ -4943,6 +5246,576 @@
           }
         }
       }
+    },
+    "/api/v1/rights": {
+      "get": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "Every rights record with its status today (valid, expiring, expired, not_yet_valid) and its asset and document counts, by name. status narrows; q matches names containing the text. Needs rights.manage",
+        "operationId": "ListRights",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RightsDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "Creates a rights record: licence type, channels and regions it covers (empty = all), validity dates (the end date is inclusive), watermark requirement. Channel and region values must be codes of the tenant\u0027s vocabularies. Names are unique per tenant, ignoring case (422 on name). Needs rights.manage",
+        "operationId": "CreateRights",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RightsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RightsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rights/{id}": {
+      "get": {
+        "tags": [
+          "Rights"
+        ],
+        "operationId": "GetRights",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RightsDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "Replaces a rights record. If its channels or regions change, the access attributes of up to 500 assigned assets are re-derived in the same request (and re-indexed); the rest are reported in pendingAssets and caught up within the hour",
+        "operationId": "UpdateRights",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RightsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RightsDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "Deletes a rights record and its documents. 409 (with assetCount) while any asset still uses it",
+        "operationId": "DeleteRights",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rights/{id}/assign": {
+      "post": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "Assigns the record to up to 500 assets. Every asset gets its own result: assigned, skipped (already assigned, has other rights and replace is false, deleted/blocked, or the licence is not in force for a published asset) or failed (not found, not permitted)",
+        "operationId": "AssignRights",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRightsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignRightsResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rights/{id}/documents": {
+      "get": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "Release forms and licence files attached to the record, oldest first. Needs rights.manage",
+        "operationId": "ListRightsDocuments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RightsDocumentDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "Step 1 of attaching a document: validates the file name, type (pdf, png, jpeg, docx or txt, by declared type and extension) and size (up to 25 MB) and returns a presigned PUT address valid for 15 minutes. Nothing is recorded until complete. Documents are not virus-scanned",
+        "operationId": "StartRightsDocumentUpload",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RightsDocumentUploadInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RightsDocumentUploadDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rights/{id}/documents/{documentId}/complete": {
+      "post": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "Step 2: finds the uploaded object, checks it has the declared size and looks like its declared type, and records the document. A file that fails the check is deleted from storage",
+        "operationId": "CompleteRightsDocumentUpload",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RightsDocumentCompleteInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RightsDocumentDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rights/{id}/documents/{documentId}/link": {
+      "get": {
+        "tags": [
+          "Rights"
+        ],
+        "summary": "A download address valid for 5 minutes; the response is a forced attachment of type application/octet-stream",
+        "operationId": "GetRightsDocumentLink",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RightsDocumentLinkDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rights/{id}/documents/{documentId}": {
+      "delete": {
+        "tags": [
+          "Rights"
+        ],
+        "operationId": "DeleteRightsDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/ai/capabilities": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "What AI can do for the caller\u0027s tenant right now: enabled, semanticSearch (also requires a ready vector index), enrichment, textVectors, imageVectors, provider kind and whether data goes off-site. For any signed-in user; no URLs, keys or models",
+        "operationId": "GetAiCapabilities",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiCapabilitiesDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/settings": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "The tenant\u0027s AI settings (off until saved), the deployment\u0027s default provider and which providers are configured. Needs ai.manage",
+        "operationId": "GetAiSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Replaces the tenant\u0027s AI settings: on/off, provider (empty = deployment default), features and OCR language. Enabling needs a configured provider (422 on provider) and, for one that sends data off-site, acknowledgeOffSite true (422). Needs ai.manage",
+        "operationId": "UpdateAiSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/status": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Provider health (probed live), models, capabilities, counts of assets enriched, waiting, failed and not started, the queue depth, and whether the search index needs a reindex for the configured vector sizes. Needs ai.manage",
+        "operationId": "GetAiStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiStatusDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/backfill": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Queues AI for existing assets (all, or by type and folder), at most 5,000 per call (default 500); the worker processes them at its own pace. Repeat to continue. 409 when AI is off. Needs ai.manage",
+        "operationId": "AiBackfill",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiBackfillInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiBackfillResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/test": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Proves the provider works: health, then an embedding of a tiny built-in picture and of a phrase, with timings and vector sizes. Sends nothing of the tenant\u0027s, so it works before AI is enabled. Needs ai.manage",
+        "operationId": "AiTest",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiTestResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/reindex": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Asks the worker to rebuild the tenant\u0027s search index in the background (search keeps working; needed after the vector sizes changed). Needs ai.manage",
+        "operationId": "AiReindex",
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiReindexDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5079,6 +5952,700 @@
           }
         }
       },
+      "AiBackfillInput": {
+        "required": [
+          "types",
+          "folderId",
+          "includeSubfolders",
+          "onlyMissing",
+          "limit"
+        ],
+        "type": "object",
+        "properties": {
+          "types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "folderId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "includeSubfolders": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "onlyMissing": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "AiBackfillResultDto": {
+        "required": [
+          "matched",
+          "enqueued",
+          "remaining"
+        ],
+        "type": "object",
+        "properties": {
+          "matched": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enqueued": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "remaining": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AiCapabilitiesDto": {
+        "required": [
+          "enabled",
+          "semanticSearch",
+          "enrichment",
+          "textVectors",
+          "imageVectors",
+          "provider",
+          "sendsDataOffSite"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "semanticSearch": {
+            "type": "boolean"
+          },
+          "enrichment": {
+            "type": "boolean"
+          },
+          "textVectors": {
+            "type": "boolean"
+          },
+          "imageVectors": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "sendsDataOffSite": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AiCountsDto": {
+        "required": [
+          "eligible",
+          "enriched",
+          "pending",
+          "running",
+          "failed",
+          "skipped",
+          "notStarted"
+        ],
+        "type": "object",
+        "properties": {
+          "eligible": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enriched": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "running": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "notStarted": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AiDecisionDto": {
+        "required": [
+          "suggestions",
+          "tags",
+          "changed",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiSuggestionDto"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "changed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AiFeaturesDto": {
+        "required": [
+          "tags",
+          "ocr",
+          "transcribe",
+          "embeddings"
+        ],
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "boolean"
+          },
+          "ocr": {
+            "type": "boolean"
+          },
+          "transcribe": {
+            "type": "boolean"
+          },
+          "embeddings": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AiFeaturesDto2": {
+        "required": [
+          "tags",
+          "ocr",
+          "transcribe",
+          "embeddings"
+        ],
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "boolean"
+          },
+          "ocr": {
+            "type": "boolean"
+          },
+          "transcribe": {
+            "type": "boolean"
+          },
+          "embeddings": {
+            "type": "boolean"
+          }
+        },
+        "nullable": true
+      },
+      "AiHealthDto": {
+        "required": [
+          "status",
+          "detail",
+          "latencyMs",
+          "models"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "latencyMs": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "models": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AiProviderCapabilitiesDto": {
+        "required": [
+          "tags",
+          "ocr",
+          "transcribe",
+          "textEmbeddings",
+          "imageEmbeddings",
+          "detectLanguage",
+          "translate",
+          "summarise"
+        ],
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "boolean"
+          },
+          "ocr": {
+            "type": "boolean"
+          },
+          "transcribe": {
+            "type": "boolean"
+          },
+          "textEmbeddings": {
+            "type": "boolean"
+          },
+          "imageEmbeddings": {
+            "type": "boolean"
+          },
+          "detectLanguage": {
+            "type": "boolean"
+          },
+          "translate": {
+            "type": "boolean"
+          },
+          "summarise": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AiProviderInfoDto": {
+        "required": [
+          "kind",
+          "configured",
+          "sendsDataOffSite",
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "sendsDataOffSite": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "AiReindexDto": {
+        "required": [
+          "accepted",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "AiRunDto": {
+        "required": [
+          "id",
+          "versionId",
+          "status",
+          "steps",
+          "error",
+          "attempts",
+          "startedAt",
+          "finishedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiStepDto"
+            }
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "nullable": true
+      },
+      "AiSettingsDto": {
+        "required": [
+          "enabled",
+          "provider",
+          "defaultProvider",
+          "effectiveProvider",
+          "sendsDataOffSite",
+          "features",
+          "ocrLanguage",
+          "providers",
+          "updatedBy",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string",
+            "nullable": true
+          },
+          "defaultProvider": {
+            "type": "string"
+          },
+          "effectiveProvider": {
+            "type": "string"
+          },
+          "sendsDataOffSite": {
+            "type": "boolean"
+          },
+          "features": {
+            "$ref": "#/components/schemas/AiFeaturesDto"
+          },
+          "ocrLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiProviderInfoDto"
+            }
+          },
+          "updatedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "AiSettingsRequest": {
+        "required": [
+          "enabled",
+          "provider",
+          "features",
+          "ocrLanguage"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string",
+            "nullable": true
+          },
+          "features": {
+            "$ref": "#/components/schemas/AiFeaturesDto2"
+          },
+          "ocrLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "acknowledgeOffSite": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "AiStatusDto": {
+        "required": [
+          "enabled",
+          "provider",
+          "providerConfigured",
+          "health",
+          "capabilities",
+          "counts",
+          "queueDepth",
+          "vectorIndex"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "providerConfigured": {
+            "type": "boolean"
+          },
+          "health": {
+            "$ref": "#/components/schemas/AiHealthDto"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/AiProviderCapabilitiesDto"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/AiCountsDto"
+          },
+          "queueDepth": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "vectorIndex": {
+            "$ref": "#/components/schemas/AiVectorIndexDto"
+          }
+        }
+      },
+      "AiStepDto": {
+        "required": [
+          "name",
+          "status",
+          "durationMs",
+          "model",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AiSuggestionDto": {
+        "required": [
+          "id",
+          "kind",
+          "value",
+          "confidence",
+          "model",
+          "status",
+          "createdAt",
+          "decidedBy",
+          "decidedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float"
+          },
+          "model": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decidedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "AiTestResultDto": {
+        "required": [
+          "provider",
+          "ok",
+          "totalMs",
+          "steps"
+        ],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "totalMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiTestStepDto"
+            }
+          }
+        }
+      },
+      "AiTestStepDto": {
+        "required": [
+          "name",
+          "ok",
+          "durationMs",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AiTranscriptDto": {
+        "required": [
+          "language",
+          "durationMs",
+          "model",
+          "segments"
+        ],
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranscriptSegmentDto"
+            }
+          }
+        },
+        "nullable": true
+      },
+      "AiVectorIndexDto": {
+        "required": [
+          "textDim",
+          "imageDim",
+          "liveTextDim",
+          "liveImageDim",
+          "needsReindex"
+        ],
+        "type": "object",
+        "properties": {
+          "textDim": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "imageDim": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "liveTextDim": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "liveImageDim": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "needsReindex": {
+            "type": "boolean"
+          }
+        }
+      },
       "AnalyticsOverviewDto": {
         "required": [
           "generatedAt",
@@ -5172,6 +6739,55 @@
         },
         "nullable": true
       },
+      "AssetAiDto": {
+        "required": [
+          "status",
+          "run",
+          "suggestions",
+          "language",
+          "ocrText",
+          "ocrTextTruncated",
+          "ocrLanguage",
+          "transcript",
+          "embeddingsReady"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "run": {
+            "$ref": "#/components/schemas/AiRunDto"
+          },
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiSuggestionDto"
+            }
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "ocrText": {
+            "type": "string",
+            "nullable": true
+          },
+          "ocrTextTruncated": {
+            "type": "boolean"
+          },
+          "ocrLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "transcript": {
+            "$ref": "#/components/schemas/AiTranscriptDto"
+          },
+          "embeddingsReady": {
+            "type": "boolean"
+          }
+        }
+      },
       "AssetDto": {
         "required": [
           "id",
@@ -5193,7 +6809,8 @@
           "retentionPolicyId",
           "legalHold",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "rightsId"
         ],
         "type": "object",
         "properties": {
@@ -5285,6 +6902,27 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "rightsId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        }
+      },
+      "AssetRightsDto": {
+        "required": [
+          "assetId",
+          "rights"
+        ],
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rights": {
+            "$ref": "#/components/schemas/RightsSummaryDto"
           }
         }
       },
@@ -5343,6 +6981,72 @@
         "properties": {
           "instance": {
             "$ref": "#/components/schemas/WorkflowInstanceViewDto"
+          }
+        }
+      },
+      "AssignRightsInput": {
+        "type": "object",
+        "properties": {
+          "assetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "nullable": true
+          },
+          "replace": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AssignRightsItemDto": {
+        "required": [
+          "assetId",
+          "outcome",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AssignRightsResultDto": {
+        "required": [
+          "assigned",
+          "skipped",
+          "failed",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "assigned": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignRightsItemDto"
+            }
           }
         }
       },
@@ -6060,6 +7764,14 @@
           },
           "transform": {
             "$ref": "#/components/schemas/TransformRequest"
+          },
+          "channel": {
+            "type": "string",
+            "nullable": true
+          },
+          "region": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -7306,6 +9018,422 @@
           }
         }
       },
+      "RightsCheckDto": {
+        "required": [
+          "allowed",
+          "reasons",
+          "status",
+          "watermarkRequired",
+          "validTo",
+          "effectiveChannels",
+          "effectiveRegions",
+          "noChannelsAllowed",
+          "noRegionsAllowed"
+        ],
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "watermarkRequired": {
+            "type": "boolean"
+          },
+          "validTo": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "effectiveChannels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "effectiveRegions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "noChannelsAllowed": {
+            "type": "boolean"
+          },
+          "noRegionsAllowed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RightsDocumentCompleteInput": {
+        "required": [
+          "fileName",
+          "contentType",
+          "size"
+        ],
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "contentType": {
+            "type": "string",
+            "nullable": true
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "RightsDocumentDto": {
+        "required": [
+          "id",
+          "rightsId",
+          "name",
+          "contentType",
+          "sizeBytes",
+          "uploadedBy",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rightsId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "uploadedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RightsDocumentLinkDto": {
+        "required": [
+          "url",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RightsDocumentUploadDto": {
+        "required": [
+          "documentId",
+          "uploadUrl",
+          "method",
+          "headers",
+          "expiresAt",
+          "maxBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploadUrl": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "maxBytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "RightsDocumentUploadInput": {
+        "required": [
+          "fileName",
+          "contentType",
+          "size"
+        ],
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "contentType": {
+            "type": "string",
+            "nullable": true
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "RightsDto": {
+        "required": [
+          "id",
+          "name",
+          "licenceType",
+          "licensor",
+          "channels",
+          "regions",
+          "validFrom",
+          "validTo",
+          "watermarkRequired",
+          "notes",
+          "status",
+          "daysRemaining",
+          "assetCount",
+          "documentCount",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "licenceType": {
+            "type": "string"
+          },
+          "licensor": {
+            "type": "string"
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "validTo": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "watermarkRequired": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "daysRemaining": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "assetCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "documentCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "pendingAssets": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          }
+        }
+      },
+      "RightsInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "licenceType": {
+            "type": "string",
+            "nullable": true
+          },
+          "licensor": {
+            "type": "string",
+            "nullable": true
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "validTo": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "watermarkRequired": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "RightsSummaryDto": {
+        "required": [
+          "id",
+          "name",
+          "licenceType",
+          "channels",
+          "regions",
+          "validFrom",
+          "validTo",
+          "status",
+          "daysRemaining",
+          "watermarkRequired",
+          "documentsCount",
+          "licensor",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "licenceType": {
+            "type": "string"
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "validTo": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "daysRemaining": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "watermarkRequired": {
+            "type": "boolean"
+          },
+          "documentsCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "licensor": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "nullable": true
+      },
       "RoleDto": {
         "required": [
           "id",
@@ -7550,6 +9678,22 @@
               }
             },
             "nullable": true
+          },
+          "matchedBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": null,
+            "nullable": true
+          },
+          "transcriptMatches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranscriptMatchDto"
+            },
+            "default": null,
+            "nullable": true
           }
         }
       },
@@ -7607,6 +9751,10 @@
             "format": "int32",
             "default": null,
             "nullable": true
+          },
+          "semantic": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -7664,6 +9812,10 @@
             "format": "int32",
             "default": null,
             "nullable": true
+          },
+          "semantic": {
+            "type": "boolean",
+            "default": false
           }
         },
         "nullable": true
@@ -7695,6 +9847,36 @@
           },
           "nextCursor": {
             "type": "string",
+            "nullable": true
+          },
+          "semantic": {
+            "type": "boolean",
+            "default": false
+          },
+          "semanticLegs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": null,
+            "nullable": true
+          },
+          "semanticFallback": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "SetAssetRightsInput": {
+        "required": [
+          "rightsId"
+        ],
+        "type": "object",
+        "properties": {
+          "rightsId": {
+            "type": "string",
+            "format": "uuid",
             "nullable": true
           }
         }
@@ -8130,6 +10312,43 @@
           "count": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "TranscriptMatchDto": {
+        "required": [
+          "startMs",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "startMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "TranscriptSegmentDto": {
+        "required": [
+          "startMs",
+          "endMs",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "startMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "endMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "text": {
+            "type": "string"
           }
         }
       },
@@ -9724,6 +11943,12 @@
     },
     {
       "name": "Comments"
+    },
+    {
+      "name": "Rights"
+    },
+    {
+      "name": "AI"
     },
     {
       "name": "Tenant"

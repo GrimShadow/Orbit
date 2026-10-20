@@ -189,6 +189,42 @@ public sealed class S3ObjectStore : IObjectStore, IDisposable
             Protocol = new Uri(_options.Endpoint).Scheme == Uri.UriSchemeHttp ? Protocol.HTTP : Protocol.HTTPS,
         });
 
+    public string PresignPut(string bucket, string key, string contentType, TimeSpan ttl) =>
+        _signer.GetPreSignedURL(new GetPreSignedUrlRequest
+        {
+            BucketName = bucket,
+            Key = key,
+            Verb = HttpVerb.PUT,
+            ContentType = contentType,
+            Expires = DateTime.UtcNow.Add(ttl),
+            Protocol = _publicScheme,
+        });
+
+    public string PresignDownload(string bucket, string key, string fileName, TimeSpan ttl) =>
+        _signer.GetPreSignedURL(new GetPreSignedUrlRequest
+        {
+            BucketName = bucket,
+            Key = key,
+            Verb = HttpVerb.GET,
+            Expires = DateTime.UtcNow.Add(ttl),
+            Protocol = _publicScheme,
+            ResponseHeaderOverrides = new ResponseHeaderOverrides
+            {
+                ContentType = "application/octet-stream",
+                ContentDisposition = AttachmentHeader(fileName),
+                CacheControl = "private, no-store",
+            },
+        });
+
+    /// <summary>An attachment header that cannot be bent by the file name: quotes and control characters are dropped, and non-ASCII names use the RFC 6266 filename* form.</summary>
+    public static string AttachmentHeader(string fileName)
+    {
+        var clean = new string(fileName.Where(c => !char.IsControl(c) && c is not ('"' or '\\' or ';' or '/')).ToArray()).Trim();
+        if (clean.Length == 0) clean = "download";
+        var ascii = new string(clean.Select(c => c < 128 ? c : '_').ToArray());
+        return $"attachment; filename=\"{ascii}\"; filename*=UTF-8''{Uri.EscapeDataString(clean)}";
+    }
+
     public Task DeleteAsync(string bucket, string key, CancellationToken ct) =>
         _client.DeleteObjectAsync(new DeleteObjectRequest { BucketName = bucket, Key = key }, ct);
 

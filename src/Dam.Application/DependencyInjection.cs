@@ -30,6 +30,11 @@ public static class DependencyInjection
         services.AddScoped<Audit.AuditExporter>();
         services.AddScoped<Comments.AssetReaders>();
         services.AddScoped<Comments.CommentMapper>();
+        services.AddScoped<Licensing.RightsVocabularies>();
+        services.AddScoped<Licensing.RightsGuard>();
+        services.AddScoped<Licensing.RightsMapper>();
+        services.AddScoped<Ai.AiSuggestionDecider>();
+        services.AddScoped<Ai.AiBackfillService>();
         services.AddValidatorsFromAssembly(asm, includeInternalTypes: true);
 
         foreach (var t in asm.GetTypes().Where(t => t is { IsAbstract: false, IsInterface: false }))

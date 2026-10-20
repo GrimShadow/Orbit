@@ -1,0 +1,154 @@
+{
+  "aiAsset": {
+    "title": "AI insights",
+    "loading": "Loading AI insights",
+    "loadFailed": "Could not load the AI insights for this asset.",
+    "retry": "Try again",
+    "status": {
+      "none": "Not analysed",
+      "pending": "Waiting",
+      "running": "Analysing",
+      "ready": "Analysed",
+      "failed": "Failed",
+      "disabled": "AI is off"
+    },
+    "analyse": "Analyse now",
+    "analyseAgain": "Analyse again",
+    "analyseStarted": "Analysis started",
+    "analyseFailed": "Could not start the analysis",
+    "none": {
+      "title": "Not analysed yet",
+      "hint": "AI can suggest tags, read the text in a picture or page, and transcribe speech. Nothing changes on the asset until you accept a suggestion.",
+      "hintReader": "This asset has not been analysed yet.",
+      "skipped": "Nothing to analyse for this file: {{reason}}",
+      "skippedPlain": "There was nothing to analyse for this file."
+    },
+    "disabled": {
+      "note": "AI analysis is turned off for your organisation. What was found earlier is shown below."
+    },
+    "progress": {
+      "waiting": "Waiting for its turn",
+      "waitingWhy": "Waiting to try again: {{reason}}",
+      "running": "Analysing this file",
+      "now": "Now: {{step}}",
+      "count": "{{done}} of {{total}} steps done",
+      "label": "Analysis progress",
+      "hint": "This page updates by itself. You can keep working."
+    },
+    "failed": {
+      "title": "The analysis did not finish",
+      "fallback": "The AI service could not analyse this file."
+    },
+    "steps": {
+      "tags": "Suggesting tags",
+      "ocr": "Reading text in the picture",
+      "text-layer": "Reading the document's text",
+      "image-embedding": "Preparing picture search",
+      "text-embedding": "Preparing meaning search",
+      "transcript": "Transcribing speech",
+      "language": "Detecting the language"
+    },
+    "stepName": {
+      "tags": "Tags",
+      "ocr": "Text in the picture",
+      "text-layer": "Document text",
+      "image-embedding": "Picture search",
+      "text-embedding": "Meaning search",
+      "transcript": "Transcript",
+      "language": "Language"
+    },
+    "stepStatus": {
+      "ok": "Done",
+      "skipped": "Skipped",
+      "failed": "Failed"
+    },
+    "tags": {
+      "title": "Suggested tags",
+      "hint": "Add the ones that fit. Tags you add join the asset's own tags; nothing is added automatically.",
+      "hintReader": "Only people who can edit this asset can add or dismiss suggestions.",
+      "list": "Suggested tags",
+      "confidence": "Confidence",
+      "add": "Add tag {{tag}}",
+      "dismiss": "Dismiss tag {{tag}}",
+      "addAll": "Add all ({{count}})",
+      "addAllLabel": "Add all {{count}} suggested tags",
+      "added": "Added tag \"{{tag}}\"",
+      "dismissed": "Dismissed \"{{tag}}\"",
+      "addedAll_one": "Added {{count}} tag",
+      "addedAll_other": "Added {{count}} tags",
+      "addedNone": "No tags were added",
+      "allDone": "Every suggestion has been reviewed.",
+      "none": "No new tag suggestions for this file.",
+      "decided": "Decided ({{count}})",
+      "decidedList": "Decided suggestions",
+      "statusAccepted": "Added",
+      "statusRejected": "Dismissed",
+      "decideFailed": "That suggestion could not be updated: {{reason}}",
+      "olderVersion": "These suggestions are for an earlier version of the file."
+    },
+    "language": {
+      "title": "Language",
+      "looksLike": "Looks like {{language}}",
+      "accept": "Set language to {{language}}",
+      "dismiss": "Dismiss language suggestion {{language}}",
+      "accepted": "Language {{language}}",
+      "added": "Language set to {{language}}",
+      "dismissed": "Dismissed language \"{{language}}\""
+    },
+    "transcript": {
+      "title": "Transcript",
+      "meta": "Transcript details",
+      "copy": "Copy transcript",
+      "copied": "Transcript copied",
+      "copyFailed": "Could not copy the transcript",
+      "filter": "Search transcript",
+      "filterPlaceholder": "Search what was said",
+      "count": "{{shown}} of {{total}} lines",
+      "none": "No line mentions \"{{query}}\".",
+      "list": "Transcript lines",
+      "jump": "Jump to {{time}}",
+      "lines_one": "{{count}} line",
+      "lines_other": "{{count}} lines"
+    },
+    "ocr": {
+      "title": "Text found in the picture",
+      "titleDocument": "Text found in the pages",
+      "copy": "Copy text",
+      "copied": "Text copied",
+      "copyFailed": "Could not copy the text",
+      "truncated": "Showing the first part only. The rest is searchable but not shown here.",
+      "language": "Language: {{language}}",
+      "characters_one": "{{count}} character",
+      "characters_other": "{{count}} characters"
+    },
+    "run": {
+      "title": "How this was analysed",
+      "steps": "Analysis steps",
+      "duration": "Took {{time}}",
+      "attempts_one": "{{count}} attempt",
+      "attempts_other": "{{count}} attempts",
+      "finished": "Finished {{when}}",
+      "started": "Started {{when}}",
+      "model": "Model: {{model}}",
+      "error": "Problem: {{error}}"
+    },
+    "privacy": {
+      "onSite": "Analysed on your own servers",
+      "offSite": "Analysed by {{provider}} outside your network",
+      "onSiteWill": "Analysis runs on your own servers",
+      "offSiteWill": "Analysis is done by {{provider}} outside your network",
+      "provider": {
+        "self-hosted": "a self-hosted service",
+        "openai-compatible": "an external AI service"
+      }
+    },
+    "search": {
+      "ready": "Included in Smart search"
+    },
+    "chip": {
+      "label_one": "{{count}} AI suggestion",
+      "label_other": "{{count}} AI suggestions",
+      "hint": "Review the AI's suggestions"
+    }
+  }
+}

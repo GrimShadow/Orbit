@@ -1,5 +1,6 @@
 using Dam.Application.Abstractions;
 using Dam.Application.Content;
+using Dam.Application.Licensing;
 using Dam.Application.Messaging;
 using Dam.Domain.Assets;
 using Dam.Domain.Authorization;
@@ -11,13 +12,15 @@ namespace Dam.Application.Assets;
 
 /// <summary>
 /// Signs links to an asset's current version (spec A5 "Delivery"). The link carries what it may fetch, when it expires and,
-/// optionally, the one address that may use it. Assets that are not published get watermarked output.
+/// optionally, the one address that may use it. Assets that are not published, or whose rights require it, get watermarked output.
+/// <para>Rights (ADR-0033): a licence that has ended or not begun refuses the link (403), and so does a <c>channel</c> or <c>region</c> the licence or the asset's
+/// effective access attributes exclude. The channel and region the link was issued for are signed into it.</para>
 /// </summary>
 public sealed record CreateDeliveryLinkCommand(Guid AssetId, CreateLinkRequest Request) : ICommand<DeliveryLinkDto>;
 
 public sealed class CreateDeliveryLinkHandler(
     IRepository<Asset> assets, IRepository<AssetVersion> versions, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz,
-    DeliveryTokenSigner signer, DeliverySettings settings, ITenantContext tenant, IClock clock)
+    DeliveryTokenSigner signer, DeliverySettings settings, ITenantContext tenant, RightsGuard rightsGuard, IClock clock)
     : IRequestHandler<CreateDeliveryLinkCommand, DeliveryLinkDto>
 {
     private static string? Text(int? n) => n?.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -38,6 +41,9 @@ public sealed class CreateDeliveryLinkHandler(
         var ttl = r.TtlSeconds is { } s ? TimeSpan.FromSeconds(s) : settings.DefaultTokenTtl;
         if (ttl <= TimeSpan.Zero || ttl > settings.MaxTokenTtl) problems["ttlSeconds"] = [$"Must be between 1 and {(int)settings.MaxTokenTtl.TotalSeconds} seconds."];
         if (r.Ip is not null && !System.Net.IPAddress.TryParse(r.Ip, out _)) problems["ip"] = ["Not a valid IP address."];
+        var channel = string.IsNullOrWhiteSpace(r.Channel) ? null : r.Channel.Trim().ToLowerInvariant();
+        var region = string.IsNullOrWhiteSpace(r.Region) ? null : r.Region.Trim().ToLowerInvariant();
+        foreach (var (field, messages) in ConsumerContext.Validate(channel, region)) problems[field] = messages;
 
         string scope;
         List<string> names;
@@ -59,13 +65,19 @@ public sealed class CreateDeliveryLinkHandler(
         if (names.Contains(RenditionProfiles.Original) && !await authz.CanAsync(Permissions.AssetsDownloadOriginal, resource, ct))
             return Error.Forbidden("You may not download the original file of this asset.");
 
-        var watermark = asset.Status != AssetStatuses.Published;
+        var rights = await rightsGuard.CheckAsync(asset, channel, region, ct);
+        if (!rights.Allowed)
+            return new Error("rights_restricted", rights.Reasons[0], ErrorType.Forbidden,
+                Extensions: new Dictionary<string, object?> { ["code"] = "rights_restricted", ["reason"] = rights.Reasons[0], ["reasons"] = rights.Reasons });
+
+        var watermark = asset.Status != AssetStatuses.Published || rights.WatermarkRequired;
+        var why = asset.Status != AssetStatuses.Published ? "an unpublished" : "a watermark-required";
         if (watermark && names.Contains(RenditionProfiles.Original))
-            return Error.Conflict("The original file of an unpublished asset cannot be shared by link; other renditions carry a watermark.");
+            return Error.Conflict($"The original file of {why} asset cannot be shared by link; other renditions carry a watermark.");
         if (watermark && kind == SourceKind.Video && names.Any(n => RenditionProfiles.Videos.Any(v => v.Name == n)))
-            return Error.Conflict("Video renditions of an unpublished asset are not available yet; only its still images (thumb, poster) carry a watermark.");
+            return Error.Conflict($"Video renditions of {why} asset are not available; only its still images (thumb, poster) carry a watermark.");
         var expires = clock.UtcNow.Add(ttl);
-        var token = signer.Sign(new DeliveryClaims(tenant.TenantId, asset.Id, scope, expires, r.Ip, watermark));
+        var token = signer.Sign(new DeliveryClaims(tenant.TenantId, asset.Id, scope, expires, r.Ip, watermark, channel, region));
         var baseUrl = $"{settings.LinkBase}/d/{token}/{asset.Id}";
         var links = r.Transform is not null
             ? new Dictionary<string, string> { ["transform"] = $"{baseUrl}/t?{scope[2..]}" }
@@ -91,7 +103,7 @@ public sealed record CreateThumbnailLinksBatchCommand(IReadOnlyList<Guid> AssetI
 
 public sealed class CreateThumbnailLinksBatchHandler(
     IRepository<Asset> assets, IRepository<Folder> folders, IQueryExecutor q, IAuthorizationService authz,
-    DeliveryTokenSigner signer, DeliverySettings settings, ITenantContext tenant, IClock clock)
+    DeliveryTokenSigner signer, DeliverySettings settings, ITenantContext tenant, RightsGuard rightsGuard, IClock clock)
     : IRequestHandler<CreateThumbnailLinksBatchCommand, IReadOnlyDictionary<string, string?>>
 {
     private const int MaxBatchSize = 200;
@@ -118,7 +130,9 @@ public sealed class CreateThumbnailLinksBatchHandler(
         if (asset.Status is AssetStatuses.Deleted or AssetStatuses.Blocked) return null;
         if (!await authz.CanAsync(Permissions.AssetsRead, asset.ToResource(path), ct)) return null;
 
-        var watermark = asset.Status != AssetStatuses.Published;
+        var rights = await rightsGuard.CheckAsync(asset, null, null, ct);
+        if (rights.OutsideValidity) return null;   // a licence that is not in force shows no thumbnail, like any asset that cannot be delivered
+        var watermark = asset.Status != AssetStatuses.Published || rights.WatermarkRequired;
         var token = signer.Sign(new DeliveryClaims(tenant.TenantId, asset.Id, $"r:{ThumbProfile}", expires, null, watermark));
         return $"{settings.LinkBase}/d/{token}/{asset.Id}/{ThumbProfile}";
     }

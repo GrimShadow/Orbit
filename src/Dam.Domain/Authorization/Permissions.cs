@@ -53,6 +53,8 @@ public static class Permissions
     public const string NotificationsManage = "notifications.manage";
     public const string ApiClientsManage = "api_clients.manage";
     public const string RetentionManage = "retention.manage";
+    /// <summary>AI settings, provider health, backfills and the provider test (ADR-0035). Reading an asset's AI results needs assets.read; deciding on them assets.update.</summary>
+    public const string AiManage = "ai.manage";
     public const string AuditRead = "audit.read";
     public const string MigrationManage = "migration.manage";
 
@@ -71,7 +73,7 @@ public static class Permissions
         RightsManage, KnowledgeManage, QrManage, ShareManage, PortalsManage,
         AnalyticsRead, UsageWrite,
         TenantsManage, UsersManage, GroupsManage, RolesManage, AccessRulesManage, WebhooksManage, NotificationsManage, ApiClientsManage,
-        RetentionManage, AuditRead, MigrationManage,
+        RetentionManage, AiManage, AuditRead, MigrationManage,
         SystemPing,
     ];
 

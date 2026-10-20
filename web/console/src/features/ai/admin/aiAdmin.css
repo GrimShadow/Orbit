@@ -1,0 +1,491 @@
+/* ---- AI settings page ---- */
+.dam-aipage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+  min-width: 0;
+}
+.dam-aipage > * {
+  min-width: 0;
+}
+
+/* Settings on the left, operations (test, backfill) on the right; one column below 1100px, in reading order. */
+.dam-ai__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--dam-space-4);
+  align-items: start;
+}
+@media (min-width: 1100px) {
+  .dam-ai__grid {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+}
+.dam-ai__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+  min-width: 0;
+}
+.dam-ai__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+}
+
+/* Cards */
+.dam-ai__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+}
+.dam-ai__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--dam-space-3);
+}
+.dam-ai__title {
+  margin: 0;
+  font-size: var(--dam-text-lg);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.dam-ai__desc {
+  margin: calc(-1 * var(--dam-space-2)) 0 0;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+  max-width: 68ch;
+}
+.dam-ai__sub {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+  margin: 0 0 var(--dam-space-2);
+  font-size: var(--dam-text-sm);
+  font-weight: 700;
+}
+.dam-ai__actions {
+  display: flex;
+  gap: var(--dam-space-3);
+  flex-wrap: wrap;
+}
+
+/* Status */
+.dam-ai__statusbody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+}
+.dam-ai__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-3) var(--dam-space-6);
+  margin: 0;
+}
+.dam-ai__facts > div {
+  min-width: 0;
+}
+.dam-ai__facts dt {
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dam-ai__facts dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+.dam-ai__healthrow {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+  font-weight: 400;
+}
+.dam-ai__modellist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-1) var(--dam-space-4);
+  font-weight: 400;
+}
+.dam-ai__modellist li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--dam-space-2);
+}
+.dam-ai__modellist code {
+  font-size: var(--dam-text-xs);
+  overflow-wrap: anywhere;
+}
+.dam-ai__detail {
+  margin: calc(-1 * var(--dam-space-2)) 0 0;
+}
+.dam-ai__block p {
+  margin: 0;
+}
+.dam-ai__block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-1);
+}
+.dam-ai__chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-ai__chips .dam-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dam-ai__chip--off {
+  font-weight: 500;
+}
+.dam-ai__chipnote {
+  font-weight: 400;
+}
+.dam-ai__summary {
+  font-weight: 600;
+  margin-bottom: var(--dam-space-2) !important;
+}
+.dam-ai__queue {
+  margin-top: var(--dam-space-2) !important;
+}
+.dam-ai__indexbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dam-ai__estimate {
+  margin: 0;
+  padding: var(--dam-space-3) var(--dam-space-4);
+  border-radius: var(--dam-radius);
+  background: var(--dam-tone-neutral-bg);
+  color: var(--dam-tone-neutral-text);
+  font-size: var(--dam-text-sm);
+}
+
+/* Callouts: a coloured panel with an icon, a bold lead line and text. Never colour alone: the lead line says it. */
+.dam-aicallout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dam-space-3);
+  margin: 0;
+  padding: var(--dam-space-4);
+  border-radius: var(--dam-radius);
+  border: 1px solid transparent;
+  font-size: var(--dam-text-sm);
+}
+.dam-aicallout > svg {
+  flex: none;
+  margin-top: 1px;
+}
+.dam-aicallout > div,
+.dam-aicallout > span {
+  flex: 1;
+  min-width: 0;
+}
+.dam-aicallout p {
+  margin: 4px 0 0;
+}
+.dam-aicallout strong {
+  font-size: var(--dam-text-md);
+}
+.dam-aicallout > .dam-btn {
+  flex: none;
+  align-self: center;
+}
+.dam-aicallout--neutral {
+  background: var(--dam-tone-neutral-bg);
+  color: var(--dam-tone-neutral-text);
+  border-color: var(--dam-border-subtle);
+}
+.dam-aicallout--success {
+  background: var(--dam-tone-success-bg);
+  color: var(--dam-tone-success-text);
+}
+.dam-aicallout--warning {
+  background: var(--dam-tone-warning-bg);
+  color: var(--dam-tone-warning-text);
+  border-color: color-mix(in srgb, var(--dam-tone-warning-text) 25%, transparent);
+}
+.dam-aicallout--danger {
+  background: var(--dam-tone-danger-bg);
+  color: var(--dam-tone-danger-text);
+}
+.dam-aicallout .dam-hint {
+  color: inherit;
+  opacity: 0.9;
+}
+.dam-aicallout .dam-error {
+  color: var(--dam-tone-danger-text);
+}
+@media (max-width: 639px) {
+  .dam-aicallout:has(> .dam-btn) {
+    flex-wrap: wrap;
+  }
+  .dam-aicallout > .dam-btn {
+    align-self: stretch;
+    width: 100%;
+  }
+}
+
+/* Providers: radio cards */
+.dam-aiproviders {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.dam-aiproviders__list {
+  list-style: none;
+  margin: var(--dam-space-1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+}
+.dam-aiprovider {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3) var(--dam-space-4);
+  border: 1px solid var(--dam-border);
+  border-radius: var(--dam-radius);
+  background: var(--dam-surface);
+  cursor: pointer;
+  transition:
+    border-color var(--dam-duration) var(--dam-ease),
+    background-color var(--dam-duration) var(--dam-ease);
+}
+.dam-aiprovider:hover:not(.dam-aiprovider--disabled) {
+  border-color: var(--dam-brand);
+}
+.dam-aiprovider--checked {
+  border-color: var(--dam-brand);
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+}
+.dam-aiprovider:has(input:focus-visible) {
+  outline: 2px solid var(--dam-focus);
+  outline-offset: 2px;
+}
+.dam-aiprovider--disabled {
+  cursor: not-allowed;
+  background: var(--dam-surface-2);
+}
+.dam-aiprovider input[type='radio'] {
+  flex: none;
+  margin: 3px 0 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--dam-brand);
+}
+.dam-aiprovider__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.dam-aiprovider__name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+  font-weight: 700;
+}
+.dam-aiprovider__name .dam-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dam-aiprovider__desc {
+  font-size: var(--dam-text-sm);
+  color: var(--dam-muted);
+}
+.dam-aiprovider--checked .dam-aiprovider__desc {
+  color: inherit;
+}
+.dam-aiprovider--disabled .dam-aiprovider__name {
+  color: var(--dam-muted);
+}
+.dam-aiprovider__missing {
+  display: block;
+  margin-top: 2px;
+  font-weight: 600;
+  color: var(--dam-tone-warning-text);
+}
+.dam-aiprovider--disabled .dam-aiprovider__missing {
+  color: var(--dam-text);
+}
+.dam-aiack {
+  margin-top: var(--dam-space-3);
+  font-weight: 600;
+}
+.dam-aiack .dam-check__label {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+/* Features */
+.dam-aifeatures {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-4);
+}
+.dam-ai__language {
+  max-width: 360px;
+}
+
+/* Save bar */
+/* Static while there is nothing to save; it follows the viewport only once there are edits to save or discard. */
+.dam-aibar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--dam-space-3) var(--dam-space-4);
+  padding: var(--dam-space-3) var(--dam-space-4);
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius-lg);
+  background: var(--dam-surface-raised);
+  box-shadow: var(--dam-shadow);
+}
+.dam-aibar[data-dirty] {
+  position: sticky;
+  bottom: var(--dam-space-3);
+  z-index: var(--dam-z-sticky);
+  border-color: var(--dam-brand);
+  box-shadow: var(--dam-shadow-lg);
+}
+/* Below 1024px the shell shows a 60px tab bar at the bottom; keep the bar above it. */
+@media (max-width: 1023px) {
+  .dam-aibar[data-dirty] {
+    bottom: calc(60px + env(safe-area-inset-bottom) + var(--dam-space-2));
+  }
+}
+.dam-aibar__text {
+  min-width: 0;
+  flex: 1 1 220px;
+  font-size: var(--dam-text-sm);
+}
+.dam-aibar__text p {
+  margin: 0;
+}
+.dam-aibar__errors {
+  margin-top: var(--dam-space-1);
+}
+.dam-aibar__actions {
+  display: flex;
+  gap: var(--dam-space-2);
+  flex-wrap: wrap;
+}
+@media (max-width: 639px) {
+  .dam-aibar__actions {
+    width: 100%;
+  }
+  .dam-aibar__actions .dam-btn {
+    flex: 1;
+  }
+}
+
+/* Test connection */
+.dam-aitest {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+}
+.dam-aisteps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--dam-border-subtle);
+  border-radius: var(--dam-radius);
+}
+.dam-aistep {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3) var(--dam-space-4);
+  font-size: var(--dam-text-sm);
+}
+.dam-aistep + .dam-aistep {
+  border-top: 1px solid var(--dam-border-subtle);
+}
+.dam-aistep__icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--dam-tone-success-text);
+}
+.dam-aistep--fail .dam-aistep__icon {
+  color: var(--dam-danger);
+}
+.dam-aistep__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dam-aistep__name {
+  font-weight: 600;
+}
+.dam-aistep__hint:empty {
+  display: none;
+}
+.dam-aistep__detail {
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+  overflow-wrap: anywhere;
+}
+.dam-aistep__ms {
+  flex: none;
+  color: var(--dam-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Backfill */
+.dam-aibackfill {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--dam-space-4);
+}
+@media (min-width: 640px) {
+  .dam-aibackfill {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+/* Dialogs */
+.dam-aidialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+  max-width: 52ch;
+}
+.dam-aidialog p {
+  margin: 0;
+}
+.dam-aidialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+  margin-top: var(--dam-space-2);
+}

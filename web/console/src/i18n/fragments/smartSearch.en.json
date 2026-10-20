@@ -1,0 +1,39 @@
+{
+  "smartSearch": {
+    "toggle": {
+      "label": "Smart search",
+      "tooltip": "Finds results by meaning, including what's in pictures and recordings"
+    },
+    "queryPlaceholder": "Describe what you're looking for",
+    "globalPlaceholder": "Search by name, tag, or describe what you're looking for",
+    "match": {
+      "label": "Matched by",
+      "text": "Text",
+      "image": "Visual match",
+      "ocr": "Text in image",
+      "transcript": "Spoken in recording"
+    },
+    "transcript": {
+      "label": "Moments that match",
+      "jump": "Play from {{time}}"
+    },
+    "fallback": {
+      "ai_disabled": "Smart search isn't switched on for your organisation. Showing regular results.",
+      "provider_not_configured": "Smart search isn't set up for your organisation yet. Showing regular results.",
+      "embeddings_disabled": "Smart search isn't switched on for your organisation. Showing regular results.",
+      "embeddings_unsupported": "Smart search isn't available with your organisation's current setup. Showing regular results.",
+      "provider_unavailable": "Smart search is temporarily unavailable. Showing regular results.",
+      "vectors_not_indexed": "Smart search is still being prepared. Showing regular results."
+    },
+    "examples": {
+      "label": "Try",
+      "one": "a car on a mountain road",
+      "two": "photos of people smiling",
+      "three": "signed contract"
+    },
+    "noResults": {
+      "title": "Nothing matches that description",
+      "description": "Try describing it a different way, or with fewer details. Files that haven't been analysed yet can only be found by their name, tags and text."
+    }
+  }
+}

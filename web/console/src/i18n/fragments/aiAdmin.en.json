@@ -1,0 +1,240 @@
+{
+  "aiAdmin": {
+    "title": "AI",
+    "description": "Choose whether and how AI helps in this organisation: suggested tags, text read from pictures and recordings, and Smart search.",
+    "loading": "Loading AI settings…",
+    "retry": "Retry",
+    "loadFailed": "AI settings could not be loaded",
+    "loadFailedHint": "Check your connection and try again.",
+    "forbidden": {
+      "title": "AI settings are not available to your role",
+      "description": "Ask an administrator for the AI management permission if you need to change these settings."
+    },
+    "providerNames": {
+      "self-hosted": "Self-hosted",
+      "openai-compatible": "OpenAI-compatible",
+      "none": "None"
+    },
+    "saved": "AI settings saved",
+    "saveFailed": "AI settings could not be saved",
+    "saveFailedHint": "Nothing was changed. Try again in a moment.",
+
+    "status": {
+      "title": "Status",
+      "refresh": "Refresh",
+      "refreshing": "Refreshing…",
+      "loading": "Loading status…",
+      "failed": "Status could not be loaded",
+      "failedHint": "The settings below still work. Try refreshing in a moment.",
+      "provider": "Provider in use",
+      "health": "Service",
+      "latency": "{{ms}} ms",
+      "latencyLabel": "Answered in {{ms}} ms",
+      "models": "Models",
+      "modelNames": {
+        "clip": "Pictures",
+        "text": "Text",
+        "whisper": "Speech",
+        "ocr": "Reading text"
+      },
+      "healthLabels": {
+        "ok": "Healthy",
+        "loading": "Starting up",
+        "degraded": "Degraded",
+        "down": "Unreachable",
+        "unreachable": "Unreachable",
+        "disabled": "Off",
+        "unconfigured": "Not configured"
+      },
+      "offTitle": "AI is off for everyone in this organisation",
+      "offBody": "Nothing is analysed and no content is sent to any AI service. Smart search falls back to ordinary search. Switch AI on below to start.",
+      "capabilities": "What this provider can do",
+      "cap": {
+        "tags": "Suggest tags",
+        "ocr": "Read text in pictures",
+        "transcribe": "Transcribe audio and video",
+        "textEmbeddings": "Find by meaning of words",
+        "imageEmbeddings": "Find by what a picture shows",
+        "translate": "Translation",
+        "summarise": "Summaries"
+      },
+      "capYes": "available",
+      "capNo": "not available",
+      "capLater": "coming later",
+      "progress": "Assets analysed",
+      "progressSummary": "{{enriched}} of {{eligible}} assets analysed",
+      "progressNone": "There are no assets to analyse yet.",
+      "counts": {
+        "enriched": "Analysed",
+        "running": "Running",
+        "pending": "Waiting",
+        "failed": "Failed",
+        "skipped": "Skipped",
+        "notStarted": "Not started"
+      },
+      "queue_one": "{{formattedCount}} asset waiting or running",
+      "queue_other": "{{formattedCount}} assets waiting or running",
+      "queueEmpty": "Nothing is waiting in the queue.",
+      "index": "Smart search index",
+      "indexDims": "Text vectors: {{text}} dimensions. Picture vectors: {{image}} dimensions.",
+      "indexOk": "Up to date",
+      "indexLive": "The live index was built for {{text}} text and {{image}} picture dimensions.",
+      "indexUnknown": "not built",
+      "reindexTitle": "Smart search needs the index rebuilt",
+      "reindexBody": "The search index was built for different vector sizes than this installation is set to use, so Smart search is paused. Rebuilding runs in the background without taking search offline and does not call the AI provider.",
+      "reindexButton": "Rebuild index",
+      "reindexing": "Rebuilding…",
+      "reindexStarted": "Rebuilding in the background",
+      "reindexStartedBody": "This page updates when the new index is ready.",
+      "reindexDone": "Search index rebuilt",
+      "reindexFailed": "The index could not be rebuilt",
+      "reindexFailedHint": "Try again in a moment."
+    },
+
+    "provider": {
+      "title": "Provider and privacy",
+      "description": "AI features are off until an administrator turns them on. Choose where the analysis runs.",
+      "enable": "Use AI in this organisation",
+      "enableHint": "When this is off, nothing is analysed and no content leaves your installation.",
+      "choose": "Provider",
+      "chooseHint": "Applies to everyone in this organisation.",
+      "default": "Server default",
+      "inUse": "In use now",
+      "defaultIs": "The server default is {{provider}}.",
+      "defaultNone": "The server has no default provider, so choose one.",
+      "stays": "Stays on your servers",
+      "offSite": "Sends content off-site",
+      "notConfigured": "Not configured on the server (set DAM_AI_* variables).",
+      "descriptions": {
+        "self-hosted": "Self-hosted runs on your own servers (the AI sidecar). Pictures, documents and recordings never leave your network.",
+        "openai-compatible": "OpenAI-compatible sends pictures, audio and text to the endpoint configured on the server, which may be run by a third party."
+      },
+      "offTitle": "AI is off for everyone",
+      "offBody": "Nothing is analysed, no content is sent to any AI service, and Smart search uses ordinary search. You can still pick a provider and set up the features, then switch AI on when you are ready.",
+      "chooseProblem": "Choose a provider before switching AI on.",
+      "unconfiguredProblem": "This provider is not configured on the server.",
+      "privacy": {
+        "title": "Content will leave your installation",
+        "body": "With {{provider}}, this organisation's pictures, documents, audio and the text read from them are sent to an external service to be analysed. Only continue if you are entitled to share that content (consent, data-protection law such as India's DPDP Act, and your contracts).",
+        "body2": "Switching AI off, or choosing a self-hosted provider, stops this. The connection test sends only a tiny built-in picture and a short phrase.",
+        "ack": "I understand that content will be sent to {{provider}}",
+        "ackRequired": "Confirm that you understand before saving.",
+        "already": "Content is already being sent to {{provider}} (acknowledged earlier)."
+      }
+    },
+
+    "features": {
+      "title": "What the AI does",
+      "description": "Choose which kinds of analysis run. Turning one off stops it for new and re-analysed assets; what was already found stays.",
+      "tags": "Suggest tags",
+      "tagsHint": "Looks at pictures, video frames and document pages and proposes tags. A person accepts or rejects each one.",
+      "ocr": "Read text in pictures and pages (OCR)",
+      "ocrHint": "Reads the words in photos, scans and documents so they can be searched.",
+      "transcribe": "Transcribe audio and video",
+      "transcribeHint": "Turns speech into searchable text with timestamps so you can jump to the moment.",
+      "embeddings": "Enable smart search",
+      "embeddingsHint": "Lets people search by meaning, for example \"red car on a beach\", not only by the words typed into a field.",
+      "unsupported": "The provider in use cannot do this, so the step is skipped.",
+      "ocrLanguage": "OCR language",
+      "ocrLanguageHint": "Leave empty to detect it automatically. Use a language code such as en, hi or pt-br. The self-hosted OCR reads Latin script best; other scripts may not be recognised.",
+      "ocrLanguagePlaceholder": "Automatic",
+      "ocrLanguageInvalid": "Use a language code such as en, hi or pt-br."
+    },
+
+    "bar": {
+      "label": "Save changes",
+      "unsaved": "You have unsaved changes.",
+      "clean": "All changes are saved.",
+      "lastSaved": "Last saved {{when}}",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "discard": "Discard changes",
+      "fixFirst": "Fix the highlighted fields to save.",
+      "refused": "The server did not accept some settings. Check the highlighted fields."
+    },
+
+    "leave": {
+      "title": "Leave without saving?",
+      "body": "You have unsaved AI settings. If you leave now they are lost.",
+      "stay": "Keep editing",
+      "leave": "Leave without saving"
+    },
+
+    "test": {
+      "title": "Test connection",
+      "description": "Checks that the provider answers and returns vectors of the expected size. It sends only a tiny built-in picture and a short phrase, so it works before AI is switched on.",
+      "run": "Run test",
+      "running": "Testing…",
+      "ok": "The connection works",
+      "okBody": "{{provider}} answered every check in {{ms}} ms.",
+      "fail": "Something is not working",
+      "failBody": "{{provider}} did not pass every check.",
+      "steps": "Test steps",
+      "step": {
+        "health": "Service is reachable",
+        "embed-image": "Picture vectors",
+        "embed-text": "Text vectors",
+        "embed-text-for-images": "Text-to-picture vectors"
+      },
+      "stepOk": "passed",
+      "stepFail": "failed",
+      "ms": "{{ms}} ms",
+      "hint": {
+        "health": "Check that the AI service is running and that the server's address and key are correct.",
+        "embed-image": "The service answered but could not turn a picture into a vector. Check the model and the vector size setting.",
+        "embed-text": "The service answered but could not turn text into a vector. Check the model and the vector size setting.",
+        "embed-text-for-images": "This provider cannot compare words with pictures, so Smart search will use the meaning of words only."
+      },
+      "error": "The test could not be run",
+      "errorBody": "The request did not complete. Try again in a moment."
+    },
+
+    "backfill": {
+      "title": "Analyse existing assets",
+      "description": "New uploads are analysed automatically. Use this to analyse the assets that were already in the library before AI was switched on.",
+      "off": "Switch AI on and save before analysing existing assets.",
+      "types": "Asset types",
+      "typesHint": "Leave all ticked to include every type.",
+      "type": {
+        "image": "Images",
+        "video": "Videos",
+        "audio": "Audio",
+        "document": "Documents",
+        "manual": "Manuals"
+      },
+      "folder": "Folder",
+      "allFolders": "All folders",
+      "options": "Options",
+      "includeSub": "Include subfolders",
+      "onlyMissing": "Only assets not yet analysed",
+      "onlyMissingHint": "Untick to analyse everything again, including assets that are done.",
+      "limit": "Most assets to queue now",
+      "limitHint": "Between 1 and {{max}}. Run it again to continue where it stopped.",
+      "limitInvalid": "Enter a whole number between 1 and {{max}}.",
+      "estimate_one": "About {{formattedCount}} asset, taking {{time}} at roughly 1.5 seconds per image.",
+      "estimate_other": "About {{formattedCount}} assets, taking {{time}} at roughly 1.5 seconds per image.",
+      "estimateUpTo_one": "Up to {{formattedCount}} asset with these filters, taking {{time}} at roughly 1.5 seconds per image.",
+      "estimateUpTo_other": "Up to {{formattedCount}} assets with these filters, taking {{time}} at roughly 1.5 seconds per image.",
+      "estimateNone": "There is nothing left to analyse.",
+      "estimateUnknown": "The count is not available yet.",
+      "timeUnderMinute": "under a minute",
+      "timeMinutes_one": "about {{count}} minute",
+      "timeMinutes_other": "about {{count}} minutes",
+      "timeHours": "about {{hours}} h {{minutes}} min",
+      "start": "Analyse assets…",
+      "confirmTitle": "Analyse existing assets?",
+      "confirmBody_one": "This will queue about {{formattedCount}} asset for analysis.",
+      "confirmBody_other": "This will queue about {{formattedCount}} assets for analysis.",
+      "confirmReal": "It processes real content from your library with {{provider}}: pictures, documents and recordings are read and analysed. It runs in the background and you can keep working. Tags are only suggestions until a person accepts them.",
+      "confirmOffSite": "This provider is off-site: the content of these assets will be sent to it.",
+      "cancel": "Cancel",
+      "confirm": "Start analysis",
+      "starting": "Starting…",
+      "queued_one": "Queued {{formattedCount}} asset",
+      "queued_other": "Queued {{formattedCount}} assets",
+      "queuedBody": "{{matched}} matched, {{enqueued}} queued, {{remaining}} remaining. Progress shows in the status above.",
+      "failed": "Analysis could not be started",
+      "failedHint": "Try again in a moment."
+    }
+  }
+}

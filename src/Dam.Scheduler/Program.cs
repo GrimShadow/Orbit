@@ -1,5 +1,6 @@
 using Dam.Application.Abstractions;
 using Dam.Infrastructure;
+using Dam.Infrastructure.Ai;
 using Dam.Infrastructure.Messaging;
 using Dam.Infrastructure.Notifications;
 using Dam.Infrastructure.Scheduling;
@@ -25,6 +26,7 @@ builder.Services.AddScheduledJob<SearchReindexJob>();
 // Webhook retries (needs the secrets key and outbound HTTP) and the SIEM forwarder.
 builder.Services.AddDamNotifications(cfg);
 builder.Services.AddDamNotificationJobs(cfg);
+builder.Services.AddDamAiScheduling(cfg);
 
 var app = builder.Build();
 app.MapGet("/healthz", () => Results.Ok("ok"));
@@ -38,9 +40,15 @@ await scheduler.ScheduleCronAsync("assets.publish_expire", PublishExpireJob.JobK
 await scheduler.ScheduleCronAsync("workflow.sla", WorkflowSlaJob.JobKey, cfg["DAM_WORKFLOW_SLA_POLL_CRON"] ?? "0/30 * * * * ?");
 // Hourly: archive/purge have no tight SLA, and each check involves a policy join across every tenant.
 await scheduler.ScheduleCronAsync("assets.retention", RetentionJob.JobKey, cfg["DAM_RETENTION_POLL_CRON"] ?? "0 0 * * * ?");
+// Hourly, and once shortly after start: licence alerts (30, 7, 1 days), expiring published assets whose licence ended, and catching up rights-derived access attributes.
+await scheduler.ScheduleCronAsync("rights.expiry", RightsExpiryJob.JobKey, cfg["DAM_RIGHTS_POLL_CRON"] ?? "0 5 * * * ?");
+await scheduler.ScheduleOnceAsync("rights.expiry.start", RightsExpiryJob.JobKey, DateTimeOffset.UtcNow.AddSeconds(20));
 // Every 10s: a failed webhook delivery is retried on its backoff schedule to within ten seconds of its due time (ADR-0031).
 await scheduler.ScheduleCronAsync("webhooks.retry", WebhookRetryJob.JobKey, cfg["DAM_WEBHOOK_RETRY_POLL_CRON"] ?? "0/10 * * * * ?");
 // Every 30s, only when DAM_SIEM_ENABLED=true: forward new audit rows to the SIEM as CEF over syslog.
 if (string.Equals(cfg["DAM_SIEM_ENABLED"], "true", StringComparison.OrdinalIgnoreCase))
     await scheduler.ScheduleCronAsync("audit.siem", SiemForwardJob.JobKey, cfg["DAM_SIEM_POLL_CRON"] ?? "0/30 * * * * ?");
+// Optional catch-up for assets uploaded while AI was off or down: set DAM_AI_BACKFILL_CRON (a Quartz cron, e.g. "0 */10 * * * ?"). Otherwise the backfill job runs only when asked.
+if (cfg["DAM_AI_BACKFILL_CRON"] is { Length: > 0 } backfillCron)
+    await scheduler.ScheduleCronAsync("ai.backfill", AiBackfillJob.JobKey, backfillCron);
 app.Run();

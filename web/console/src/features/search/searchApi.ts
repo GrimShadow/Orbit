@@ -26,7 +26,7 @@ export function useSearch(query: SearchRequestBody, enabled: boolean) {
 
 /** The Search screen's accumulating variant: "Load more" appends the next page of hits (the first page also carries the
  * facet counts and the total). `query.cursor` is ignored - the page param owns it. */
-export function useSearchInfinite(query: Omit<SearchRequestBody, 'cursor'>) {
+export function useSearchInfinite(query: Omit<SearchRequestBody, 'cursor'>, options: { enabled?: boolean } = {}) {
   const api = useApiClient();
   return useInfiniteQuery({
     queryKey: ['search', 'infinite', query],
@@ -34,5 +34,6 @@ export function useSearchInfinite(query: Omit<SearchRequestBody, 'cursor'>) {
     queryFn: async ({ pageParam }) => unwrap(await api.POST('/api/v1/search', { body: { ...query, cursor: pageParam } })),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     placeholderData: keepPreviousData,
+    enabled: options.enabled ?? true,
   });
 }

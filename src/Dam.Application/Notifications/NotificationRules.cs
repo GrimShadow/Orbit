@@ -69,6 +69,19 @@ public static class NotificationRules
         _ => null,
     };
 
+    /// <summary>Told to an asset's owner 30, 7 and 1 days before its licence ends (ADR-0033).</summary>
+    public static NotificationContent LicenceExpiring(Guid assetId, string assetTitle, string rightsName, DateOnly validTo, int daysRemaining) =>
+        new("rights.expiring", NotificationCategories.Rights,
+            $"Licence for {Subject(assetTitle)} expires {Dam.Domain.Licensing.RightsRules.DaysPhrase(daysRemaining)}",
+            $"The licence '{rightsName}' ends on {validTo.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}. Renew it or assign other rights to keep {Quote(assetTitle)} available.",
+            AssetPath(assetId), assetId);
+
+    public static NotificationContent LicenceExpired(Guid assetId, string assetTitle, string rightsName, DateOnly validTo) =>
+        new("rights.expired", NotificationCategories.Rights,
+            $"Licence for {Subject(assetTitle)} has expired",
+            $"The licence '{rightsName}' ended on {validTo.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}. {Quote(assetTitle)} can no longer be published or delivered under it; a published asset is moved to expired.",
+            AssetPath(assetId), assetId);
+
     /// <summary>The console deep link to a comment: the asset page, which opens the thread.</summary>
     public static string CommentPath(Guid assetId, Guid commentId) => $"{AssetPath(assetId)}?comment={commentId}";
 
@@ -113,6 +126,8 @@ public static class NotificationRules
             "comment.added" => "New comment",
             "comment.resolved" => "Comment thread resolved",
             "comment.reopened" => "Comment thread reopened",
+            "rights.expiring" => "Licence expiring",
+            "rights.expired" => "Licence expired",
             _ => eventName,
         };
         var subject = string.IsNullOrWhiteSpace(assetTitle) ? "" : Short(assetTitle);

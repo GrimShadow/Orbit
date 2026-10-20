@@ -870,6 +870,28 @@ public sealed class WorkflowTests(PostgresFixture pg) : AssetTestBase(pg)
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Transition(admin, asset, "publish")).Status);   // the guard still holds for a manual publish
     }
 
+    [Fact]
+    public async Task Auto_publish_under_a_licence_that_has_ended_leaves_the_asset_approved_and_names_the_licence()
+    {
+        var (t, admin, _, path, _, asset) = await Scene(Def("review", [S("review")], autoPublish: true));
+        var reviewer = await Reviewer(t, admin, ["Approver"], path);
+        var rights = (await Call(HttpMethod.Post, "/api/v1/rights", admin, new
+            { name = "Acme stock licence", licenceType = "licensed", validTo = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1) })).Body.GetProperty("id").GetGuid();
+        Assert.Equal(HttpStatusCode.OK, (await Call(HttpMethod.Put, $"/api/v1/assets/{asset}/rights", admin, new { rightsId = rights })).Status);
+        await Transition(admin, asset, "submit");
+
+        Assert.Equal(HttpStatusCode.OK, (await Decide(reviewer.Token, await TaskFor(reviewer.Token, asset), "approve")).Status);
+        Assert.Equal("approved", await StatusOf(admin, asset));
+        var reason = (await View(admin, asset)).GetProperty("outcomeReason").GetString()!;
+        Assert.Contains("not published automatically", reason, StringComparison.Ordinal);
+        Assert.Contains("'Acme stock licence'", reason, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.Conflict, (await Transition(admin, asset, "publish")).Status);   // a person cannot either, until the licence is renewed
+
+        Assert.Equal(HttpStatusCode.OK, (await Call(HttpMethod.Put, $"/api/v1/rights/{rights}", admin, new
+            { name = "Acme stock licence", licenceType = "licensed", validTo = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30) })).Status);
+        Assert.Equal(HttpStatusCode.OK, (await Transition(admin, asset, "publish")).Status);
+    }
+
     // ---- snapshot ------------------------------------------------------------------------------------------------
 
     [Fact]

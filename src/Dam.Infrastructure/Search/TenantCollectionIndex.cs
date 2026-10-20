@@ -17,6 +17,9 @@ public sealed class TenantCollectionIndex
 
     private TenantCollectionIndex(ILookup<Guid, Guid> collectionIdsByAsset) => _collectionIdsByAsset = collectionIdsByAsset;
 
+    /// <summary>A tenant with no static collections.</summary>
+    public static readonly TenantCollectionIndex Empty = new(Array.Empty<(Guid, Guid)>().ToLookup(p => p.Item1, p => p.Item2));
+
     public static async Task<TenantCollectionIndex> LoadAsync(DamDbContext db, CancellationToken ct)
     {
         var statics = await db.Collections.AsNoTracking().Where(c => c.Type == CollectionType.Static)

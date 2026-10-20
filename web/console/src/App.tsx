@@ -8,6 +8,8 @@ import { WorkflowsPage } from './features/workflow/designer/WorkflowsPage';
 import { AuditPage } from './features/audit/AuditPage';
 import { NotificationsPage } from './features/notifications/NotificationsPage';
 import { WebhooksPage } from './features/webhooks/WebhooksPage';
+import { RightsPage } from './features/rights/admin/RightsPage';
+import { AiSettingsPage } from './features/ai/admin/AiSettingsPage';
 import { UnusedAssetsPage } from './features/analytics/UnusedAssetsPage';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { AssetDetailPage } from './features/asset/AssetDetailPage';
@@ -47,6 +49,8 @@ export function App() {
                 <Route path="/insights/unused" element={<UnusedAssetsPage />} />
                 <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/admin/ai" element={<AiSettingsPage />} />
+                <Route path="/admin/rights" element={<RightsPage />} />
                 <Route path="/admin/webhooks" element={<WebhooksPage />} />
                 <Route path="/admin/audit" element={<AuditPage />} />
                 <Route path="/admin/workflows" element={<WorkflowsPage />} />

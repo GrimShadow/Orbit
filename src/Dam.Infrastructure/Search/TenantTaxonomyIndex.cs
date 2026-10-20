@@ -20,6 +20,9 @@ public sealed class TenantTaxonomyIndex
         _termsByVocabularyAndCode = termsByVocabularyAndCode;
     }
 
+    /// <summary>A tenant with no taxonomy.</summary>
+    public static readonly TenantTaxonomyIndex Empty = new([], []);
+
     public static async Task<TenantTaxonomyIndex> LoadAsync(DamDbContext db, CancellationToken ct)
     {
         var vocabularies = await db.Vocabularies.AsNoTracking().Select(v => new { v.Id, v.Key }).ToListAsync(ct);

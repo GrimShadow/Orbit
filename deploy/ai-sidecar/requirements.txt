@@ -1,0 +1,42 @@
+# Runtime dependencies, exact versions (resolved for CPython 3.12, linux/arm64 + linux/amd64 wheels).
+# rapidocr-onnxruntime is installed separately with --no-deps (see requirements-ocr.txt) so that the
+# headless OpenCV build below is used instead of the GUI one it would pull in.
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+av==19.0.1
+click==8.5.0
+ctranslate2==4.8.3
+fastapi==0.151.0
+faster-whisper==1.2.1
+filelock==4.2.4
+flatbuffers==25.12.19
+fsspec==2026.9.0
+h11==0.16.0
+hf-xet==1.7.0
+httpcore2==2.15.1
+httpx2==2.15.1
+huggingface_hub==2.2.0
+idna==3.20
+langdetect==1.0.9
+numpy==2.5.4
+onnxruntime==1.31.0
+opencv-python-headless==5.0.0.93
+opentelemetry-api==1.45.1
+packaging==26.3
+pillow==13.0.0
+protobuf==7.36.2
+pyclipper==1.4.0
+pydantic==2.14.1
+pydantic_core==2.50.1
+python-multipart==0.0.32
+PyYAML==6.0.3
+shapely==2.2.0
+six==1.17.0
+starlette==1.9.0
+tokenizers==0.23.3
+tqdm==4.70.1
+truststore==0.10.5
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+uvicorn==0.54.0

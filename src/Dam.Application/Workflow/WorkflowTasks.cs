@@ -175,7 +175,7 @@ public sealed class DecideTaskValidator : AbstractValidator<DecideTaskCommand>
 public sealed class DecideTaskHandler(
     IRepository<WorkflowTask> tasks, IRepository<WorkflowInstance> instances, IRepository<Asset> assets, IRepository<Folder> folders,
     IWorkflowStore store, WorkflowRuntime runtime, WorkflowTaskAccess access, WorkflowTaskMapper mapper, AssetMetadataBuilder builder,
-    IAuthorizationService authz, IQueryExecutor q, IClock clock) : IRequestHandler<DecideTaskCommand, WorkflowTaskDto>
+    IAuthorizationService authz, Licensing.RightsGuard rightsGuard, IQueryExecutor q, IClock clock) : IRequestHandler<DecideTaskCommand, WorkflowTaskDto>
 {
     public async Task<Result<WorkflowTaskDto>> Handle(DecideTaskCommand c, CancellationToken ct)
     {
@@ -250,6 +250,11 @@ public sealed class DecideTaskHandler(
         if (built.IsFailure)
         {
             instance.Note("Approved, but not published automatically: required metadata is incomplete.", AssetStatuses.Approved);
+            return;
+        }
+        if (Licensing.RightsGuard.OutOfForceMessage(await rightsGuard.CheckAsync(asset, null, null, ct)) is { } outOfForce)
+        {
+            instance.Note(Limit($"Approved, but not published automatically: {outOfForce}"), AssetStatuses.Approved);
             return;
         }
         asset.ChangeStatus(AssetStatuses.Published, Limit($"Published automatically by workflow '{instance.DefinitionName}'."), now);

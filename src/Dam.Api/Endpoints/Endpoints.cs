@@ -34,6 +34,8 @@ public static class ApiEndpoints
         v1.MapNotificationEndpoints();
         v1.MapWebhookEndpoints();
         v1.MapAuditEndpoints();
+        v1.MapRightsEndpoints();
+        v1.MapAiEndpoints();
     }
 
     /// <summary>Maps a failed application Result to RFC 9457 problem+json.</summary>
@@ -42,10 +44,11 @@ public static class ApiEndpoints
         ErrorType.Validation => Results.ValidationProblem(
             e.FieldErrors!.ToDictionary(k => k.Key, k => k.Value), title: e.Message, statusCode: 422),
         ErrorType.Unauthorized => Results.Problem(statusCode: 401, title: e.Message),
-        ErrorType.Forbidden => Results.Problem(statusCode: 403, title: e.Message),
+        ErrorType.Forbidden => Results.Problem(statusCode: 403, title: e.Message, extensions: e.Extensions?.ToDictionary(k => k.Key, k => k.Value)),
         ErrorType.NotFound => Results.Problem(statusCode: 404, title: e.Message),
         ErrorType.Conflict => Results.Problem(statusCode: 409, title: e.Message,
-            extensions: e.FieldErrors?.ToDictionary(k => k.Key, k => (object?)(k.Value.Length == 1 ? k.Value[0] : k.Value))),
+            extensions: e.Extensions?.ToDictionary(k => k.Key, k => k.Value)
+                        ?? e.FieldErrors?.ToDictionary(k => k.Key, k => (object?)(k.Value.Length == 1 ? k.Value[0] : k.Value))),
         _ => Results.Problem(statusCode: 500, title: e.Message),
     };
 }

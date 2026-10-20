@@ -57,7 +57,7 @@ internal static class AssetMapping
     public static AssetDto ToDto(Asset a) =>
         new(a.Id, a.FolderId, a.Type, a.Status, a.Title, a.Metadata, a.MetadataSchemaVersion, a.TaxonomyTerms, a.Tags, a.Attributes,
             a.OwnerId, a.CurrentVersionId, a.ChecksumSha256, a.StatusReason, a.PublishAt, a.ExpireAt, a.RetentionPolicyId, a.LegalHold,
-            a.CreatedAt, a.UpdatedAt);
+            a.CreatedAt, a.UpdatedAt, a.RightsId);
 
     public static UploadDto ToDto(Upload u, IReadOnlyList<ReceivedPartDto>? received = null) =>
         new(u.Id, u.AssetId, u.BatchId, u.Status.ToString().ToLowerInvariant(), u.FileName, u.DeclaredSize, u.ContentType, u.PartSize, u.PartCount,

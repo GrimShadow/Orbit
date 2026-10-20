@@ -16,6 +16,8 @@ public sealed class SearchFixture : IAsyncLifetime
         .WithEnvironment("discovery.type", "single-node")
         .WithEnvironment("DISABLE_SECURITY_PLUGIN", "true")
         .WithEnvironment("DISABLE_INSTALL_DEMO_CONFIG", "true")
+        // A throwaway node must not refuse to create indexes because the machine running the tests is nearly full (the flood-stage disk watermark).
+        .WithEnvironment("cluster.routing.allocation.disk.threshold_enabled", "false")
         .WithEnvironment("OPENSEARCH_JAVA_OPTS", "-Xms256m -Xmx256m")
         .WithPortBinding(9200, true)
         .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPort(9200).ForPath("/_cluster/health")))

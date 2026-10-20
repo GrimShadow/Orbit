@@ -1,0 +1,2 @@
+# Installed with `pip install --no-deps` (its declared opencv-python dependency is replaced by opencv-python-headless).
+rapidocr-onnxruntime==1.4.4

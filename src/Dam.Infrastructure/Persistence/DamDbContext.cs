@@ -1,11 +1,13 @@
 using Dam.Application.Abstractions;
 using System.Text.Json;
+using Dam.Domain.Ai;
 using Dam.Domain.Authorization;
 using Dam.Domain.Assets;
 using Dam.Domain.Comments;
 using Dam.Domain.Common;
 using Dam.Domain.Content;
 using Dam.Domain.Identity;
+using Dam.Domain.Licensing;
 using Dam.Domain.Notifications;
 using Dam.Domain.Webhooks;
 using Dam.Domain.Workflow;
@@ -54,6 +56,14 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<SiemCursor> SiemCursors => Set<SiemCursor>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<CommentMention> CommentMentions => Set<CommentMention>();
+    public DbSet<Rights> Rights => Set<Rights>();
+    public DbSet<RightsDocument> RightsDocuments => Set<RightsDocument>();
+    public DbSet<RightsAlert> RightsAlerts => Set<RightsAlert>();
+    public DbSet<AiSettings> AiSettings => Set<AiSettings>();
+    public DbSet<AiSuggestion> AiSuggestions => Set<AiSuggestion>();
+    public DbSet<AssetExtract> AssetExtracts => Set<AssetExtract>();
+    public DbSet<AssetEmbedding> AssetEmbeddings => Set<AssetEmbedding>();
+    public DbSet<AiRun> AiRuns => Set<AiRun>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -97,6 +107,8 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureWorkflow(b);
         ConfigureNotifications(b);
         ConfigureComments(b);
+        ConfigureRights(b);
+        ConfigureAi(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -223,12 +235,18 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.Property(x => x.Phash).HasColumnType("char(16)");
             e.Property(x => x.Metadata).AsJson();
             e.Property(x => x.Attributes).AsJsonDictionary();
+            e.Property(x => x.MetadataAttributes).AsJsonDictionary();
+            e.Property(x => x.RightsChannels).HasColumnType("text[]");
+            e.Property(x => x.RightsRegions).HasColumnType("text[]");
             e.Property(x => x.TaxonomyTerms).HasColumnType("text[]");
             e.Property(x => x.Tags).HasColumnType("text[]");
             // A folder that still holds assets cannot be removed, even by a bug: the database refuses.
             e.HasOne<Folder>().WithMany().HasForeignKey(x => x.FolderId).OnDelete(DeleteBehavior.Restrict);
             // A retention policy still assigned to assets cannot be removed either; unassign first.
             e.HasOne<RetentionPolicy>().WithMany().HasForeignKey(x => x.RetentionPolicyId).OnDelete(DeleteBehavior.Restrict);
+            // Rights still assigned to assets cannot be removed either (the app refuses with a count; the database refuses regardless).
+            e.HasOne<Rights>().WithMany().HasForeignKey(x => x.RightsId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TenantId, x.RightsId }).HasFilter("rights_id IS NOT NULL");
             e.HasIndex(x => new { x.TenantId, x.FolderId });
             e.HasIndex(x => new { x.TenantId, x.Status });
             e.HasIndex(x => new { x.TenantId, x.ChecksumSha256 }).HasFilter("checksum_sha256 IS NOT NULL");
@@ -514,6 +532,120 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasKey(x => new { x.CommentId, x.UserId });
             e.HasOne<Comment>().WithMany().HasForeignKey(x => x.CommentId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.TenantId, x.UserId });
+        });
+    }
+
+    private static void ConfigureRights(ModelBuilder b)
+    {
+        b.Entity<Rights>(e =>
+        {
+            e.ToTable("rights", t => t.HasCheckConstraint("ck_rights_licence_type",
+                "licence_type IN ('owned','licensed','royalty_free','rights_managed','editorial','creative_commons','other')"));
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.LicenceType).HasMaxLength(24);
+            e.Property(x => x.Licensor).HasMaxLength(200);
+            e.Property(x => x.Channels).HasColumnType("text[]");
+            e.Property(x => x.Regions).HasColumnType("text[]");
+            e.Property(x => x.ValidFrom).HasColumnType("date");
+            e.Property(x => x.ValidTo).HasColumnType("date");
+            e.Property(x => x.Notes).HasMaxLength(4000);
+            // The rights job sweeps every tenant for licences ending soon or already ended.
+            e.HasIndex(x => x.ValidTo).HasFilter("valid_to IS NOT NULL");
+            e.HasIndex(x => x.TenantId);
+        });
+        b.Entity<RightsDocument>(e =>
+        {
+            e.ToTable("rights_documents");
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.ContentType).HasMaxLength(100);
+            e.Property(x => x.Bucket).HasMaxLength(100);
+            e.Property(x => x.StorageKey).HasMaxLength(300);
+            e.HasOne<Rights>().WithMany().HasForeignKey(x => x.RightsId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.TenantId, x.RightsId });
+            e.HasIndex(x => x.StorageKey).IsUnique();
+        });
+        b.Entity<RightsAlert>(e =>
+        {
+            e.ToTable("rights_alerts");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ValidTo).HasColumnType("date");
+            e.HasOne<Rights>().WithMany().HasForeignKey(x => x.RightsId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            // One alert per asset, licence, threshold and end date: extending the licence (a new end date) starts the sequence again.
+            e.HasIndex(x => new { x.AssetId, x.RightsId, x.ThresholdDays, x.ValidTo }).IsUnique().HasDatabaseName("ux_rights_alerts_once");
+            e.HasIndex(x => x.RightsId);
+        });
+    }
+
+    private static void ConfigureAi(ModelBuilder b)
+    {
+        b.Entity<AiSettings>(e =>
+        {
+            e.ToTable("ai_settings", t => t.HasCheckConstraint("ck_ai_settings_provider", "provider IS NULL OR provider IN ('self-hosted','openai-compatible','none')"));
+            e.HasKey(x => x.TenantId);
+            e.Property(x => x.Provider).HasMaxLength(24);
+            e.Property(x => x.Features).AsJson();
+            e.Property(x => x.OcrLanguage).HasMaxLength(12);
+        });
+        b.Entity<AiSuggestion>(e =>
+        {
+            e.ToTable("ai_suggestions", t =>
+            {
+                t.HasCheckConstraint("ck_ai_suggestions_kind", "kind IN ('tag','language')");
+                t.HasCheckConstraint("ck_ai_suggestions_status", "status IN ('pending','accepted','rejected')");
+            });
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Kind).HasMaxLength(16);
+            e.Property(x => x.Value).HasMaxLength(200);
+            e.Property(x => x.Model).HasMaxLength(100);
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.AssetId, x.VersionId, x.Kind, x.Value }).IsUnique().HasDatabaseName("ux_ai_suggestions_once");
+            e.HasIndex(x => new { x.TenantId, x.AssetId, x.Status });
+        });
+        b.Entity<AssetExtract>(e =>
+        {
+            e.ToTable("asset_extracts");
+            e.HasKey(x => new { x.AssetId, x.VersionId });
+            e.Property(x => x.OcrText).HasColumnType("text");
+            e.Property(x => x.OcrLanguage).HasMaxLength(12);
+            e.Property(x => x.TranscriptLanguage).HasMaxLength(12);
+            e.Property(x => x.TranscriptText).HasColumnType("text");
+            e.Property(x => x.TranscriptSegments).AsJson();
+            e.Property(x => x.Model).AsJson();
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.TenantId);
+        });
+        b.Entity<AssetEmbedding>(e =>
+        {
+            e.ToTable("asset_embeddings", t =>
+            {
+                t.HasCheckConstraint("ck_asset_embeddings_kind", "kind IN ('image','text')");
+                t.HasCheckConstraint("ck_asset_embeddings_dim", "dim > 0 AND octet_length(vector) = dim * 4");
+            });
+            e.HasKey(x => new { x.AssetId, x.VersionId, x.Kind });
+            e.Property(x => x.Kind).HasMaxLength(8);
+            e.Property(x => x.Model).HasMaxLength(100);
+            e.Property(x => x.Vector).HasColumnType("bytea");
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.TenantId);
+        });
+        b.Entity<AiRun>(e =>
+        {
+            e.ToTable("ai_runs", t => t.HasCheckConstraint("ck_ai_runs_status", "status IN ('pending','running','succeeded','failed','skipped')"));
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Ignore(x => x.IsActive);
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.Property(x => x.Steps).AsJson();
+            e.Property(x => x.Error).HasMaxLength(1000);
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.AssetId, x.VersionId }).IsUnique().HasDatabaseName("ux_ai_runs_version");
+            e.HasIndex(x => new { x.TenantId, x.Status });
         });
     }
 

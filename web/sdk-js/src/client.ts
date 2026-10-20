@@ -8,6 +8,8 @@ export class ApiError extends Error {
     public title: string,
     public detail?: string,
     public correlationId?: string,
+    /** The raw problem+json body, for the members a status and title cannot carry (`code`, `reasons`, per-field `errors`). */
+    public problem?: Record<string, unknown>,
   ) {
     super(title);
   }
@@ -63,6 +65,7 @@ export function unwrap<T>({ data, error, response }: { data?: T; error?: unknown
     problem.title ?? response.statusText,
     problem.detail,
     problem.correlationId ?? response.headers.get('X-Correlation-ID') ?? undefined,
+    typeof error === 'object' && error !== null ? (error as Record<string, unknown>) : undefined,
   );
 }
 

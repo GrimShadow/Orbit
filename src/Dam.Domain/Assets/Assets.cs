@@ -2,6 +2,7 @@ using System.Text.Json;
 using Dam.Domain.Authorization;
 using Dam.Domain.Common;
 using Dam.Domain.Content;
+using Dam.Domain.Licensing;
 
 namespace Dam.Domain.Assets;
 
@@ -52,8 +53,16 @@ public sealed class Asset : AggregateRoot
     /// <summary>Every term code used in the metadata, for facets and search.</summary>
     public List<string> TaxonomyTerms { get; private set; } = [];
     public List<string> Tags { get; private set; } = [];
-    /// <summary>Access-control attributes (region, dealer, brand, channel) derived from metadata; see ADR-0002.</summary>
+    /// <summary>The EFFECTIVE access-control attributes (region, dealer, brand, channel; ADR-0002): derived from metadata, then narrowed by the
+    /// asset's rights (ADR-0033). This is what the policy engine and the search index see.</summary>
     public Dictionary<string, string[]> Attributes { get; private set; } = [];
+    /// <summary>The attributes metadata alone derives, before rights narrow them. Kept so a change of rights can re-derive <see cref="Attributes"/>.</summary>
+    public Dictionary<string, string[]> MetadataAttributes { get; private set; } = [];
+    /// <summary>A copy of the assigned rights' channels (empty: every channel), kept in step by <see cref="AssignRights"/> so an edit of the metadata
+    /// re-derives the attributes without loading the rights record.</summary>
+    public List<string> RightsChannels { get; private set; } = [];
+    /// <summary>A copy of the assigned rights' regions (empty: worldwide).</summary>
+    public List<string> RightsRegions { get; private set; } = [];
     public Guid? OwnerId { get; private set; }
     public Guid? CurrentVersionId { get; private set; }
     public Guid? RightsId { get; private set; }
@@ -82,9 +91,51 @@ public sealed class Asset : AggregateRoot
         Metadata = metadata;
         MetadataSchemaVersion = schemaVersion;
         TaxonomyTerms = projection.TaxonomyTerms;
-        Attributes = projection.Attributes;
+        MetadataAttributes = projection.Attributes;
+        Attributes = RightsScope.Apply(MetadataAttributes, RightsChannels, RightsRegions);
         UpdatedAt = now;
         Raise(new AssetMetadataUpdated(Id));
+    }
+
+    /// <summary>
+    /// Assigns (or, with a null id, clears) the asset's rights and re-derives its access attributes from the metadata attributes and the rights'
+    /// <paramref name="channels"/> and <paramref name="regions"/>. Also the way to refresh the copy when the same rights record changed. Returns
+    /// whether anything changed; if so the asset must be re-indexed, which <see cref="AssetRightsChanged"/> asks for.
+    /// </summary>
+    public bool AssignRights(Guid? rightsId, IReadOnlyCollection<string> channels, IReadOnlyCollection<string> regions, DateTimeOffset now)
+    {
+        var newChannels = RightsRules.NormalizeValues(rightsId is null ? [] : channels);
+        var newRegions = RightsRules.NormalizeValues(rightsId is null ? [] : regions);
+        var effective = RightsScope.Apply(MetadataAttributes, newChannels, newRegions);
+        var same = RightsId == rightsId && RightsRules.SameValues(RightsChannels, newChannels) && RightsRules.SameValues(RightsRegions, newRegions)
+                   && RightsScope.SameAttributes(Attributes, effective);
+        if (same) return false;
+        var previous = RightsId;
+        RightsId = rightsId;
+        RightsChannels = newChannels;
+        RightsRegions = newRegions;
+        Attributes = effective;
+        UpdatedAt = now;
+        Raise(new AssetRightsChanged(Id, rightsId, previous));
+        return true;
+    }
+
+    /// <summary>Adds tags the asset does not have yet (normalised like any tag), up to <paramref name="maxTags"/> in all. Returns the ones actually added.
+    /// Unlike <see cref="SetTags"/> this raises <see cref="AssetMetadataUpdated"/>, so the change is audited, delivered and re-indexed.</summary>
+    public IReadOnlyList<string> AddTags(IEnumerable<string> tags, int maxTags, DateTimeOffset now)
+    {
+        var added = new List<string>();
+        var current = Tags.ToHashSet(StringComparer.Ordinal);
+        foreach (var t in Normalize(tags))
+        {
+            if (current.Count >= maxTags) break;
+            if (current.Add(t)) added.Add(t);
+        }
+        if (added.Count == 0) return added;
+        Tags = Normalize(current);
+        UpdatedAt = now;
+        Raise(new AssetMetadataUpdated(Id));
+        return added;
     }
 
     public void Rename(string title, DateTimeOffset now) { Title = title.Trim(); UpdatedAt = now; }
