@@ -26,6 +26,8 @@ export interface CommentsUi {
   setPlayheadMs: (ms: number | null) => void;
   /** Panel -> stage: seek the video to a timecode (stages register a handler). */
   seekTo: (ms: number) => void;
+  /** True while a stage that can seek is mounted (a playable video); `seekTo` does nothing otherwise. */
+  canSeek: boolean;
   registerSeek: (fn: ((ms: number) => void) | null) => void;
   /** Panel -> stage: show this page of a document. */
   showPage: (page: number) => void;
@@ -78,6 +80,7 @@ export function CommentsProvider({
       playheadMs,
       setPlayheadMs,
       seekTo,
+      canSeek: seek !== null,
       registerSeek,
       showPage,
       registerShowPage,
@@ -93,6 +96,7 @@ export function CommentsProvider({
       annotating,
       draftAnchor,
       playheadMs,
+      seek,
       seekTo,
       registerSeek,
       showPage,
@@ -124,6 +128,7 @@ export function useCommentsUi(): CommentsUi {
     playheadMs: null,
     setPlayheadMs: noop,
     seekTo: noop,
+    canSeek: false,
     registerSeek: noop,
     showPage: noop,
     registerShowPage: noop,

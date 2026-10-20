@@ -335,6 +335,27 @@ describe('library-round additions', () => {
     expect(screen.getByRole('list', { name: 'Assets' })).toHaveClass('dam-grid--selecting');
   });
 
+  it('ThumbnailGrid renders an optional footer outside the open button, so it can hold links', async () => {
+    const onOpen = vi.fn();
+    const { container } = render(
+      <ThumbnailGrid
+        label="Assets"
+        onOpen={onOpen}
+        items={[
+          { id: 'a', title: 'With footer', footer: <a href="/x">Jump</a> },
+          { id: 'b', title: 'Plain' },
+        ]}
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Jump' });
+    expect(link.closest('button')).toBeNull();
+    expect(link.closest('.dam-thumb__footer')).not.toBeNull();
+    expect(container.querySelectorAll('.dam-thumb__footer')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /With footer/ })).not.toHaveTextContent('Jump');
+    await userEvent.click(screen.getByRole('button', { name: /Plain/ }));
+    expect(onOpen).toHaveBeenCalledWith('b');
+  });
+
   it('ThumbnailGridSkeleton announces loading once and renders the requested number of placeholder cards', async () => {
     const { container } = render(<ThumbnailGridSkeleton count={4} label="Loading assets" />);
     expect(screen.getByRole('status')).toHaveTextContent('Loading assets');

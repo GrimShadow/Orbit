@@ -20,6 +20,7 @@ export function useLibrarySnapshot() {
             sort: null,
             highlight: false,
             similarTo: null,
+            semantic: false,
             cursor: null,
             limit: 1,
           },

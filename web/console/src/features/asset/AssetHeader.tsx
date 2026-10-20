@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { CaretRight } from '../../ui';
+import { AiSuggestionsChip } from '../ai/asset/AiSuggestionsChip';
 import { LicenceBadge } from '../rights/asset/LicenceBadge';
 import { folderBreadcrumb, useFolders } from '../library/folders';
 import type { AssetDto } from './assetApi';
@@ -42,7 +43,15 @@ function Summary({ assetId }: { assetId: string }) {
   return version ? <p className="dam-asset-summary">{summaryLine(version)}</p> : null;
 }
 
-export function AssetHeader({ asset, onReviewRights }: { asset: AssetDto; onReviewRights?: () => void }) {
+export function AssetHeader({
+  asset,
+  onReviewRights,
+  onReviewAi,
+}: {
+  asset: AssetDto;
+  onReviewRights?: () => void;
+  onReviewAi?: () => void;
+}) {
   return (
     <header className="dam-asset-head">
       <Crumbs asset={asset} />
@@ -52,6 +61,9 @@ export function AssetHeader({ asset, onReviewRights }: { asset: AssetDto; onRevi
           <div className="dam-asset-head__meta">
             <StatusBadge status={asset.status} />
             <LicenceBadge assetId={asset.id} onReview={onReviewRights} />
+            {onReviewAi && asset.status !== 'deleted' && (
+              <AiSuggestionsChip assetId={asset.id} type={asset.type} onOpen={onReviewAi} />
+            )}
             <TypeBadge type={asset.type} />
             <Summary assetId={asset.id} />
           </div>

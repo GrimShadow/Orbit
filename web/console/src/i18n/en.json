@@ -16,7 +16,8 @@
     "webhooks": "Webhooks",
     "audit": "Audit log",
     "notifications": "Notifications",
-    "rights": "Rights"
+    "rights": "Rights",
+    "ai": "AI"
   },
   "shell": {
     "tenant": "Tenant",

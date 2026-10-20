@@ -1,5 +1,6 @@
 using Dam.Application.Abstractions;
 using Dam.Infrastructure;
+using Dam.Infrastructure.Ai;
 using Dam.Infrastructure.Consumers;
 using Dam.Infrastructure.Delivery;
 using Dam.Infrastructure.Messaging;
@@ -29,6 +30,8 @@ builder.Services.AddEventConsumer<PromoteUploadConsumer>();
 builder.Services.AddEventConsumer<PerceptualHashConsumer>();
 builder.Services.AddEventConsumer<RenditionConsumer>();
 builder.Services.AddEventConsumer<IndexConsumer>();
+// AI enrichment (tags, OCR, transcripts, vectors) runs on its own queue, so a slow or absent AI service never holds up ingest (ADR-0035); also the index rebuild consumer.
+builder.Services.AddDamAiWorker(cfg);
 // Webhook fan-out and notifications (email, in-app, chat) both listen to the same public domain events, each on its own queue.
 builder.Services.AddDamNotificationConsumers();
 // Relay last: consumers must have declared and bound their queues before anything is published.

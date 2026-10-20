@@ -215,9 +215,23 @@ public sealed class DeliverySettings
 /// <param name="Sort">"field" (ascending) or "-field" (descending); null or "_score" sorts by relevance. Unrecognised
 /// fields fall back to relevance.</param>
 /// <param name="SimilarTo">When set, finds assets like this one (title/metadata text) instead of using <paramref name="Text"/>.</param>
+/// <param name="Semantic">Run a hybrid search (words plus meaning, ADR-0035). <paramref name="Vectors"/> carries the query's embeddings; with none the
+/// search runs as ordinary text search and says why.</param>
 public sealed record SearchQuery(
     string? Text, IReadOnlyDictionary<string, string[]>? Filters, IReadOnlyList<string>? Facets, string? Sort,
-    bool Highlight, Guid? SimilarTo, string? Cursor, int? Limit);
+    bool Highlight, Guid? SimilarTo, string? Cursor, int? Limit, bool Semantic = false, SemanticQueryVectors? Vectors = null);
+
+/// <summary>The vector dimensions search is configured for, and those the live index was built with.</summary>
+public sealed record VectorIndexInfo(int TextDim, int ImageDim, int? LiveTextDim, int? LiveImageDim)
+{
+    /// <summary>The index exists and was built for other dimensions: vectors are left out of its documents until it is rebuilt.</summary>
+    public bool NeedsReindex => (LiveTextDim is { } t && t != TextDim) || (LiveImageDim is { } i && i != ImageDim);
+}
+
+public interface IVectorIndexInspector
+{
+    Task<VectorIndexInfo> InspectAsync(CancellationToken ct);
+}
 
 /// <summary>The search query surface (spec Step 1.7b), implemented against OpenSearch (decision D4). Every method takes
 /// the caller's own <see cref="ScopeClause"/>s (from <see cref="IAuthorizationService.GetScopeAsync"/>) and pushes them

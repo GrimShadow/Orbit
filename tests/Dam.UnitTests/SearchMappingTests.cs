@@ -75,13 +75,13 @@ public sealed class SearchMappingTests
     }
 
     [Fact]
-    public void The_fixed_top_level_shape_carries_nested_terms_and_the_two_vector_placeholders()
+    public void The_fixed_top_level_shape_carries_nested_terms_and_the_two_vector_fields()
     {
         var props = Properties([]);
         Assert.Equal("nested", ((Dictionary<string, object?>)props["terms"]!)["type"]);
         var vectorText = (Dictionary<string, object?>)props[IndexMappingBuilder.VectorTextField]!;
         Assert.Equal("knn_vector", vectorText["type"]);
-        Assert.Equal(1024, vectorText["dimension"]);
+        Assert.Equal(384, vectorText["dimension"]);   // configurable (DAM_AI_TEXT_DIM, ADR-0035); was a 1,024 placeholder before Step 2.1
         var vectorImage = (Dictionary<string, object?>)props[IndexMappingBuilder.VectorImageField]!;
         Assert.Equal(512, vectorImage["dimension"]);
     }

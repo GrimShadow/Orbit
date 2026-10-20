@@ -120,6 +120,24 @@ public sealed class Asset : AggregateRoot
         return true;
     }
 
+    /// <summary>Adds tags the asset does not have yet (normalised like any tag), up to <paramref name="maxTags"/> in all. Returns the ones actually added.
+    /// Unlike <see cref="SetTags"/> this raises <see cref="AssetMetadataUpdated"/>, so the change is audited, delivered and re-indexed.</summary>
+    public IReadOnlyList<string> AddTags(IEnumerable<string> tags, int maxTags, DateTimeOffset now)
+    {
+        var added = new List<string>();
+        var current = Tags.ToHashSet(StringComparer.Ordinal);
+        foreach (var t in Normalize(tags))
+        {
+            if (current.Count >= maxTags) break;
+            if (current.Add(t)) added.Add(t);
+        }
+        if (added.Count == 0) return added;
+        Tags = Normalize(current);
+        UpdatedAt = now;
+        Raise(new AssetMetadataUpdated(Id));
+        return added;
+    }
+
     public void Rename(string title, DateTimeOffset now) { Title = title.Trim(); UpdatedAt = now; }
     public void SetTags(IEnumerable<string> tags, DateTimeOffset now) { Tags = Normalize(tags); UpdatedAt = now; }
     public void MoveTo(Guid? folderId, DateTimeOffset now) { FolderId = folderId; UpdatedAt = now; }

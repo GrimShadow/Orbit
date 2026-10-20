@@ -156,3 +156,8 @@
     display: inline-flex;
   }
 }
+
+.dam-search__resultsbar {
+  display: flex;
+  justify-content: flex-end;
+}

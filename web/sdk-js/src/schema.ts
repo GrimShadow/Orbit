@@ -211,6 +211,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assets/{id}/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the AI found for the asset's current version: status, the run and its steps, suggestions (tags, language), text read from the picture or pages (clipped at 20,000 characters), the transcript, and whether the semantic-search vectors exist. Needs assets.read */
+        get: operations["GetAssetAi"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{id}/ai/enrich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Runs the AI again for the asset's current version (202; poll GET /assets/{id}/ai). Decided suggestions stay decided. 409 when AI is off for the tenant, the asset has no file, or a run is in progress. Needs assets.update */
+        post: operations["EnrichAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{id}/ai/suggestions/{suggestionId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accepts a suggestion. A tag is added to the asset's tags through the normal update path (audited, re-indexed); a language is written to the asset's 'language' metadata field when its schema has one that accepts it, otherwise only the acceptance is recorded (see notes). Needs assets.update */
+        post: operations["AcceptAiSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{id}/ai/suggestions/{suggestionId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rejects a suggestion; it is not proposed again. Needs assets.update */
+        post: operations["RejectAiSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{id}/ai/suggestions/accept-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accepts every pending suggestion of a kind (query parameter kind: tag, the default, or language) for the current version. Tags beyond the asset's 50-tag limit stay pending. Needs assets.update */
+        post: operations["AcceptAllAiSuggestions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/current": {
         parameters: {
             query?: never;
@@ -1033,7 +1118,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Query, filters, facets, sort, highlight and similar_to over every asset the caller may read */
+        /** Query, filters, facets, sort, highlight, similar_to and (with semantic) hybrid text-plus-meaning search over every asset the caller may read. Hits report matchedBy and, for recordings, transcriptMatches */
         post: operations["SearchAssets"];
         delete?: never;
         options?: never;
@@ -1780,6 +1865,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What AI can do for the caller's tenant right now: enabled, semanticSearch (also requires a ready vector index), enrichment, textVectors, imageVectors, provider kind and whether data goes off-site. For any signed-in user; no URLs, keys or models */
+        get: operations["GetAiCapabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The tenant's AI settings (off until saved), the deployment's default provider and which providers are configured. Needs ai.manage */
+        get: operations["GetAiSettings"];
+        /** Replaces the tenant's AI settings: on/off, provider (empty = deployment default), features and OCR language. Enabling needs a configured provider (422 on provider) and, for one that sends data off-site, acknowledgeOffSite true (422). Needs ai.manage */
+        put: operations["UpdateAiSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Provider health (probed live), models, capabilities, counts of assets enriched, waiting, failed and not started, the queue depth, and whether the search index needs a reindex for the configured vector sizes. Needs ai.manage */
+        get: operations["GetAiStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queues AI for existing assets (all, or by type and folder), at most 5,000 per call (default 500); the worker processes them at its own pace. Repeat to continue. 409 when AI is off. Needs ai.manage */
+        post: operations["AiBackfill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Proves the provider works: health, then an embedding of a tiny built-in picture and of a phrase, with timings and vector sizes. Sends nothing of the tenant's, so it works before AI is enabled. Needs ai.manage */
+        post: operations["AiTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/reindex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Asks the worker to rebuild the tenant's search index in the background (search keeps working; needed after the vector sizes changed). Needs ai.manage */
+        post: operations["AiReindex"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1822,6 +2010,200 @@ export interface components {
             /** Format: uuid */
             parentId: string | null;
             anchor: components["schemas"]["AnchorDto"];
+        };
+        AiBackfillInput: {
+            types: string[] | null;
+            /** Format: uuid */
+            folderId: string | null;
+            includeSubfolders: boolean | null;
+            onlyMissing: boolean | null;
+            /** Format: int32 */
+            limit: number | null;
+        };
+        AiBackfillResultDto: {
+            /** Format: int32 */
+            matched: number;
+            /** Format: int32 */
+            enqueued: number;
+            /** Format: int32 */
+            remaining: number;
+        };
+        AiCapabilitiesDto: {
+            enabled: boolean;
+            semanticSearch: boolean;
+            enrichment: boolean;
+            textVectors: boolean;
+            imageVectors: boolean;
+            provider: string;
+            sendsDataOffSite: boolean;
+        };
+        AiCountsDto: {
+            /** Format: int32 */
+            eligible: number;
+            /** Format: int32 */
+            enriched: number;
+            /** Format: int32 */
+            pending: number;
+            /** Format: int32 */
+            running: number;
+            /** Format: int32 */
+            failed: number;
+            /** Format: int32 */
+            skipped: number;
+            /** Format: int32 */
+            notStarted: number;
+        };
+        AiDecisionDto: {
+            suggestions: components["schemas"]["AiSuggestionDto"][];
+            tags: string[];
+            /** Format: int32 */
+            changed: number;
+            notes: string[];
+        };
+        AiFeaturesDto: {
+            tags: boolean;
+            ocr: boolean;
+            transcribe: boolean;
+            embeddings: boolean;
+        };
+        AiFeaturesDto2: {
+            tags: boolean;
+            ocr: boolean;
+            transcribe: boolean;
+            embeddings: boolean;
+        } | null;
+        AiHealthDto: {
+            status: string;
+            detail: string | null;
+            /** Format: int32 */
+            latencyMs: number | null;
+            models: {
+                [key: string]: string;
+            };
+        };
+        AiProviderCapabilitiesDto: {
+            tags: boolean;
+            ocr: boolean;
+            transcribe: boolean;
+            textEmbeddings: boolean;
+            imageEmbeddings: boolean;
+            detectLanguage: boolean;
+            translate: boolean;
+            summarise: boolean;
+        };
+        AiProviderInfoDto: {
+            kind: string;
+            configured: boolean;
+            sendsDataOffSite: boolean;
+            description: string;
+        };
+        AiReindexDto: {
+            accepted: boolean;
+            message: string;
+        };
+        AiRunDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            versionId: string;
+            status: string;
+            steps: components["schemas"]["AiStepDto"][];
+            error: string | null;
+            /** Format: int32 */
+            attempts: number;
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            finishedAt: string | null;
+        } | null;
+        AiSettingsDto: {
+            enabled: boolean;
+            provider: string | null;
+            defaultProvider: string;
+            effectiveProvider: string;
+            sendsDataOffSite: boolean;
+            features: components["schemas"]["AiFeaturesDto"];
+            ocrLanguage: string | null;
+            providers: components["schemas"]["AiProviderInfoDto"][];
+            /** Format: uuid */
+            updatedBy: string | null;
+            /** Format: date-time */
+            updatedAt: string | null;
+        };
+        AiSettingsRequest: {
+            enabled: boolean;
+            provider: string | null;
+            features: components["schemas"]["AiFeaturesDto2"];
+            ocrLanguage: string | null;
+            /** @default false */
+            acknowledgeOffSite: boolean;
+        };
+        AiStatusDto: {
+            enabled: boolean;
+            provider: string;
+            providerConfigured: boolean;
+            health: components["schemas"]["AiHealthDto"];
+            capabilities: components["schemas"]["AiProviderCapabilitiesDto"];
+            counts: components["schemas"]["AiCountsDto"];
+            /** Format: int32 */
+            queueDepth: number;
+            vectorIndex: components["schemas"]["AiVectorIndexDto"];
+        };
+        AiStepDto: {
+            name: string;
+            status: string;
+            /** Format: int32 */
+            durationMs: number;
+            model: string | null;
+            detail: string | null;
+        };
+        AiSuggestionDto: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            value: string;
+            /** Format: float */
+            confidence: number;
+            model: string;
+            status: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: uuid */
+            decidedBy: string | null;
+            /** Format: date-time */
+            decidedAt: string | null;
+        };
+        AiTestResultDto: {
+            provider: string;
+            ok: boolean;
+            /** Format: int32 */
+            totalMs: number;
+            steps: components["schemas"]["AiTestStepDto"][];
+        };
+        AiTestStepDto: {
+            name: string;
+            ok: boolean;
+            /** Format: int32 */
+            durationMs: number;
+            detail: string | null;
+        };
+        AiTranscriptDto: {
+            language: string | null;
+            /** Format: int64 */
+            durationMs: number | null;
+            model: string | null;
+            segments: components["schemas"]["TranscriptSegmentDto"][];
+        } | null;
+        AiVectorIndexDto: {
+            /** Format: int32 */
+            textDim: number;
+            /** Format: int32 */
+            imageDim: number;
+            /** Format: int32 */
+            liveTextDim: number | null;
+            /** Format: int32 */
+            liveImageDim: number | null;
+            needsReindex: boolean;
         };
         AnalyticsOverviewDto: {
             /** Format: date-time */
@@ -1871,6 +2253,17 @@ export interface components {
              */
             endMs: number | null;
         } | null;
+        AssetAiDto: {
+            status: string;
+            run: components["schemas"]["AiRunDto"];
+            suggestions: components["schemas"]["AiSuggestionDto"][];
+            language: string | null;
+            ocrText: string | null;
+            ocrTextTruncated: boolean;
+            ocrLanguage: string | null;
+            transcript: components["schemas"]["AiTranscriptDto"];
+            embeddingsReady: boolean;
+        };
         AssetDto: {
             /** Format: uuid */
             id: string;
@@ -2682,6 +3075,10 @@ export interface components {
             highlights: {
                 [key: string]: string[];
             } | null;
+            /** @default null */
+            matchedBy: string[] | null;
+            /** @default null */
+            transcriptMatches: components["schemas"]["TranscriptMatchDto"][] | null;
         };
         SearchRequestBody: {
             query: string | null;
@@ -2704,6 +3101,8 @@ export interface components {
              * @default null
              */
             limit: number | null;
+            /** @default false */
+            semantic: boolean;
         };
         SearchRequestBody2: {
             query: string | null;
@@ -2726,6 +3125,8 @@ export interface components {
              * @default null
              */
             limit: number | null;
+            /** @default false */
+            semantic: boolean;
         } | null;
         SearchResultDto: {
             hits: components["schemas"]["SearchHitDto"][];
@@ -2733,6 +3134,12 @@ export interface components {
             total: number;
             facets: components["schemas"]["FacetResultDto"][];
             nextCursor: string | null;
+            /** @default false */
+            semantic: boolean;
+            /** @default null */
+            semanticLegs: string[] | null;
+            /** @default null */
+            semanticFallback: string | null;
         };
         SetAssetRightsInput: {
             /** Format: uuid */
@@ -2871,6 +3278,18 @@ export interface components {
             type: string;
             /** Format: int64 */
             count: number;
+        };
+        TranscriptMatchDto: {
+            /** Format: int64 */
+            startMs: number;
+            text: string;
+        };
+        TranscriptSegmentDto: {
+            /** Format: int64 */
+            startMs: number;
+            /** Format: int64 */
+            endMs: number;
+            text: string;
         };
         TransformRequest: {
             /** Format: int32 */
@@ -3674,6 +4093,120 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RightsCheckDto"];
+                };
+            };
+        };
+    };
+    GetAssetAi: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetAiDto"];
+                };
+            };
+        };
+    };
+    EnrichAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetAiDto"];
+                };
+            };
+        };
+    };
+    AcceptAiSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                suggestionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiDecisionDto"];
+                };
+            };
+        };
+    };
+    RejectAiSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                suggestionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiDecisionDto"];
+                };
+            };
+        };
+    };
+    AcceptAllAiSuggestions: {
+        parameters: {
+            query?: {
+                kind?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiDecisionDto"];
                 };
             };
         };
@@ -6931,6 +7464,154 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    GetAiCapabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiCapabilitiesDto"];
+                };
+            };
+        };
+    };
+    GetAiSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSettingsDto"];
+                };
+            };
+        };
+    };
+    UpdateAiSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSettingsDto"];
+                };
+            };
+        };
+    };
+    GetAiStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiStatusDto"];
+                };
+            };
+        };
+    };
+    AiBackfill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiBackfillInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiBackfillResultDto"];
+                };
+            };
+        };
+    };
+    AiTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTestResultDto"];
+                };
+            };
+        };
+    };
+    AiReindex: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiReindexDto"];
+                };
             };
         };
     };

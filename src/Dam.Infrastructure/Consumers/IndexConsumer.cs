@@ -20,7 +20,7 @@ public sealed class IndexConsumer(ISearchIndexWriter writer) : EventConsumer
     public override IReadOnlyList<string> RoutingKeys =>
     [
         "asset.created", "asset.metadata.updated", "asset.status.changed", "asset.version.added", "asset.legal_hold.changed",
-        Dam.Domain.Licensing.AssetRightsChanged.EventName, "collection.assets_changed",
+        Dam.Domain.Licensing.AssetRightsChanged.EventName, Dam.Domain.Ai.AssetAiEnriched.EventName, "collection.assets_changed",
     ];
 
     public override async Task HandleAsync(EventEnvelope message, CancellationToken ct)

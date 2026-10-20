@@ -217,4 +217,17 @@ public static class SecuritySql
         GRANT SELECT ON rights TO dam_system;
         CREATE POLICY system_read_rights ON rights FOR SELECT TO dam_system USING (true);
         """;
+
+    /// <summary>AI settings are edited in place; suggestions, extracts, embeddings and runs are rewritten by re-runs and deleted with an asset's derived data
+    /// when it is purged (their rows also go with the asset through the foreign keys, which need no grant).</summary>
+    public const string AiGrants = """
+        GRANT SELECT, INSERT, UPDATE ON ai_settings TO dam_app;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ai_suggestions, asset_extracts, asset_embeddings, ai_runs TO dam_app;
+        """;
+
+    /// <summary>The AI catch-up job (Step 2.1) finds the tenants that have AI switched on through the system connection, read-only, like the other cross-tenant jobs.</summary>
+    public const string AiSystemGrants = """
+        GRANT SELECT ON ai_settings TO dam_system;
+        CREATE POLICY system_read_ai_settings ON ai_settings FOR SELECT TO dam_system USING (true);
+        """;
 }

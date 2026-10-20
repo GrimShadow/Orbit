@@ -550,6 +550,191 @@
         }
       }
     },
+    "/api/v1/assets/{id}/ai": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "What the AI found for the asset\u0027s current version: status, the run and its steps, suggestions (tags, language), text read from the picture or pages (clipped at 20,000 characters), the transcript, and whether the semantic-search vectors exist. Needs assets.read",
+        "operationId": "GetAssetAi",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetAiDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/ai/enrich": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Runs the AI again for the asset\u0027s current version (202; poll GET /assets/{id}/ai). Decided suggestions stay decided. 409 when AI is off for the tenant, the asset has no file, or a run is in progress. Needs assets.update",
+        "operationId": "EnrichAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetAiDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/ai/suggestions/{suggestionId}/accept": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Accepts a suggestion. A tag is added to the asset\u0027s tags through the normal update path (audited, re-indexed); a language is written to the asset\u0027s \u0027language\u0027 metadata field when its schema has one that accepts it, otherwise only the acceptance is recorded (see notes). Needs assets.update",
+        "operationId": "AcceptAiSuggestion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "suggestionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiDecisionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/ai/suggestions/{suggestionId}/reject": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Rejects a suggestion; it is not proposed again. Needs assets.update",
+        "operationId": "RejectAiSuggestion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "suggestionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiDecisionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{id}/ai/suggestions/accept-all": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Accepts every pending suggestion of a kind (query parameter kind: tag, the default, or language) for the current version. Tags beyond the asset\u0027s 50-tag limit stay pending. Needs assets.update",
+        "operationId": "AcceptAllAiSuggestions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiDecisionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tenants/current": {
       "get": {
         "tags": [
@@ -3191,7 +3376,7 @@
         "tags": [
           "Search"
         ],
-        "summary": "Query, filters, facets, sort, highlight and similar_to over every asset the caller may read",
+        "summary": "Query, filters, facets, sort, highlight, similar_to and (with semantic) hybrid text-plus-meaning search over every asset the caller may read. Hits report matchedBy and, for recordings, transcriptMatches",
         "operationId": "SearchAssets",
         "requestBody": {
           "content": {
@@ -5466,6 +5651,171 @@
           }
         }
       }
+    },
+    "/api/v1/ai/capabilities": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "What AI can do for the caller\u0027s tenant right now: enabled, semanticSearch (also requires a ready vector index), enrichment, textVectors, imageVectors, provider kind and whether data goes off-site. For any signed-in user; no URLs, keys or models",
+        "operationId": "GetAiCapabilities",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiCapabilitiesDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/settings": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "The tenant\u0027s AI settings (off until saved), the deployment\u0027s default provider and which providers are configured. Needs ai.manage",
+        "operationId": "GetAiSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Replaces the tenant\u0027s AI settings: on/off, provider (empty = deployment default), features and OCR language. Enabling needs a configured provider (422 on provider) and, for one that sends data off-site, acknowledgeOffSite true (422). Needs ai.manage",
+        "operationId": "UpdateAiSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettingsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/status": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Provider health (probed live), models, capabilities, counts of assets enriched, waiting, failed and not started, the queue depth, and whether the search index needs a reindex for the configured vector sizes. Needs ai.manage",
+        "operationId": "GetAiStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiStatusDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/backfill": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Queues AI for existing assets (all, or by type and folder), at most 5,000 per call (default 500); the worker processes them at its own pace. Repeat to continue. 409 when AI is off. Needs ai.manage",
+        "operationId": "AiBackfill",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiBackfillInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiBackfillResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/test": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Proves the provider works: health, then an embedding of a tiny built-in picture and of a phrase, with timings and vector sizes. Sends nothing of the tenant\u0027s, so it works before AI is enabled. Needs ai.manage",
+        "operationId": "AiTest",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiTestResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/reindex": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Asks the worker to rebuild the tenant\u0027s search index in the background (search keeps working; needed after the vector sizes changed). Needs ai.manage",
+        "operationId": "AiReindex",
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiReindexDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5602,6 +5952,700 @@
           }
         }
       },
+      "AiBackfillInput": {
+        "required": [
+          "types",
+          "folderId",
+          "includeSubfolders",
+          "onlyMissing",
+          "limit"
+        ],
+        "type": "object",
+        "properties": {
+          "types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "folderId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "includeSubfolders": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "onlyMissing": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "AiBackfillResultDto": {
+        "required": [
+          "matched",
+          "enqueued",
+          "remaining"
+        ],
+        "type": "object",
+        "properties": {
+          "matched": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enqueued": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "remaining": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AiCapabilitiesDto": {
+        "required": [
+          "enabled",
+          "semanticSearch",
+          "enrichment",
+          "textVectors",
+          "imageVectors",
+          "provider",
+          "sendsDataOffSite"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "semanticSearch": {
+            "type": "boolean"
+          },
+          "enrichment": {
+            "type": "boolean"
+          },
+          "textVectors": {
+            "type": "boolean"
+          },
+          "imageVectors": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "sendsDataOffSite": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AiCountsDto": {
+        "required": [
+          "eligible",
+          "enriched",
+          "pending",
+          "running",
+          "failed",
+          "skipped",
+          "notStarted"
+        ],
+        "type": "object",
+        "properties": {
+          "eligible": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enriched": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "running": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "notStarted": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AiDecisionDto": {
+        "required": [
+          "suggestions",
+          "tags",
+          "changed",
+          "notes"
+        ],
+        "type": "object",
+        "properties": {
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiSuggestionDto"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "changed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AiFeaturesDto": {
+        "required": [
+          "tags",
+          "ocr",
+          "transcribe",
+          "embeddings"
+        ],
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "boolean"
+          },
+          "ocr": {
+            "type": "boolean"
+          },
+          "transcribe": {
+            "type": "boolean"
+          },
+          "embeddings": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AiFeaturesDto2": {
+        "required": [
+          "tags",
+          "ocr",
+          "transcribe",
+          "embeddings"
+        ],
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "boolean"
+          },
+          "ocr": {
+            "type": "boolean"
+          },
+          "transcribe": {
+            "type": "boolean"
+          },
+          "embeddings": {
+            "type": "boolean"
+          }
+        },
+        "nullable": true
+      },
+      "AiHealthDto": {
+        "required": [
+          "status",
+          "detail",
+          "latencyMs",
+          "models"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "latencyMs": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "models": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AiProviderCapabilitiesDto": {
+        "required": [
+          "tags",
+          "ocr",
+          "transcribe",
+          "textEmbeddings",
+          "imageEmbeddings",
+          "detectLanguage",
+          "translate",
+          "summarise"
+        ],
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "boolean"
+          },
+          "ocr": {
+            "type": "boolean"
+          },
+          "transcribe": {
+            "type": "boolean"
+          },
+          "textEmbeddings": {
+            "type": "boolean"
+          },
+          "imageEmbeddings": {
+            "type": "boolean"
+          },
+          "detectLanguage": {
+            "type": "boolean"
+          },
+          "translate": {
+            "type": "boolean"
+          },
+          "summarise": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AiProviderInfoDto": {
+        "required": [
+          "kind",
+          "configured",
+          "sendsDataOffSite",
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "sendsDataOffSite": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "AiReindexDto": {
+        "required": [
+          "accepted",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "AiRunDto": {
+        "required": [
+          "id",
+          "versionId",
+          "status",
+          "steps",
+          "error",
+          "attempts",
+          "startedAt",
+          "finishedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiStepDto"
+            }
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "nullable": true
+      },
+      "AiSettingsDto": {
+        "required": [
+          "enabled",
+          "provider",
+          "defaultProvider",
+          "effectiveProvider",
+          "sendsDataOffSite",
+          "features",
+          "ocrLanguage",
+          "providers",
+          "updatedBy",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string",
+            "nullable": true
+          },
+          "defaultProvider": {
+            "type": "string"
+          },
+          "effectiveProvider": {
+            "type": "string"
+          },
+          "sendsDataOffSite": {
+            "type": "boolean"
+          },
+          "features": {
+            "$ref": "#/components/schemas/AiFeaturesDto"
+          },
+          "ocrLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiProviderInfoDto"
+            }
+          },
+          "updatedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "AiSettingsRequest": {
+        "required": [
+          "enabled",
+          "provider",
+          "features",
+          "ocrLanguage"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string",
+            "nullable": true
+          },
+          "features": {
+            "$ref": "#/components/schemas/AiFeaturesDto2"
+          },
+          "ocrLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "acknowledgeOffSite": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "AiStatusDto": {
+        "required": [
+          "enabled",
+          "provider",
+          "providerConfigured",
+          "health",
+          "capabilities",
+          "counts",
+          "queueDepth",
+          "vectorIndex"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "providerConfigured": {
+            "type": "boolean"
+          },
+          "health": {
+            "$ref": "#/components/schemas/AiHealthDto"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/AiProviderCapabilitiesDto"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/AiCountsDto"
+          },
+          "queueDepth": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "vectorIndex": {
+            "$ref": "#/components/schemas/AiVectorIndexDto"
+          }
+        }
+      },
+      "AiStepDto": {
+        "required": [
+          "name",
+          "status",
+          "durationMs",
+          "model",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AiSuggestionDto": {
+        "required": [
+          "id",
+          "kind",
+          "value",
+          "confidence",
+          "model",
+          "status",
+          "createdAt",
+          "decidedBy",
+          "decidedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float"
+          },
+          "model": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decidedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "AiTestResultDto": {
+        "required": [
+          "provider",
+          "ok",
+          "totalMs",
+          "steps"
+        ],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "totalMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiTestStepDto"
+            }
+          }
+        }
+      },
+      "AiTestStepDto": {
+        "required": [
+          "name",
+          "ok",
+          "durationMs",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AiTranscriptDto": {
+        "required": [
+          "language",
+          "durationMs",
+          "model",
+          "segments"
+        ],
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranscriptSegmentDto"
+            }
+          }
+        },
+        "nullable": true
+      },
+      "AiVectorIndexDto": {
+        "required": [
+          "textDim",
+          "imageDim",
+          "liveTextDim",
+          "liveImageDim",
+          "needsReindex"
+        ],
+        "type": "object",
+        "properties": {
+          "textDim": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "imageDim": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "liveTextDim": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "liveImageDim": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "needsReindex": {
+            "type": "boolean"
+          }
+        }
+      },
       "AnalyticsOverviewDto": {
         "required": [
           "generatedAt",
@@ -5694,6 +6738,55 @@
           }
         },
         "nullable": true
+      },
+      "AssetAiDto": {
+        "required": [
+          "status",
+          "run",
+          "suggestions",
+          "language",
+          "ocrText",
+          "ocrTextTruncated",
+          "ocrLanguage",
+          "transcript",
+          "embeddingsReady"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "run": {
+            "$ref": "#/components/schemas/AiRunDto"
+          },
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiSuggestionDto"
+            }
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "ocrText": {
+            "type": "string",
+            "nullable": true
+          },
+          "ocrTextTruncated": {
+            "type": "boolean"
+          },
+          "ocrLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "transcript": {
+            "$ref": "#/components/schemas/AiTranscriptDto"
+          },
+          "embeddingsReady": {
+            "type": "boolean"
+          }
+        }
       },
       "AssetDto": {
         "required": [
@@ -8585,6 +9678,22 @@
               }
             },
             "nullable": true
+          },
+          "matchedBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": null,
+            "nullable": true
+          },
+          "transcriptMatches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranscriptMatchDto"
+            },
+            "default": null,
+            "nullable": true
           }
         }
       },
@@ -8642,6 +9751,10 @@
             "format": "int32",
             "default": null,
             "nullable": true
+          },
+          "semantic": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -8699,6 +9812,10 @@
             "format": "int32",
             "default": null,
             "nullable": true
+          },
+          "semantic": {
+            "type": "boolean",
+            "default": false
           }
         },
         "nullable": true
@@ -8730,6 +9847,23 @@
           },
           "nextCursor": {
             "type": "string",
+            "nullable": true
+          },
+          "semantic": {
+            "type": "boolean",
+            "default": false
+          },
+          "semanticLegs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": null,
+            "nullable": true
+          },
+          "semanticFallback": {
+            "type": "string",
+            "default": null,
             "nullable": true
           }
         }
@@ -9178,6 +10312,43 @@
           "count": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "TranscriptMatchDto": {
+        "required": [
+          "startMs",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "startMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "TranscriptSegmentDto": {
+        "required": [
+          "startMs",
+          "endMs",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "startMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "endMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "text": {
+            "type": "string"
           }
         }
       },
@@ -10775,6 +11946,9 @@
     },
     {
       "name": "Rights"
+    },
+    {
+      "name": "AI"
     },
     {
       "name": "Tenant"

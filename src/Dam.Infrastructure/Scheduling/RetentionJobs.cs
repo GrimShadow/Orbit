@@ -194,6 +194,11 @@ public sealed class RetentionJob(IServiceScopeFactory scopeFactory, NpgsqlDataSo
             var versions = await db.AssetVersions.Where(v => v.AssetId == asset.Id).Select(v => new { v.Bucket, v.StorageKey }).ToListAsync(c);
             var renditions = await db.Renditions.Where(r => r.AssetId == asset.Id).Select(r => new { r.Bucket, r.StorageKey }).ToListAsync(c);
             asset.ChangeStatus(to, "Purged by retention policy.", clock.UtcNow);
+            // What the AI derived from the files goes with them (vectors are large); the rows would also follow the asset through their foreign keys.
+            await db.AssetEmbeddings.Where(e => e.AssetId == asset.Id).ExecuteDeleteAsync(c);
+            await db.AssetExtracts.Where(e => e.AssetId == asset.Id).ExecuteDeleteAsync(c);
+            await db.AiSuggestions.Where(e => e.AssetId == asset.Id).ExecuteDeleteAsync(c);
+            await db.AiRuns.Where(e => e.AssetId == asset.Id).ExecuteDeleteAsync(c);
             filesToDelete.AddRange(versions.Select(v => (v.Bucket, v.StorageKey)));
             filesToDelete.AddRange(renditions.Select(r => (r.Bucket, r.StorageKey)));
             purged++;

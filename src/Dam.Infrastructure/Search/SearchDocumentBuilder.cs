@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Dam.Domain.Ai;
 using Dam.Domain.Assets;
 using Dam.Domain.Authorization;
 using Dam.Domain.Content;
@@ -12,10 +13,12 @@ namespace Dam.Infrastructure.Search;
 /// </summary>
 public static class SearchDocumentBuilder
 {
-    public static Dictionary<string, object?> Build(Asset asset, Folder? folder, TenantSchemaIndex schemas, TenantTaxonomyIndex taxonomy, TenantCollectionIndex collections)
+    /// <param name="Ai">What AI enrichment produced for the asset's current version, if anything (ADR-0035). An asset with none is indexed exactly as before.</param>
+    public static Dictionary<string, object?> Build(
+        Asset asset, Folder? folder, TenantSchemaIndex schemas, TenantTaxonomyIndex taxonomy, TenantCollectionIndex collections, AiIndexData? ai = null)
     {
         var fields = schemas.FieldsFor(asset.Type);
-        return new Dictionary<string, object?>
+        var doc = new Dictionary<string, object?>
         {
             ["id"] = asset.Id,
             ["tenant_id"] = asset.TenantId,
@@ -41,6 +44,19 @@ public static class SearchDocumentBuilder
             ["metadata"] = BuildMetadata(asset, fields),
             ["terms"] = BuildTerms(asset, fields, taxonomy),
         };
+        if (ai is not null) AddAi(doc, ai);
+        return doc;
+    }
+
+    /// <summary>Extracted text and the transcript are analysed text; the vectors go in as plain number lists. Anything the asset does not have is left out.</summary>
+    private static void AddAi(Dictionary<string, object?> doc, AiIndexData ai)
+    {
+        if (!string.IsNullOrEmpty(ai.OcrText)) doc[IndexMappingBuilder.OcrTextField] = ai.OcrText;
+        if (!string.IsNullOrEmpty(ai.TranscriptText)) doc[IndexMappingBuilder.TranscriptTextField] = ai.TranscriptText;
+        if (ai.Segments.Count > 0)
+            doc[IndexMappingBuilder.TranscriptSegmentsField] = ai.Segments.Select(s => new Dictionary<string, object?> { ["start_ms"] = s.StartMs, ["end_ms"] = s.EndMs, ["text"] = s.Text }).ToList();
+        if (ai.TextVector is not null) doc[IndexMappingBuilder.VectorTextField] = ai.TextVector;
+        if (ai.ImageVector is not null) doc[IndexMappingBuilder.VectorImageField] = ai.ImageVector;
     }
 
     private static Dictionary<string, JsonElement> BuildMetadata(Asset asset, IReadOnlyList<FieldDefinition> fields)
@@ -82,4 +98,10 @@ public static class SearchDocumentBuilder
         JsonValueKind.String => [value.GetString()!],
         _ => [],
     };
+}
+
+/// <summary>The AI-derived parts of an asset's search document.</summary>
+public sealed record AiIndexData(string? OcrText, string? TranscriptText, IReadOnlyList<TranscriptSegment> Segments, float[]? TextVector, float[]? ImageVector)
+{
+    public static readonly AiIndexData Empty = new(null, null, [], null, null);
 }

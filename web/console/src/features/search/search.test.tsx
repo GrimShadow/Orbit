@@ -1,99 +1,12 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation } from 'react-router-dom';
-import { App, queryClient } from '../../App';
-import { AuthContext, type AuthState } from '../../auth/AuthProvider';
+import { queryClient } from '../../App';
 import { setLanguage } from '../../i18n';
-
-const signedIn: AuthState = {
-  status: 'authenticated',
-  name: 'Dev Admin',
-  email: 'admin@dam.local',
-  accessToken: 'tok',
-  signIn: vi.fn(async () => {}),
-  signOut: vi.fn(async () => {}),
-};
-
-/** Makes the router's current URL observable to assertions. */
-function LocationProbe() {
-  const { pathname, search } = useLocation();
-  return <output data-testid="location">{pathname + search}</output>;
-}
-
-function renderAt(route: string) {
-  return render(
-    <AuthContext.Provider value={signedIn}>
-      <MemoryRouter initialEntries={[route]}>
-        <App />
-        <LocationProbe />
-      </MemoryRouter>
-    </AuthContext.Provider>,
-  );
-}
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-
-interface Call {
-  method: string;
-  pathname: string;
-  json: () => Promise<unknown>;
-}
-
-/** `thumbnailLinks` answers the grid's own batch thumbnail-link request (defaulting every id to no thumbnail) so
- * tests that don't care about it don't each need to teach `handler` about a request they never asked for. */
-function mockApi(
-  handler: (call: Call) => Response | Promise<Response> | undefined,
-  thumbnailLinks: Record<string, string | null> = {},
-) {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
-      if (input instanceof Request) {
-        const call: Call = { method: input.method, pathname: new URL(input.url).pathname, json: () => input.json() };
-        if (call.pathname === '/api/v1/assets/links/batch') {
-          const { assetIds } = (await call.json()) as { assetIds: string[] };
-          return json(Object.fromEntries(assetIds.map((id) => [id, thumbnailLinks[id] ?? null])));
-        }
-        const response = handler(call);
-        if (response) return response;
-        throw new Error(`unexpected request: ${call.method} ${call.pathname}`);
-      }
-      throw new Error(`unexpected raw fetch: ${String(input)}`);
-    }),
-  );
-}
-
-const RESULT = {
-  hits: [
-    {
-      id: 'a1',
-      type: 'image',
-      status: 'published',
-      title: 'Hero shot',
-      folderId: null,
-      folderPath: null,
-      tags: [],
-      taxonomyTerms: [],
-      ownerId: null,
-      publishAt: null,
-      expireAt: null,
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-02T00:00:00Z',
-      score: 1,
-      highlights: null,
-    },
-  ],
-  total: 1,
-  facets: [
-    { field: 'type', values: [{ value: 'image', count: 1 }] },
-    { field: 'status', values: [{ value: 'published', count: 1 }] },
-  ],
-  nextCursor: null,
-};
+import { json, mockApi, renderAt, RESULT } from './searchTestUtils';
 
 beforeEach(() => {
   queryClient.clear();
+  localStorage.clear();
   setLanguage('en');
 });
 afterEach(() => {

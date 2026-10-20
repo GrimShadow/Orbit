@@ -122,6 +122,39 @@ services:
     healthcheck: { test: ["CMD", "/mailpit", "readyz"], <<: *hc }
     mem_limit: 128m
 
+  # Self-hosted AI (ADR-0034): CLIP embeddings + zero-shot tags, OCR, Whisper speech-to-text, multilingual text embeddings.
+  # Everything runs on CPU inside this container and nothing leaves the machine; models are baked into the image at build time.
+  # Build once with `make up-ai` (needs internet only for the build). The first start warms the models for ~30 s; the healthcheck
+  # turns green when /healthz says "ok". Not part of the CI image matrix yet (see ADR-0034).
+  ai-sidecar:
+    profiles: [ai, all]
+    build: { context: ./ai-sidecar, target: runtime }
+    image: orbit-ai-sidecar:dev
+    init: true
+    restart: unless-stopped
+    environment:
+      # Dev default: empty = no auth (the port is only published on this machine). Set it for any shared environment and give
+      # the same value to Dam:Ai:SelfHosted (DAM_AI_SIDECAR_TOKEN).
+      AI_SIDECAR_TOKEN: ${AI_SIDECAR_TOKEN:-}
+      AI_WHISPER_MODEL: ${AI_WHISPER_MODEL:-base}   # tiny | base | small; must be baked in (--build-arg WHISPER_MODELS=...)
+      AI_MAX_CONCURRENCY: ${AI_MAX_CONCURRENCY:-2}
+    ports: ["${DAM_PORT_AI:-18090}:8080"]
+    read_only: true
+    tmpfs: ["/tmp:size=512m,mode=1777"]
+    healthcheck: { test: ["CMD", "python", "/srv/scripts/healthcheck.py"], interval: 10s, timeout: 5s, retries: 30, start_period: 60s }
+    stop_grace_period: 40s
+    mem_limit: 4g
+
+  # `docker compose -f deploy/docker-compose.yml run --rm --build ai-sidecar-tests` (or `make test-ai`): lint, types and the model tests.
+  ai-sidecar-tests:
+    profiles: [ai-test]
+    build: { context: ./ai-sidecar, target: test }
+    image: orbit-ai-sidecar-test:dev
+    read_only: true
+    tmpfs: ["/tmp:size=512m,mode=1777"]
+    mem_limit: 4g
+    restart: "no"
+
   otel-collector:
     profiles: [obs, all]
     image: otel/opentelemetry-collector-contrib:0.111.0

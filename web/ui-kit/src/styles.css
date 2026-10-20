@@ -1203,6 +1203,13 @@ th[aria-sort='descending'] .dam-sort__icon {
 .dam-thumb__meta .dam-badge {
   margin-top: 6px;
 }
+.dam-thumb__footer {
+  container-type: inline-size;
+  min-width: 0;
+  padding: 0 var(--dam-space-3) var(--dam-space-3);
+  margin-top: calc(-1 * var(--dam-space-1));
+  background: var(--dam-surface-raised);
+}
 .dam-cardmenu {
   position: absolute;
   top: var(--dam-space-2);

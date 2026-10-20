@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Badge, Card, Skeleton, TagInput } from '../../ui';
+import { AiPanel } from '../ai/asset/AiPanel';
 import { RightsPanel } from '../rights/asset/RightsPanel';
 import { FileInfo } from './FileInfo';
 import { WorkflowPanel } from './WorkflowPanel';
@@ -77,6 +78,7 @@ export function DetailsPanel({ asset, draft }: { asset: AssetDto; draft: AssetDr
           listLabel={t('asset.tagList', { field: t('upload.tags') })}
         />
       </Card>
+      <AiPanel asset={asset} />
       {(schedule.length > 0 || asset.legalHold) && (
         <Card as="section" padding="md" aria-labelledby="dam-asset-lifecycle">
           <h2 id="dam-asset-lifecycle" className="dam-metasection__title">

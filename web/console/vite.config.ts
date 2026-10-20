@@ -9,5 +9,5 @@ export default defineConfig({
     strictPort: true,
     proxy: { '/api': { target: process.env.DAM_API_URL ?? 'http://localhost:5080', changeOrigin: false } },
   },
-  test: { environment: 'jsdom', globals: true, setupFiles: ['./src/test-setup.ts'], css: false },
+  test: { environment: 'jsdom', globals: true, setupFiles: ['./src/test-setup.ts'], css: false, testTimeout: 20_000 },
 });

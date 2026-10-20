@@ -4,6 +4,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
+import { useAiCapabilities } from '../features/ai/aiApi';
 import { NotificationBell } from '../features/notifications/NotificationBell';
 import { Brand } from './Brand';
 import { HELP_KEY, isHelpShortcut, isShortcutTarget, matchNavShortcut, NAV_SHORTCUTS } from './keyboardShortcuts';
@@ -12,8 +13,22 @@ import { UserMenu } from './UserMenu';
 
 const SEARCH_FOCUS_KEY = '/';
 
+const WIDE = '(min-width: 640px)';
+function useIsWide() {
+  const [wide, setWide] = useState(() => window.matchMedia?.(WIDE).matches ?? true);
+  useEffect(() => {
+    const mq = window.matchMedia?.(WIDE);
+    if (!mq) return;
+    const onChange = () => setWide(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return wide;
+}
+
 /** The global search box: Enter takes the query to the Search page (`/search?q=`); `/` anywhere focuses it. On the
- * Search page itself the box mirrors the current query. */
+ * Search page itself the box mirrors the current query. When Smart search is available the placeholder invites a
+ * description; the Search page decides Smart on/off itself (`?smart=`, else the remembered choice, else on). */
 function GlobalSearch() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -21,6 +36,9 @@ function GlobalSearch() {
   const [params] = useSearchParams();
   const input = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState(() => (location.pathname === '/search' ? (params.get('q') ?? '') : ''));
+  // The longer invitation only fits the box from tablet width up; a phone keeps the short standard placeholder.
+  const wide = useIsWide();
+  const smartAvailable = useAiCapabilities().data?.semanticSearch === true && wide;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -36,7 +54,11 @@ function GlobalSearch() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const q = value.trim();
-    navigate(q ? `/search?q=${encodeURIComponent(q)}` : '/search');
+    // Searching again from the Search page keeps its Smart search choice (`?smart=`) rather than resetting it.
+    const smart = location.pathname === '/search' ? params.get('smart') : null;
+    const extra = smart === '0' || smart === '1' ? `smart=${smart}` : '';
+    const qs = [q ? `q=${encodeURIComponent(q)}` : '', extra].filter(Boolean).join('&');
+    navigate(qs ? `/search?${qs}` : '/search');
   };
 
   return (
@@ -47,7 +69,7 @@ function GlobalSearch() {
         type="search"
         className="dam-gsearch__input"
         aria-label={t('shell.search.label')}
-        placeholder={t('shell.search.placeholder')}
+        placeholder={smartAvailable ? t('smartSearch.globalPlaceholder') : t('shell.search.placeholder')}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         enterKeyHint="search"

@@ -9,7 +9,7 @@ namespace Dam.Application.Search;
 
 public sealed record SearchAssetsQuery(
     string? Text, IReadOnlyDictionary<string, string[]>? Filters, IReadOnlyList<string>? Facets, string? Sort,
-    bool Highlight, Guid? SimilarTo, string? Cursor, int? Limit) : IQuery<SearchResultDto>;
+    bool Highlight, Guid? SimilarTo, string? Cursor, int? Limit, bool Semantic = false) : IQuery<SearchResultDto>;
 
 public sealed class SearchAssetsValidator : AbstractValidator<SearchAssetsQuery>
 {
@@ -24,14 +24,18 @@ public sealed class SearchAssetsValidator : AbstractValidator<SearchAssetsQuery>
 /// the caller's access clauses are pushed into the OpenSearch query itself rather than checked one row at a time. No
 /// clauses means no access - the same empty-but-not-an-error result <c>ListAssetsHandler</c> already returns.
 /// </summary>
-public sealed class SearchAssetsHandler(IAuthorizationService authz, ISearchQueryService search) : IRequestHandler<SearchAssetsQuery, SearchResultDto>
+public sealed class SearchAssetsHandler(IAuthorizationService authz, ISearchQueryService search, ISemanticQueryEmbedder embedder) : IRequestHandler<SearchAssetsQuery, SearchResultDto>
 {
     public async Task<Result<SearchResultDto>> Handle(SearchAssetsQuery r, CancellationToken ct)
     {
         var profile = await authz.GetProfileAsync(ct);
         var clauses = PolicyEngine.GetScope(profile, Permissions.AssetsRead);
         if (clauses.Count == 0) return new SearchResultDto([], 0, [], null);
-        var query = new SearchQuery(r.Text, r.Filters, r.Facets, r.Sort, r.Highlight, r.SimilarTo, r.Cursor, r.Limit);
+
+        // A semantic search needs the query as vectors (ADR-0035). If the provider cannot supply them the search still runs, as an ordinary one, and says why.
+        SemanticQueryVectors? vectors = null;
+        if (r.Semantic && r.SimilarTo is null && !string.IsNullOrWhiteSpace(r.Text)) vectors = await embedder.EmbedAsync(r.Text.Trim(), ct);
+        var query = new SearchQuery(r.Text, r.Filters, r.Facets, r.Sort, r.Highlight, r.SimilarTo, r.Cursor, r.Limit, r.Semantic, vectors);
         return await search.SearchAsync(query, clauses, profile.UserId, ct);
     }
 }

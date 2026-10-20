@@ -130,6 +130,50 @@ public static class TestImages
         finally { try { File.Delete(input); } catch (IOException) { } }
     }
 
+    /// <summary>A short video with a sound track (a test pattern and a tone), built at test time with the system's own ffmpeg.</summary>
+    public static byte[] VideoWithAudio(int seconds = 3, int width = 320, int height = 240)
+    {
+        var output = System.IO.Path.Combine(ScratchDir(), $"dam-fixture-{Guid.NewGuid():N}.mp4");
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("ffmpeg") { RedirectStandardError = true, UseShellExecute = false };
+            foreach (var a in new[]
+                     {
+                         "-y", "-f", "lavfi", "-i", $"testsrc=size={width}x{height}:rate=15:duration={seconds}", "-f", "lavfi", "-i", $"sine=frequency={440 + Random.Shared.Next(0, 400)}:duration={seconds}",
+                         "-pix_fmt", "yuv420p", "-c:v", "libx264", "-preset", "ultrafast", "-c:a", "aac", "-shortest", output,
+                     })
+                psi.ArgumentList.Add(a);
+            using var p = System.Diagnostics.Process.Start(psi) ?? throw new InvalidOperationException("ffmpeg did not start");
+            var err = p.StandardError.ReadToEnd();
+            if (!p.WaitForExit(30_000)) { p.Kill(true); throw new TimeoutException("ffmpeg took too long to build the test fixture."); }
+            if (p.ExitCode != 0) throw new InvalidOperationException($"ffmpeg fixture build failed: {err}");
+            return File.ReadAllBytes(output);
+        }
+        finally { try { File.Delete(output); } catch (IOException) { } }
+    }
+
+    /// <summary>A mono 16-bit WAV of a tone, built in memory (no tools needed). <paramref name="hz"/> makes each one different, so none is a duplicate.</summary>
+    public static byte[] Wav(int seconds = 2, int hz = 440, int sampleRate = 16000)
+    {
+        var samples = seconds * sampleRate;
+        using var ms = new MemoryStream();
+        using var w = new BinaryWriter(ms);
+        w.Write("RIFF"u8.ToArray()); w.Write(36 + samples * 2); w.Write("WAVEfmt "u8.ToArray()); w.Write(16); w.Write((short)1); w.Write((short)1);
+        w.Write(sampleRate); w.Write(sampleRate * 2); w.Write((short)2); w.Write((short)16); w.Write("data"u8.ToArray()); w.Write(samples * 2);
+        for (var i = 0; i < samples; i++) w.Write((short)(Math.Sin(2 * Math.PI * hz * i / sampleRate) * 8000));
+        w.Flush();
+        return ms.ToArray();
+    }
+
+    /// <summary>A plain picture of one colour. <paramref name="variant"/> changes a few pixels so two pictures of the same colour are not byte-identical (the upload would be refused as a duplicate).</summary>
+    public static byte[] Solid(byte red, byte green, byte blue, int variant = 0, int width = 320, int height = 240)
+    {
+        var pixels = new byte[width * height * 3];
+        for (var i = 0; i < pixels.Length; i += 3) { pixels[i] = red; pixels[i + 1] = green; pixels[i + 2] = blue; }
+        for (var k = 0; k < 40; k++) { var o = ((k * 997 + variant * 31) % (width * height)) * 3; pixels[o] = (byte)Math.Min(255, red + 20 + variant % 15); }
+        return Encode(pixels, width, height, 3, ".jpg");
+    }
+
     /// <summary>A minimal .docx: a zip with document properties.</summary>
     /// <summary>A real, minimal .docx: LibreOffice can open and convert it, not just read its properties. The main part lives at the
     /// fixed OOXML path "word/document.xml", which is how the content sniffer tells a Word document from any other zip.</summary>

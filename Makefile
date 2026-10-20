@@ -1,12 +1,14 @@
 export DAM_MIGRATION_CONNECTION ?= Host=localhost;Port=15432;Database=dam;Username=dam;Password=dam
-.PHONY: run-worker run-scheduler run-delivery run-api openapi migrate build test up up-search up-scan up-mail up-obs up-all down reset
+.PHONY: run-worker run-scheduler run-delivery run-api openapi migrate build test test-ai up up-search up-scan up-mail up-ai up-obs up-all down reset
 build: ; dotnet build Dam.sln && pnpm -r build
 test:  ; dotnet test Dam.sln && pnpm test
 up:    ; docker compose -f deploy/docker-compose.yml up -d --wait
 up-search: ; docker compose -f deploy/docker-compose.yml --profile search up -d --wait
 up-scan: ; docker compose -f deploy/docker-compose.yml --profile scan up -d --wait
 up-mail: ; docker compose -f deploy/docker-compose.yml --profile mail up -d --wait
+up-ai: ; docker compose -f deploy/docker-compose.yml --profile ai up -d --build --wait
 up-obs: ; docker compose -f deploy/docker-compose.yml --profile obs up -d
+test-ai: ; docker compose -f deploy/docker-compose.yml run --rm --build ai-sidecar-tests
 up-all: ; docker compose -f deploy/docker-compose.yml --profile all up -d --wait
 down:  ; docker compose -f deploy/docker-compose.yml --profile all down
 reset: ; docker compose -f deploy/docker-compose.yml --profile all down -v && $(MAKE) up

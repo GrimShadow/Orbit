@@ -18,6 +18,10 @@ export interface Thumb {
   icon?: ReactNode;
   /** A secondary metadata line below the subtitle, e.g. a relative "Updated 6 days ago". */
   meta?: string;
+  /** Extra content under the card's text, outside the card's open button - so it may hold links and other controls
+   * (e.g. "why it matched" chips). The footer is a `container-type: inline-size` box: use `@container` queries to
+   * adapt to the card width. Omit for the plain card. */
+  footer?: ReactNode;
 }
 
 interface ThumbnailGridProps {
@@ -97,6 +101,7 @@ export function ThumbnailGrid({
                 )}
               </div>
             </button>
+            {t.footer && <div className="dam-thumb__footer">{t.footer}</div>}
           </li>
         );
       })}

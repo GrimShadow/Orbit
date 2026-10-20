@@ -12,6 +12,9 @@ public sealed class TenantSchemaIndex
 
     private TenantSchemaIndex(Dictionary<string, IReadOnlyList<FieldDefinition>> fieldsByAssetType) => _fieldsByAssetType = fieldsByAssetType;
 
+    /// <summary>A tenant with no schemas.</summary>
+    public static readonly TenantSchemaIndex Empty = new([]);
+
     public static async Task<TenantSchemaIndex> LoadAsync(DamDbContext db, CancellationToken ct)
     {
         var schemas = await db.MetadataSchemas.AsNoTracking().Where(s => s.IsCurrent).ToListAsync(ct);

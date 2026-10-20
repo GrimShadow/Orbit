@@ -1,0 +1,284 @@
+/* "Why it matched" chips and transcript moments - shared by the grid card footer and the list row. */
+.dam-matchwrap {
+  container-type: inline-size;
+  min-width: 0;
+}
+.dam-matchchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dam-matchchip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--dam-tone-neutral-bg);
+  color: var(--dam-tone-neutral-text);
+  font-size: var(--dam-text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dam-matchchip > svg {
+  flex: 0 0 auto;
+}
+.dam-matchchip--image {
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+}
+.dam-matchchip--ocr {
+  background: var(--dam-tone-info-bg);
+  color: var(--dam-tone-info-text);
+}
+.dam-matchchip--transcript {
+  background: var(--dam-tone-warning-bg);
+  color: var(--dam-tone-warning-text);
+}
+/* In a narrow container (a grid card) the words give way to the icon strip: the text stays for screen readers and
+ * the tooltip (title) names each icon. */
+@container (max-width: 199px) {
+  .dam-matchchip {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    justify-content: center;
+  }
+  .dam-matchchip__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+.dam-tmatches {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.dam-matchwrap + .dam-tmatches {
+  margin-top: var(--dam-space-2);
+}
+.dam-tmatch {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px 4px;
+  margin-inline: -4px;
+  border-radius: var(--dam-radius-sm);
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+  text-decoration: none;
+}
+.dam-tmatch:hover {
+  background: var(--dam-surface-2);
+  color: var(--dam-text);
+}
+.dam-tmatch__icon {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--dam-brand);
+}
+.dam-tmatch__time {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--dam-text);
+}
+.dam-tmatch__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-tmatch__text::before,
+.dam-tmatch__text::after {
+  content: '\2026';
+}
+
+/* The Smart search switch that sits in the search bar. */
+.dam-smarttoggle {
+  position: relative;
+  flex: 0 0 auto;
+}
+.dam-smarttoggle__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--dam-border);
+  border-radius: 999px;
+  background: var(--dam-surface);
+  color: var(--dam-muted);
+  font: inherit;
+  font-size: var(--dam-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--dam-duration) var(--dam-ease),
+    color var(--dam-duration) var(--dam-ease),
+    border-color var(--dam-duration) var(--dam-ease);
+}
+.dam-smarttoggle__btn:hover {
+  color: var(--dam-text);
+  border-color: var(--dam-muted);
+}
+.dam-smarttoggle__btn[aria-checked='true'] {
+  background: var(--dam-brand-soft);
+  border-color: transparent;
+  color: var(--dam-brand-soft-text);
+}
+.dam-smarttoggle__state {
+  font-size: var(--dam-text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+.dam-smarttoggle__tip {
+  position: absolute;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-end: 0;
+  z-index: var(--dam-z-menu);
+  width: max-content;
+  max-width: 240px;
+  padding: var(--dam-space-2) var(--dam-space-3);
+  border-radius: var(--dam-radius);
+  background: var(--dam-text);
+  color: var(--dam-surface);
+  box-shadow: var(--dam-shadow-lg);
+  font-size: var(--dam-text-xs);
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: normal;
+  text-align: start;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--dam-duration) var(--dam-ease),
+    visibility var(--dam-duration);
+}
+.dam-smarttoggle:hover .dam-smarttoggle__tip,
+.dam-smarttoggle:focus-within .dam-smarttoggle__tip {
+  opacity: 1;
+  visibility: visible;
+}
+@media (max-width: 639px) {
+  .dam-smarttoggle__label,
+  .dam-smarttoggle__state {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .dam-smarttoggle__btn {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+/* Quiet one-line notes under the search bar (fallback reasons). */
+.dam-searchnote {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dam-space-2);
+  margin: 0 0 var(--dam-space-3);
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+.dam-searchnote > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+/* Example queries on an empty Search page. */
+.dam-examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dam-space-2);
+  margin: 0 0 var(--dam-space-3);
+}
+.dam-examples__label {
+  color: var(--dam-muted);
+  font-size: var(--dam-text-sm);
+}
+.dam-examples__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 var(--dam-space-3);
+  border: 1px solid var(--dam-border);
+  border-radius: 999px;
+  background: var(--dam-surface-raised);
+  color: var(--dam-text);
+  font: inherit;
+  font-size: var(--dam-text-sm);
+  cursor: pointer;
+  transition:
+    background-color var(--dam-duration) var(--dam-ease),
+    border-color var(--dam-duration) var(--dam-ease);
+}
+.dam-examples__chip:hover {
+  background: var(--dam-brand-soft);
+  border-color: transparent;
+  color: var(--dam-brand-soft-text);
+}
+.dam-examples__chip > svg {
+  color: var(--dam-brand);
+}
+
+/* List view: the title cell stacks the link, chips and spoken moments. */
+.dam-assetcell--top {
+  align-items: flex-start;
+}
+.dam-searchlist__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.dam-searchlist__main > .dam-assetcell__title {
+  align-self: flex-start;
+  max-width: 100%;
+}
+.dam-searchlist__main .dam-matchwrap + .dam-tmatches {
+  margin-top: 0;
+}
+/* Wrapped, not truncated: a nowrap line inside a table cell would widen the whole table past its container. */
+.dam-searchlist__main .dam-tmatch {
+  align-items: flex-start;
+}
+.dam-searchlist__main .dam-tmatch__icon {
+  align-self: flex-start;
+  margin-top: 3px;
+}
+.dam-searchlist__main .dam-tmatch__text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,1222 @@
+# Default zero-shot label set for POST /v1/tag (one label per line; '#' lines and blanks are ignored).
+# Generic visual concepts only: no customer, brand or product names. Tenants send their own `labels` to override.
+# --- scenes: nature ---
+forest
+rainforest
+pine forest
+bamboo forest
+woodland path
+meadow
+grassland
+savanna
+desert
+sand dunes
+canyon
+mountain
+snow-capped mountain
+mountain range
+mountain pass
+volcano
+glacier
+iceberg
+valley
+hill
+cliff
+cave
+waterfall
+river
+stream
+lake
+pond
+swamp
+wetland
+beach
+tropical beach
+rocky coast
+coastline
+ocean
+sea
+waves
+island
+lagoon
+coral reef
+harbour
+sunrise
+sunset
+night sky
+starry sky
+milky way
+moon
+clouds
+storm clouds
+rainbow
+fog
+mist
+rain
+snow
+snowfall
+frost
+ice
+lightning
+tornado
+flood
+drought
+field
+farmland
+rice paddy
+wheat field
+vineyard
+orchard
+plantation
+tea garden
+flower field
+garden
+botanical garden
+park
+waterfront promenade
+countryside
+rural road
+dirt road
+trail
+jungle
+mangrove
+oasis
+tundra
+arctic landscape
+aerial view of landscape
+horizon
+# --- scenes: urban and architecture ---
+city
+city skyline
+skyscraper
+downtown
+city street
+busy street
+narrow alley
+crosswalk
+intersection
+highway
+motorway
+flyover
+bridge
+suspension bridge
+tunnel
+roundabout
+parking lot
+parking garage
+petrol station
+charging station
+bus stop
+railway station
+train platform
+airport terminal
+airport runway
+harbour crane
+shipping containers
+industrial area
+factory
+warehouse
+construction site
+crane
+scaffolding
+building exterior
+glass facade
+brick wall
+concrete wall
+office building
+apartment block
+suburban house
+villa
+cottage
+farmhouse
+barn
+castle
+palace
+fort
+temple
+church
+mosque
+cathedral
+monument
+statue
+fountain
+plaza
+town square
+market
+street market
+bazaar
+shopping mall
+shop front
+storefront
+supermarket
+showroom
+car showroom
+dealership
+restaurant
+cafe
+bar
+hotel lobby
+hotel room
+bedroom
+living room
+kitchen
+bathroom
+dining room
+balcony
+rooftop
+staircase
+corridor
+lobby
+reception desk
+office
+open plan office
+meeting room
+conference room
+auditorium
+classroom
+library
+laboratory
+hospital
+clinic
+gym
+swimming pool
+stadium
+sports arena
+playground
+cemetery
+skate park
+amusement park
+ferris wheel
+theatre
+cinema
+museum
+art gallery
+exhibition hall
+trade show booth
+stage
+concert
+nightclub
+street at night
+neon lights
+city lights
+traffic
+traffic jam
+rush hour
+road at night
+tail lights
+light trails
+# --- vehicles ---
+car
+red car
+blue car
+white car
+black car
+silver car
+suv
+compact suv
+sedan
+hatchback
+coupe
+convertible
+station wagon
+minivan
+pickup truck
+sports car
+electric car
+hybrid car
+off-road vehicle
+luxury car
+vintage car
+classic car
+taxi
+police car
+ambulance
+fire truck
+race car
+go-kart
+car interior
+car dashboard
+steering wheel
+gear shifter
+infotainment screen
+instrument cluster
+car seat
+rear seat
+car boot
+car trunk
+engine bay
+engine
+alloy wheel
+tyre
+headlight
+tail light
+car grille
+car door
+side mirror
+windscreen
+sunroof
+roof rack
+license plate
+charging cable
+electric vehicle charging
+car wash
+car repair
+mechanic
+car being driven
+car on a road
+car on a mountain road
+car on a beach
+car in the snow
+car in the desert
+car in the city
+car in the mud
+off-roading
+driving
+traffic sign
+road marking
+motorcycle
+scooter
+moped
+bicycle
+mountain bike
+electric bicycle
+tractor
+combine harvester
+truck
+lorry
+delivery van
+bus
+school bus
+tram
+metro train
+train
+high-speed train
+steam locomotive
+freight train
+airplane
+passenger jet
+helicopter
+drone
+hot air balloon
+glider
+rocket
+spaceship
+boat
+sailboat
+yacht
+speedboat
+cruise ship
+cargo ship
+fishing boat
+canoe
+kayak
+submarine
+rickshaw
+cart
+horse carriage
+wheelchair
+forklift
+excavator
+bulldozer
+dump truck
+crane truck
+# --- animals ---
+dog
+puppy
+cat
+kitten
+horse
+foal
+cow
+bull
+buffalo
+goat
+sheep
+lamb
+pig
+chicken
+rooster
+duck
+goose
+turkey
+rabbit
+hamster
+guinea pig
+parrot
+eagle
+hawk
+owl
+peacock
+swan
+flamingo
+pelican
+penguin
+seagull
+sparrow
+crow
+hummingbird
+kingfisher
+elephant
+lion
+tiger
+leopard
+cheetah
+bear
+polar bear
+panda
+wolf
+fox
+deer
+antelope
+zebra
+giraffe
+rhinoceros
+hippopotamus
+camel
+monkey
+gorilla
+orangutan
+kangaroo
+koala
+squirrel
+bat
+whale
+dolphin
+shark
+seal
+sea turtle
+fish
+goldfish
+jellyfish
+octopus
+crab
+lobster
+starfish
+frog
+lizard
+chameleon
+snake
+crocodile
+tortoise
+butterfly
+bee
+ant
+spider
+dragonfly
+ladybird
+beetle
+grasshopper
+snail
+insect
+herd of animals
+flock of birds
+wildlife
+pet
+zoo
+farm animals
+# --- plants ---
+tree
+palm tree
+oak tree
+autumn leaves
+fallen leaves
+leaf
+flower
+rose
+sunflower
+tulip
+lotus
+orchid
+daisy
+lavender
+marigold
+jasmine
+hibiscus
+cactus
+succulent
+fern
+moss
+grass
+bush
+hedge
+bamboo
+mushroom
+seedling
+potted plant
+bouquet
+wildflowers
+cherry blossom
+fruit tree
+# --- people ---
+person
+man
+woman
+child
+baby
+boy
+girl
+teenager
+elderly person
+elderly couple
+group of people
+crowd
+family
+couple
+friends
+team
+colleagues
+audience
+portrait
+close-up portrait
+smiling person
+selfie
+headshot
+silhouette
+person walking
+person running
+person cycling
+person jumping
+person sitting
+person standing
+person talking on phone
+person using a laptop
+person using a smartphone
+person reading
+person writing
+person cooking
+person eating
+person shopping
+person driving
+person working
+person presenting
+person dancing
+person singing
+person playing music
+person meditating
+person hiking
+person climbing
+person swimming
+person fishing
+person gardening
+person painting
+person photographing
+people shaking hands
+people hugging
+people laughing
+people talking
+people walking in the street
+people at a meeting
+people at a party
+people at a wedding
+people at a festival
+people at a market
+people in an office
+people in a classroom
+people in a restaurant
+people at a gym
+people at an airport
+people at a show
+people in traditional clothing
+people wearing masks
+people wearing helmets
+people in uniform
+doctor
+nurse
+teacher
+student
+engineer
+mechanic at work
+chef
+farmer
+construction worker
+factory worker
+salesperson
+customer
+businessman
+businesswoman
+athlete
+musician
+dancer
+artist
+tourist
+bride and groom
+hands
+hand holding a phone
+hand holding a product
+hands typing
+handshake
+face
+eyes
+smile
+crowd at a concert
+parade
+protest
+ceremony
+celebration
+fireworks
+# --- activities and sports ---
+football
+soccer
+cricket
+basketball
+tennis
+badminton
+golf
+baseball
+rugby
+volleyball
+hockey
+table tennis
+swimming
+running
+marathon
+cycling race
+motor racing
+rally racing
+motocross
+horse riding
+yoga
+gymnastics
+weightlifting
+boxing
+martial arts
+wrestling
+skiing
+snowboarding
+skateboarding
+surfing
+sailing
+rowing
+diving
+rock climbing
+hiking
+camping
+fishing
+archery
+athletics track
+trophy
+medal
+podium
+# --- food and drink ---
+food
+meal
+breakfast
+lunch
+dinner
+fast food
+street food
+pizza
+burger
+sandwich
+pasta
+noodles
+rice dish
+curry
+biryani
+soup
+salad
+sushi
+steak
+grilled meat
+fried chicken
+seafood
+fish dish
+egg dish
+bread
+toast
+croissant
+cake
+cupcake
+pastry
+cookies
+chocolate
+ice cream
+dessert
+sweets
+fruit
+apple
+banana
+orange
+mango
+grapes
+strawberry
+watermelon
+lemon
+pineapple
+coconut
+berries
+vegetables
+tomato
+potato
+onion
+carrot
+chili pepper
+mushrooms
+spices
+herbs
+nuts
+cheese
+milk
+coffee
+cup of coffee
+latte art
+tea
+cup of tea
+juice
+smoothie
+water bottle
+soft drink
+beer
+wine
+wine glass
+cocktail
+whisky
+cooking
+kitchen utensils
+frying pan
+barbecue
+buffet
+picnic
+table setting
+food market
+bakery
+grocery store
+vending machine
+# --- objects: tech ---
+smartphone
+mobile phone
+tablet computer
+laptop
+desktop computer
+computer monitor
+keyboard
+computer mouse
+television
+smart tv
+projector
+digital signage
+digital display
+video wall
+led screen
+kiosk
+touch screen
+tv screen showing content
+camera
+dslr camera
+video camera
+camcorder
+tripod
+lens
+microphone
+studio microphone
+headphones
+earbuds
+speaker
+smart speaker
+radio
+record player
+guitar
+piano
+violin
+drums
+flute
+saxophone
+musical instrument
+smartwatch
+wristwatch
+fitness tracker
+virtual reality headset
+game controller
+video game
+drone camera
+robot
+robotic arm
+circuit board
+microchip
+server room
+data center
+cables
+router
+printer
+scanner
+barcode
+qr code
+usb drive
+battery
+solar panel
+wind turbine
+power lines
+electricity pylon
+light bulb
+lamp
+flashlight
+candle
+fireplace
+air conditioner
+refrigerator
+washing machine
+microwave oven
+oven
+vacuum cleaner
+kettle
+toaster
+blender
+coffee machine
+# --- objects: everyday ---
+chair
+armchair
+sofa
+bed
+table
+desk
+bookshelf
+wardrobe
+mirror
+carpet
+curtains
+window
+door
+gate
+fence
+wall
+floor
+ceiling
+stairs
+elevator
+escalator
+clock
+calendar
+book
+open book
+stack of books
+magazine
+newspaper
+notebook
+pen
+pencil
+paper
+envelope
+letter
+sticky notes
+whiteboard
+blackboard
+folder
+files
+documents
+contract
+passport
+ticket
+map
+globe
+compass
+binoculars
+telescope
+microscope
+key
+lock
+umbrella
+bag
+backpack
+handbag
+suitcase
+wallet
+purse
+shopping bag
+shopping cart
+box
+cardboard box
+package
+parcel
+gift
+gift box
+balloon
+flag
+banner
+sign
+signboard
+billboard
+poster
+sticker
+label
+price tag
+packaging
+bottle
+jar
+can
+cup
+mug
+glass
+plate
+bowl
+cutlery
+knife
+scissors
+hammer
+screwdriver
+wrench
+toolbox
+power tools
+drill
+saw
+ladder
+rope
+chain
+bucket
+broom
+toy
+teddy bear
+doll
+building blocks
+board game
+cards
+dice
+puzzle
+medicine
+pills
+syringe
+stethoscope
+mask
+helmet
+safety vest
+gloves
+glasses
+sunglasses
+hat
+cap
+scarf
+jacket
+coat
+shirt
+t-shirt
+dress
+suit
+saree
+kurta
+jeans
+uniform
+shoes
+sneakers
+boots
+sandals
+jewellery
+necklace
+ring
+bracelet
+earrings
+watch
+perfume
+makeup
+lipstick
+cosmetics
+skincare product
+soap
+toothbrush
+towel
+# --- materials, textures, patterns ---
+wood texture
+metal texture
+brushed steel
+chrome
+glass surface
+water droplets
+ripples
+smoke
+fire
+flames
+sparks
+dust
+sand
+mud
+rock
+stone
+marble
+gravel
+fabric
+leather
+carbon fibre
+paint
+paper texture
+abstract pattern
+geometric pattern
+floral pattern
+stripes
+dots
+gradient
+# --- colours and lighting ---
+red color
+orange color
+yellow color
+green color
+blue color
+purple color
+pink color
+brown color
+black color
+white color
+grey color
+gold color
+silver color
+black and white photo
+golden hour
+blue hour
+night photography
+# --- photo and media types ---
+photograph
+product photo
+studio shot
+packshot
+product on white background
+product on a plain background
+aerial photo
+drone shot
+panorama
+macro photo
+close-up
+wide shot
+top view
+portrait photo
+group photo
+architectural photo
+interior photo
+landscape photo
+street photo
+wildlife photo
+food photo
+fashion photo
+sports photo
+illustration
+cartoon
+drawing
+sketch
+painting
+watercolor
+oil painting
+digital art
+3d render
+cgi
+vector graphic
+icon
+logo
+emblem
+badge
+mascot
+infographic
+chart
+bar chart
+line graph
+pie chart
+data table
+diagram
+flowchart
+blueprint
+technical drawing
+schematic
+wireframe
+mockup
+screenshot
+user interface
+website
+mobile app screen
+dashboard screen
+presentation slide
+title slide
+brochure
+flyer
+leaflet
+catalogue
+poster design
+banner ad
+advertisement
+billboard ad
+social media post
+thumbnail
+cover page
+business card
+letterhead
+invoice
+certificate
+form
+report
+manual
+user manual
+instruction sheet
+handwriting
+scanned document
+printed document
+book cover
+magazine cover
+newspaper article
+comic
+video conference
+webinar
+live stream
+# --- business, retail, industry ---
+meeting
+presentation
+workshop
+training session
+interview
+brainstorming
+teamwork
+handover
+negotiation
+customer service
+call centre
+help desk
+checkout counter
+cash register
+retail display
+shelf display
+product display
+window display
+store interior
+warehouse shelves
+assembly line
+production line
+welding
+manufacturing
+packaging line
+quality inspection
+laboratory work
+research
+construction
+road construction
+mining
+oil rig
+refinery
+power plant
+substation
+pipeline
+farming
+harvest
+irrigation
+greenhouse
+livestock
+fish market
+logistics
+delivery
+loading dock
+trucking
+shipping port
+cargo
+supply chain
+banking
+atm
+payment terminal
+credit card
+cash
+coins
+stock market screen
+real estate
+for sale sign
+signing a contract
+startup office
+coworking space
+home office
+remote work
+# --- health, education, community ---
+hospital room
+operating theatre
+doctor consultation
+vaccination
+medical equipment
+x-ray
+pharmacy
+dentist
+therapy
+exercise class
+school
+school children
+university campus
+graduation
+lecture
+exam
+study group
+playing children
+birthday party
+wedding
+festival
+religious ceremony
+prayer
+pilgrimage
+traditional dance
+traditional market
+village
+slum
+refugee camp
+charity
+volunteers
+recycling
+waste
+pollution
+smog
+oil spill
+deforestation
+climate change
+recycling bins
+# --- travel and landmarks ---
+travel
+tourism
+road trip
+vacation
+resort
+luggage
+passport and tickets
+tourist attraction
+historic site
+ruins
+old town
+palace complex
+temple complex
+stepwell
+gateway
+lighthouse
+windmill
+pier
+boardwalk
+cable car
+ski resort
+campsite
+tent
+caravan
+hot spring
+safari
+desert camp
+backwaters
+houseboat
+spice plantation
+tea estate
+hill station
+beach resort
+city tour
+airport lounge
+hotel pool
+# --- misc scenes and states ---
+abandoned building
+broken glass
+snowy road
+wet road
+icy road
+muddy track
+foggy road
+mountain road
+winding road
+coastal road
+desert road
+forest road
+tunnel entrance
+toll booth
+border crossing
+checkpoint
+test track
+proving ground
+wind tunnel
+crash test
+assembly hall
+paint shop
+design studio
+clay model
+concept sketch
+prototype
+cutaway view
+exploded view

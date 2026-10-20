@@ -240,12 +240,21 @@ public sealed class RetentionTests(PostgresFixture pg, RabbitFixture mq) : Pipel
         var versionId = version.GetProperty("id").GetGuid();
         Assert.True(await InStore("dam-originals", $"{t:N}/{asset:N}/{versionId:N}"));
 
+        // What the AI derived from the file (vector, extracted text, suggestions, run) goes with it (ADR-0035).
+        Sql($"""
+            INSERT INTO asset_embeddings (tenant_id, asset_id, version_id, kind, dim, model, vector, created_at) VALUES ('{t}', '{asset}', '{versionId}', 'text', 1, 'm', '\x0000803f', now());
+            INSERT INTO asset_extracts (tenant_id, asset_id, version_id, ocr_text, transcript_segments, model, created_at, updated_at) VALUES ('{t}', '{asset}', '{versionId}', 'text', '[]', jsonb_build_object(), now(), now());
+            INSERT INTO ai_suggestions (id, tenant_id, asset_id, version_id, kind, value, confidence, model, status, created_at) VALUES ('{Guid.NewGuid()}', '{t}', '{asset}', '{versionId}', 'tag', 'x', 0.5, 'm', 'pending', now());
+            INSERT INTO ai_runs (id, tenant_id, asset_id, version_id, status, steps, error, attempts, created_at) VALUES ('{Guid.NewGuid()}', '{t}', '{asset}', '{versionId}', 'succeeded', '[]', '', 1, now());
+            """);
+
         Sql($"UPDATE assets SET status = 'archived', updated_at = now() - interval '8 days' WHERE id = '{asset}'");
         using var host = SchedulerHost();
         await RunRetentionAsync(host);
 
         Assert.Equal("deleted", await StatusOf(admin, asset));
         Assert.False(await InStore("dam-originals", $"{t:N}/{asset:N}/{versionId:N}"));
+        foreach (var table in new[] { "asset_embeddings", "asset_extracts", "ai_suggestions", "ai_runs" }) Assert.Equal(0, Count(t, $"SELECT count(*) FROM {table}"));
         Assert.Equal(1, Count(t, $"SELECT count(*) FROM audit_log WHERE action = 'asset.status.changed' AND entity_id = '{asset}' AND after->>'To' = 'deleted'"));
     }
 

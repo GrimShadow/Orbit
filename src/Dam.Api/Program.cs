@@ -8,6 +8,7 @@ using Dam.Application.Messaging;
 using Dam.Application.Abstractions;
 using Dam.Infrastructure;
 using Dam.Infrastructure.Persistence;
+using Dam.Infrastructure.Ai;
 using Dam.Infrastructure.Delivery;
 using Dam.Infrastructure.Notifications;
 using Dam.Infrastructure.Search;
@@ -52,6 +53,7 @@ builder.Services.AddDamInfrastructure(Required("DAM_DB_CONNECTION"));
 builder.Services.AddDamStorage(cfg);
 builder.Services.AddDamDelivery(cfg);
 builder.Services.AddDamSearch(cfg);
+builder.Services.AddDamAi(cfg);
 builder.Services.AddDamNotifications(cfg);
 
 // ---- Errors: RFC 9457 problem+json everywhere, including bare 401/403/404.

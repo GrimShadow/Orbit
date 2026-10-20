@@ -1,5 +1,6 @@
 using Dam.Application.Abstractions;
 using System.Text.Json;
+using Dam.Domain.Ai;
 using Dam.Domain.Authorization;
 using Dam.Domain.Assets;
 using Dam.Domain.Comments;
@@ -58,6 +59,11 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<Rights> Rights => Set<Rights>();
     public DbSet<RightsDocument> RightsDocuments => Set<RightsDocument>();
     public DbSet<RightsAlert> RightsAlerts => Set<RightsAlert>();
+    public DbSet<AiSettings> AiSettings => Set<AiSettings>();
+    public DbSet<AiSuggestion> AiSuggestions => Set<AiSuggestion>();
+    public DbSet<AssetExtract> AssetExtracts => Set<AssetExtract>();
+    public DbSet<AssetEmbedding> AssetEmbeddings => Set<AssetEmbedding>();
+    public DbSet<AiRun> AiRuns => Set<AiRun>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -102,6 +108,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureNotifications(b);
         ConfigureComments(b);
         ConfigureRights(b);
+        ConfigureAi(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -571,6 +578,74 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             // One alert per asset, licence, threshold and end date: extending the licence (a new end date) starts the sequence again.
             e.HasIndex(x => new { x.AssetId, x.RightsId, x.ThresholdDays, x.ValidTo }).IsUnique().HasDatabaseName("ux_rights_alerts_once");
             e.HasIndex(x => x.RightsId);
+        });
+    }
+
+    private static void ConfigureAi(ModelBuilder b)
+    {
+        b.Entity<AiSettings>(e =>
+        {
+            e.ToTable("ai_settings", t => t.HasCheckConstraint("ck_ai_settings_provider", "provider IS NULL OR provider IN ('self-hosted','openai-compatible','none')"));
+            e.HasKey(x => x.TenantId);
+            e.Property(x => x.Provider).HasMaxLength(24);
+            e.Property(x => x.Features).AsJson();
+            e.Property(x => x.OcrLanguage).HasMaxLength(12);
+        });
+        b.Entity<AiSuggestion>(e =>
+        {
+            e.ToTable("ai_suggestions", t =>
+            {
+                t.HasCheckConstraint("ck_ai_suggestions_kind", "kind IN ('tag','language')");
+                t.HasCheckConstraint("ck_ai_suggestions_status", "status IN ('pending','accepted','rejected')");
+            });
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Kind).HasMaxLength(16);
+            e.Property(x => x.Value).HasMaxLength(200);
+            e.Property(x => x.Model).HasMaxLength(100);
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.AssetId, x.VersionId, x.Kind, x.Value }).IsUnique().HasDatabaseName("ux_ai_suggestions_once");
+            e.HasIndex(x => new { x.TenantId, x.AssetId, x.Status });
+        });
+        b.Entity<AssetExtract>(e =>
+        {
+            e.ToTable("asset_extracts");
+            e.HasKey(x => new { x.AssetId, x.VersionId });
+            e.Property(x => x.OcrText).HasColumnType("text");
+            e.Property(x => x.OcrLanguage).HasMaxLength(12);
+            e.Property(x => x.TranscriptLanguage).HasMaxLength(12);
+            e.Property(x => x.TranscriptText).HasColumnType("text");
+            e.Property(x => x.TranscriptSegments).AsJson();
+            e.Property(x => x.Model).AsJson();
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.TenantId);
+        });
+        b.Entity<AssetEmbedding>(e =>
+        {
+            e.ToTable("asset_embeddings", t =>
+            {
+                t.HasCheckConstraint("ck_asset_embeddings_kind", "kind IN ('image','text')");
+                t.HasCheckConstraint("ck_asset_embeddings_dim", "dim > 0 AND octet_length(vector) = dim * 4");
+            });
+            e.HasKey(x => new { x.AssetId, x.VersionId, x.Kind });
+            e.Property(x => x.Kind).HasMaxLength(8);
+            e.Property(x => x.Model).HasMaxLength(100);
+            e.Property(x => x.Vector).HasColumnType("bytea");
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.TenantId);
+        });
+        b.Entity<AiRun>(e =>
+        {
+            e.ToTable("ai_runs", t => t.HasCheckConstraint("ck_ai_runs_status", "status IN ('pending','running','succeeded','failed','skipped')"));
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Ignore(x => x.IsActive);
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.Property(x => x.Steps).AsJson();
+            e.Property(x => x.Error).HasMaxLength(1000);
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.AssetId, x.VersionId }).IsUnique().HasDatabaseName("ux_ai_runs_version");
+            e.HasIndex(x => new { x.TenantId, x.Status });
         });
     }
 
