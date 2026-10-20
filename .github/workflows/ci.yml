@@ -20,6 +20,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with: { global-json-file: global.json }
+      # The media-tool unit tests (video, PDF, Office renditions) shell out to the real binaries, same as the integration shards.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg poppler-utils libreoffice-writer libreoffice-impress libreoffice-calc
       - run: dotnet build Dam.sln -c Release
       - run: dotnet test tests/Dam.UnitTests -c Release --no-build --logger "trx;LogFileName=results.trx" --logger GitHubActions
       - if: always()
