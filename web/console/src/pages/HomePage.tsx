@@ -1,4 +1,4 @@
-import { Plus } from '@phosphor-icons/react';
+import { ChartLineUp, Plus } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
@@ -27,10 +27,18 @@ export function HomePage() {
         eyebrow={date}
         title={greeting}
         actions={
-          <Link to="/collections" className="dam-btn dam-btn--secondary">
-            <Plus size={16} weight="bold" aria-hidden="true" />
-            {t('home.quick.collection.title')}
-          </Link>
+          <>
+            {analytics && (
+              <Link to="/insights/kpis" className="dam-btn dam-btn--ghost">
+                <ChartLineUp size={16} weight="bold" aria-hidden="true" />
+                {t('home.keyResults')}
+              </Link>
+            )}
+            <Link to="/collections" className="dam-btn dam-btn--secondary">
+              <Plus size={16} weight="bold" aria-hidden="true" />
+              {t('home.quick.collection.title')}
+            </Link>
+          </>
         }
       />
       <Kpis />

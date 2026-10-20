@@ -237,4 +237,25 @@ public static class SecuritySql
         GRANT SELECT, INSERT, UPDATE, DELETE ON glossary_terms TO dam_app;
         GRANT SELECT, INSERT, UPDATE ON translation_jobs TO dam_app;
         """;
+
+    /// <summary>Rollups, dirty marks and event keys (ADR-0037). The app role rebuilds a tenant-day by deleting and re-inserting its rollup rows, and clears the dirty
+    /// mark it has covered; event keys are append-only (retention prunes them through a function, never the app role). Schedules are edited and deleted freely.</summary>
+    public const string AnalyticsGrants = """
+        GRANT SELECT, INSERT, DELETE ON usage_daily TO dam_app;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON usage_rollup_dirty TO dam_app;
+        GRANT USAGE ON SEQUENCE usage_rollup_mark_seq TO dam_app;
+        GRANT SELECT, INSERT ON usage_event_keys TO dam_app;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON report_schedules TO dam_app;
+        """;
+
+    /// <summary>The rollup job finds tenant-days to roll up, and the report job finds due schedules, across every tenant through the system connection, read-only,
+    /// like the other cross-tenant jobs; the work itself is then done through a tenant-scoped scope. The one write: retention prunes old event keys (and only those).</summary>
+    public const string AnalyticsSystemGrants = """
+        GRANT SELECT ON usage_rollup_dirty, report_schedules TO dam_system;
+        CREATE POLICY system_read_usage_rollup_dirty ON usage_rollup_dirty FOR SELECT TO dam_system USING (true);
+        CREATE POLICY system_read_report_schedules ON report_schedules FOR SELECT TO dam_system USING (true);
+        GRANT SELECT, DELETE ON usage_event_keys TO dam_system;
+        CREATE POLICY system_read_usage_event_keys ON usage_event_keys FOR SELECT TO dam_system USING (true);
+        CREATE POLICY system_prune_usage_event_keys ON usage_event_keys FOR DELETE TO dam_system USING (true);
+        """;
 }

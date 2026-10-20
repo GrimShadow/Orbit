@@ -3986,6 +3986,297 @@
         }
       }
     },
+    "/api/v1/analytics/kpis": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "The four key performance indicators (publishing effort, duplicate reduction, reuse, workflow SLA attainment) for the last N UTC days (days, default 30, 1-365), each with the equal period before it. A ratio is null when there is nothing to measure. Needs analytics.read",
+        "operationId": "GetKpis",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KpiDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/assets/{id}": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "How one asset has been used: totals against the previous period, first and last use, a zero-filled daily series, uses by event type and channel, and the 20 most recent uses (days, default 30, 1-365). Needs analytics.read and read access to the asset; otherwise 404",
+        "operationId": "GetAssetAnalytics",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetAnalyticsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/reports": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "The reports that can be run or scheduled: kpis, top-assets, unused-assets, storage, workflow-sla. Needs analytics.read",
+        "operationId": "ListReports",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReportInfoDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/reports/{name}": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Runs a report as JSON (columns and rows) or, with format=csv, as a spreadsheet-ready CSV (content type text/csv instead of JSON; UTF-8 with a byte-order mark; text cells that could be read as formulas get a leading apostrophe). days is the period (default and maximum depend on the report; for unused-assets it is the idle window). Rows that name assets contain only assets the caller may read. Needs analytics.read",
+        "operationId": "RunReport",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/report-schedules": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "The emailed (MIS) report schedules of the tenant, with when each last went out, why it did not if it failed, and when it is next due. Needs analytics.manage",
+        "operationId": "ListReportSchedules",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReportScheduleDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Schedules a report to be emailed daily, weekly (dayOfWeek 1-7) or monthly (dayOfMonth 1-31, the last day in a shorter month) at an hour UTC. Recipients are active users of the tenant (ids), not addresses; at most 50 schedules. Audited. Needs analytics.manage",
+        "operationId": "CreateReportSchedule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportScheduleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportScheduleDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/report-schedules/{id}": {
+      "put": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Replaces a schedule\u0027s settings; its next run is recalculated from now. Audited. Needs analytics.manage",
+        "operationId": "UpdateReportSchedule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportScheduleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportScheduleDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Deletes a schedule. Audited. Needs analytics.manage",
+        "operationId": "DeleteReportSchedule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/analytics/report-schedules/{id}/send-now": {
+      "post": {
+        "tags": [
+          "Analytics"
+        ],
+        "summary": "Emails the report to the schedule\u0027s recipients now, each as they may see it, without changing when the schedule next runs. 202 with how many were sent, skipped and failed; 409 when email is not configured on the server or nothing could be sent. Needs analytics.manage",
+        "operationId": "SendReportScheduleNow",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendReportNowResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/workflows": {
       "get": {
         "tags": [
@@ -7144,6 +7435,41 @@
           }
         }
       },
+      "AnalyticsPeriodDto": {
+        "required": [
+          "from",
+          "to",
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "days": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AnalyticsPreviousPeriodDto": {
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        }
+      },
       "AnchorDto": {
         "required": [
           "type"
@@ -7247,6 +7573,85 @@
           },
           "summary": {
             "$ref": "#/components/schemas/AiSummaryDto"
+          }
+        }
+      },
+      "AssetAnalyticsDto": {
+        "required": [
+          "assetId",
+          "title",
+          "type",
+          "period",
+          "total",
+          "previousTotal",
+          "allTimeTotal",
+          "firstUsedAt",
+          "lastUsedAt",
+          "byDay",
+          "byType",
+          "byChannel",
+          "recent"
+        ],
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "period": {
+            "$ref": "#/components/schemas/AnalyticsPeriodDto"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "previousTotal": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "allTimeTotal": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "firstUsedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "byDay": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageDayDto"
+            }
+          },
+          "byType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageTypeDto"
+            }
+          },
+          "byChannel": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageChannelDto"
+            }
+          },
+          "recent": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecentUsageDto"
+            }
           }
         }
       },
@@ -8412,6 +8817,76 @@
           }
         }
       },
+      "DuplicateKpiDto": {
+        "required": [
+          "uploads",
+          "duplicatesPrevented",
+          "rate",
+          "bytesNotStored",
+          "duplicateAssetsInLibrary",
+          "previous"
+        ],
+        "type": "object",
+        "properties": {
+          "uploads": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "duplicatesPrevented": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "bytesNotStored": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "duplicateAssetsInLibrary": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/DuplicateMetricsDto"
+          }
+        }
+      },
+      "DuplicateMetricsDto": {
+        "required": [
+          "uploads",
+          "duplicatesPrevented",
+          "rate",
+          "bytesNotStored",
+          "duplicateAssetsInLibrary"
+        ],
+        "type": "object",
+        "properties": {
+          "uploads": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "duplicatesPrevented": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "bytesNotStored": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "duplicateAssetsInLibrary": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "FacetResultDto": {
         "required": [
           "field",
@@ -8795,6 +9270,42 @@
         }
       },
       "JsonElement": {},
+      "KpiDto": {
+        "required": [
+          "period",
+          "previous",
+          "generatedAt",
+          "publishingEffort",
+          "duplicates",
+          "reuse",
+          "workflowSla"
+        ],
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/AnalyticsPeriodDto"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/AnalyticsPreviousPeriodDto"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "publishingEffort": {
+            "$ref": "#/components/schemas/PublishingEffortKpiDto"
+          },
+          "duplicates": {
+            "$ref": "#/components/schemas/DuplicateKpiDto"
+          },
+          "reuse": {
+            "$ref": "#/components/schemas/ReuseKpiDto"
+          },
+          "workflowSla": {
+            "$ref": "#/components/schemas/WorkflowSlaKpiDto"
+          }
+        }
+      },
       "MarkAllReadResultDto": {
         "required": [
           "marked"
@@ -9406,6 +9917,70 @@
           }
         }
       },
+      "PublishingEffortKpiDto": {
+        "required": [
+          "publishedCount",
+          "medianHours",
+          "p90Hours",
+          "firstPassRate",
+          "previous"
+        ],
+        "type": "object",
+        "properties": {
+          "publishedCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "medianHours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "p90Hours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "firstPassRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "previous": {
+            "$ref": "#/components/schemas/PublishingEffortMetricsDto"
+          }
+        }
+      },
+      "PublishingEffortMetricsDto": {
+        "required": [
+          "publishedCount",
+          "medianHours",
+          "p90Hours",
+          "firstPassRate"
+        ],
+        "type": "object",
+        "properties": {
+          "publishedCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "medianHours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "p90Hours": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "firstPassRate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        }
+      },
       "ReceivedPartDto": {
         "required": [
           "partNumber",
@@ -9424,6 +9999,38 @@
           },
           "eTag": {
             "type": "string"
+          }
+        }
+      },
+      "RecentUsageDto": {
+        "required": [
+          "id",
+          "actorId",
+          "eventType",
+          "channel",
+          "occurredAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -9539,6 +10146,225 @@
           }
         }
       },
+      "ReportColumnDto": {
+        "required": [
+          "key",
+          "label",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "ReportDto": {
+        "required": [
+          "name",
+          "title",
+          "generatedAt",
+          "period",
+          "columns",
+          "rows",
+          "truncated"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period": {
+            "$ref": "#/components/schemas/AnalyticsPeriodDto"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportColumnDto"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReportInfoDto": {
+        "required": [
+          "name",
+          "title",
+          "description",
+          "namesAssets",
+          "defaultDays",
+          "maxDays"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "namesAssets": {
+            "type": "boolean"
+          },
+          "defaultDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxDays": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ReportScheduleDto": {
+        "required": [
+          "id",
+          "report",
+          "days",
+          "frequency",
+          "hourUtc",
+          "dayOfWeek",
+          "dayOfMonth",
+          "recipientUserIds",
+          "enabled",
+          "lastSentAt",
+          "lastError",
+          "nextRunAt",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "report": {
+            "type": "string"
+          },
+          "days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "frequency": {
+            "type": "string"
+          },
+          "hourUtc": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dayOfWeek": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "dayOfMonth": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "recipientUserIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "lastSentAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastError": {
+            "type": "string",
+            "nullable": true
+          },
+          "nextRunAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ReportScheduleInput": {
+        "required": [
+          "report",
+          "days",
+          "frequency",
+          "hourUtc",
+          "dayOfWeek",
+          "dayOfMonth",
+          "recipientUserIds",
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "report": {
+            "type": "string"
+          },
+          "days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "frequency": {
+            "type": "string"
+          },
+          "hourUtc": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dayOfWeek": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "dayOfMonth": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "recipientUserIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
       "RetentionPolicyDto": {
         "required": [
           "id",
@@ -9600,6 +10426,78 @@
           "legalHoldExempt": {
             "type": "boolean",
             "default": false
+          }
+        }
+      },
+      "ReuseKpiDto": {
+        "required": [
+          "usedAssets",
+          "reusedAssets",
+          "rate",
+          "avgUsesPerUsedAsset",
+          "multiChannelAssets",
+          "previous"
+        ],
+        "type": "object",
+        "properties": {
+          "usedAssets": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reusedAssets": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "avgUsesPerUsedAsset": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "multiChannelAssets": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/ReuseMetricsDto"
+          }
+        }
+      },
+      "ReuseMetricsDto": {
+        "required": [
+          "usedAssets",
+          "reusedAssets",
+          "rate",
+          "avgUsesPerUsedAsset",
+          "multiChannelAssets"
+        ],
+        "type": "object",
+        "properties": {
+          "usedAssets": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reusedAssets": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rate": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "avgUsesPerUsedAsset": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "multiChannelAssets": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -10450,6 +11348,28 @@
             "type": "string",
             "default": null,
             "nullable": true
+          }
+        }
+      },
+      "SendReportNowResultDto": {
+        "required": [
+          "sent",
+          "skipped",
+          "failed"
+        ],
+        "type": "object",
+        "properties": {
+          "sent": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -12491,6 +13411,78 @@
           }
         },
         "nullable": true
+      },
+      "WorkflowSlaKpiDto": {
+        "required": [
+          "decided",
+          "onTime",
+          "attainment",
+          "breached",
+          "overdueOpen",
+          "previous"
+        ],
+        "type": "object",
+        "properties": {
+          "decided": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "onTime": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "attainment": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "breached": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "overdueOpen": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "previous": {
+            "$ref": "#/components/schemas/WorkflowSlaMetricsDto"
+          }
+        }
+      },
+      "WorkflowSlaMetricsDto": {
+        "required": [
+          "decided",
+          "onTime",
+          "attainment",
+          "breached",
+          "overdueOpen"
+        ],
+        "type": "object",
+        "properties": {
+          "decided": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "onTime": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "attainment": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "breached": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "overdueOpen": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          }
+        }
       },
       "WorkflowStepViewDto": {
         "required": [

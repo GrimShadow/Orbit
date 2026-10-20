@@ -37,6 +37,19 @@ public abstract class CrossTenantJob(IServiceScopeFactory scopeFactory, NpgsqlDa
         return leads;
     }
 
+    /// <summary>Runs <paramref name="sql"/> through the system connection and reads each row with <paramref name="map"/>. Read-only discovery, like <see cref="FindAsync(string, CancellationToken)"/>,
+    /// for jobs whose candidates are not assets (a tenant and a day, for instance).</summary>
+    protected async Task<List<T>> QueryAsync<T>(string sql, IReadOnlyDictionary<string, object>? parameters, Func<NpgsqlDataReader, T> map, CancellationToken ct)
+    {
+        var rows = new List<T>();
+        await using var conn = await systemDb.OpenConnectionAsync(ct);
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        foreach (var (name, value) in parameters ?? new Dictionary<string, object>()) cmd.Parameters.AddWithValue(name, value);
+        await using var r = await cmd.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct)) rows.Add(map(r));
+        return rows;
+    }
+
     /// <summary>Like <see cref="ForEachAsync"/> but not tied to assets: runs <paramref name="apply"/> in a tenant-scoped scope for each
     /// lead (<c>AssetId</c> is simply the id of whatever row the discovery query selected). Events raised are persisted in the
     /// same transaction; one lead failing is logged and never stops the batch.</summary>

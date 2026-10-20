@@ -29,7 +29,7 @@ public static class BuiltInRoles
             Permissions.AssetsPublish, Permissions.AssetsDownloadOriginal, Permissions.AssetsBulk,
             Permissions.FoldersManage, Permissions.CollectionsManage, Permissions.MetadataSchemaManage, Permissions.TaxonomyManage,
             Permissions.RightsManage, Permissions.KnowledgeManage, Permissions.QrManage, Permissions.ShareManage,
-            Permissions.PortalsManage, Permissions.CommentsWrite, Permissions.AnalyticsRead,
+            Permissions.PortalsManage, Permissions.CommentsWrite, Permissions.AnalyticsRead, Permissions.AnalyticsManage,
         ]),
         new(Editor, "Creates and edits assets and submits them for review.",
         [

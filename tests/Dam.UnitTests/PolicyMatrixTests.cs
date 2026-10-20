@@ -40,7 +40,7 @@ public sealed class PolicyMatrixTests
         [
             AssetsRead, AssetsReadUnpublished, AssetsCreate, AssetsUpdate, AssetsDelete, AssetsMove, AssetsSubmit, AssetsWithdraw,
             AssetsPublish, AssetsDownloadOriginal, AssetsBulk, FoldersManage, CollectionsManage, MetadataSchemaManage, TaxonomyManage,
-            RightsManage, KnowledgeManage, QrManage, ShareManage, PortalsManage, CommentsWrite, AnalyticsRead,
+            RightsManage, KnowledgeManage, QrManage, ShareManage, PortalsManage, CommentsWrite, AnalyticsRead, AnalyticsManage,
         ],
         [BuiltInRoles.Editor] =
         [

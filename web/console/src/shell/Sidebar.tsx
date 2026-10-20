@@ -2,6 +2,7 @@ import {
   CaretDoubleLeft,
   CaretDoubleRight,
   BookOpenText,
+  ChartLineUp,
   CheckSquareOffset,
   FlowArrow,
   House,
@@ -38,8 +39,10 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/upload', labelKey: 'nav.upload', Icon: UploadSimple },
 ];
 
-/** Administration sections, shown in the sidebar only to people holding the named permission. */
+/** Sections shown in the sidebar only to people holding the named permission. Insights links to `/insights`, which opens Key
+ * results; the link stays current on all three of its pages because a non-`end` link matches by prefix. */
 export const ADMIN_ITEMS: (NavItem & { permission: string })[] = [
+  { to: '/insights', labelKey: 'nav.insights', Icon: ChartLineUp, permission: 'analytics.read' },
   { to: '/admin/workflows', labelKey: 'nav.workflows', Icon: FlowArrow, permission: 'workflow.manage' },
   { to: '/admin/ai', labelKey: 'nav.ai', Icon: Sparkle, permission: 'ai.manage' },
   { to: '/admin/glossary', labelKey: 'nav.glossary', Icon: BookOpenText, permission: 'glossary.manage' },
