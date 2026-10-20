@@ -44,6 +44,7 @@ public static class EventCatalogue
         new("comment.reopened", "comment", "A resolved comment thread was reopened."),
         new("rights.expiring", "rights", "The licence assigned to an asset is within 30, 7 or 1 days of ending (the payload names the asset, the licence, the end date, the days remaining and the threshold reached)."),
         new("rights.expired", "rights", "The licence assigned to an asset has ended (the payload names the asset, the licence and its end date)."),
+        new("asset.translation.ready", "asset", "Translations requested for an asset have been made and wait for review (the payload carries the job, the status and counts; never any text)."),
         new(Ping, "webhook", "A test event sent by the Ping button; never raised by the system itself."),
     ];
 

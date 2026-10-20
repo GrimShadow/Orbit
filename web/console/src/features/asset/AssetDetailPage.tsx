@@ -8,6 +8,7 @@ import { CommentsTab } from '../comments/panel/CommentsTab';
 import { AI_TITLE_ID } from '../ai/asset/AiPanel';
 import { useDeepLinkSeek } from '../ai/asset/useDeepLinkSeek';
 import { RIGHTS_TITLE_ID } from '../rights/asset/RightsPanel';
+import { TranslationScope } from '../translation/TranslationScope';
 import { Card, EmptyState, LoadingRegion, Skeleton, Tabs, WarningCircle } from '../../ui';
 import { AssetHeader } from './AssetHeader';
 import { AssetPreview } from './AssetPreview';
@@ -100,26 +101,28 @@ function AssetDetailBody({ asset }: { asset: AssetDto }) {
           <AssetPreview assetId={asset.id} type={asset.type} title={asset.title} status={asset.status} />
         </div>
         <div className="dam-asset-layout__side">
-          <Tabs
-            label={t('asset.tabs')}
-            value={tab}
-            onChange={setTab}
-            tabs={[
-              { id: 'details', label: t('asset.detailsTab'), content: <DetailsPanel asset={asset} draft={draft} /> },
-              {
-                id: 'metadata',
-                label: t('asset.metadataTab'),
-                content: <MetadataForm assetType={asset.type} draft={draft} />,
-              },
-              {
-                id: 'comments',
-                label: open > 0 ? t('comments.tabWithCount', { count: open }) : t('comments.tab'),
-                content: <CommentsTab assetId={asset.id} focusRequest={focusRequest} onFocusHandled={handled} />,
-              },
-              { id: 'activity', label: t('comments.activityTab'), content: <ActivityTab assetId={asset.id} /> },
-              { id: 'versions', label: t('asset.versionsTab'), content: <VersionsPanel assetId={asset.id} /> },
-            ]}
-          />
+          <TranslationScope assetId={asset.id} assetType={asset.type} saved={asset.metadata}>
+            <Tabs
+              label={t('asset.tabs')}
+              value={tab}
+              onChange={setTab}
+              tabs={[
+                { id: 'details', label: t('asset.detailsTab'), content: <DetailsPanel asset={asset} draft={draft} /> },
+                {
+                  id: 'metadata',
+                  label: t('asset.metadataTab'),
+                  content: <MetadataForm asset={asset} draft={draft} />,
+                },
+                {
+                  id: 'comments',
+                  label: open > 0 ? t('comments.tabWithCount', { count: open }) : t('comments.tab'),
+                  content: <CommentsTab assetId={asset.id} focusRequest={focusRequest} onFocusHandled={handled} />,
+                },
+                { id: 'activity', label: t('comments.activityTab'), content: <ActivityTab assetId={asset.id} /> },
+                { id: 'versions', label: t('asset.versionsTab'), content: <VersionsPanel assetId={asset.id} /> },
+              ]}
+            />
+          </TranslationScope>
         </div>
       </div>
       {draft.dirty && <SaveBar saving={draft.saving} onSave={draft.save} onDiscard={draft.discard} />}

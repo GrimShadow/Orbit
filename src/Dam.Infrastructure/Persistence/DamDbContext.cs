@@ -64,6 +64,8 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<AssetExtract> AssetExtracts => Set<AssetExtract>();
     public DbSet<AssetEmbedding> AssetEmbeddings => Set<AssetEmbedding>();
     public DbSet<AiRun> AiRuns => Set<AiRun>();
+    public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
+    public DbSet<TranslationJob> TranslationJobs => Set<TranslationJob>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -595,17 +597,29 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         {
             e.ToTable("ai_suggestions", t =>
             {
-                t.HasCheckConstraint("ck_ai_suggestions_kind", "kind IN ('tag','language')");
+                t.HasCheckConstraint("ck_ai_suggestions_kind", "kind IN ('tag','language','translation')");
                 t.HasCheckConstraint("ck_ai_suggestions_status", "status IN ('pending','accepted','rejected')");
+                // Tags and languages stay short; a translation is the text itself.
+                t.HasCheckConstraint("ck_ai_suggestions_value_length", "kind = 'translation' OR char_length(value) <= 200");
+                t.HasCheckConstraint("ck_ai_suggestions_translation_shape", "kind <> 'translation' OR (field IS NOT NULL AND language IS NOT NULL)");
             });
             e.HasKey(x => x.Id);
             e.Property(x => x.Kind).HasMaxLength(16);
-            e.Property(x => x.Value).HasMaxLength(200);
+            e.Property(x => x.Value).HasColumnType("text");
             e.Property(x => x.Model).HasMaxLength(100);
             e.Property(x => x.Status).HasMaxLength(16);
+            e.Property(x => x.Field).HasMaxLength(64);
+            e.Property(x => x.Language).HasMaxLength(12);
+            e.Property(x => x.SourceLanguage).HasMaxLength(12);
+            e.Property(x => x.SourceHash).HasMaxLength(64);
+            e.Ignore(x => x.IsPending);
+            e.Ignore(x => x.IsTranslation);
             e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
-            e.HasIndex(x => new { x.AssetId, x.VersionId, x.Kind, x.Value }).IsUnique().HasDatabaseName("ux_ai_suggestions_once");
+            // A re-run never proposes the same tag or language twice; and there is at most one translation waiting per field and language: a new request replaces it.
+            e.HasIndex(x => new { x.AssetId, x.VersionId, x.Kind, x.Value }).IsUnique().HasDatabaseName("ux_ai_suggestions_once").HasFilter("kind <> 'translation'");
+            e.HasIndex(x => new { x.AssetId, x.Field, x.Language }).IsUnique().HasDatabaseName("ux_ai_suggestions_translation_pending").HasFilter("kind = 'translation' AND status = 'pending'");
             e.HasIndex(x => new { x.TenantId, x.AssetId, x.Status });
+            e.HasIndex(x => new { x.TenantId, x.Status }).HasDatabaseName("ix_ai_suggestions_translation_review").HasFilter("kind = 'translation' AND status = 'pending'");
         });
         b.Entity<AssetExtract>(e =>
         {
@@ -615,6 +629,8 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.Property(x => x.OcrLanguage).HasMaxLength(12);
             e.Property(x => x.TranscriptLanguage).HasMaxLength(12);
             e.Property(x => x.TranscriptText).HasColumnType("text");
+            e.Property(x => x.Summary).HasColumnType("text");
+            e.Property(x => x.SummaryLanguage).HasMaxLength(12);
             e.Property(x => x.TranscriptSegments).AsJson();
             e.Property(x => x.Model).AsJson();
             e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
@@ -645,6 +661,32 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.Property(x => x.Error).HasMaxLength(1000);
             e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.AssetId, x.VersionId }).IsUnique().HasDatabaseName("ux_ai_runs_version");
+            e.HasIndex(x => new { x.TenantId, x.Status });
+        });
+        b.Entity<GlossaryTerm>(e =>
+        {
+            e.ToTable("glossary_terms", t => t.HasCheckConstraint("ck_glossary_terms_mode", "mode IN ('locked','mapped')"));
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.Term).HasMaxLength(200);
+            e.Property(x => x.Mode).HasMaxLength(8);
+            e.Property(x => x.Translations).AsJson();
+            e.Property(x => x.Note).HasMaxLength(500);
+            e.HasIndex(x => new { x.TenantId, x.Term }).IsUnique().HasDatabaseName("ux_glossary_terms_term");
+        });
+        b.Entity<TranslationJob>(e =>
+        {
+            e.ToTable("translation_jobs", t => t.HasCheckConstraint("ck_translation_jobs_status", "status IN ('pending','running','succeeded','partial','failed')"));
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.IsFinished);
+            e.Property(x => x.Status).HasMaxLength(16);
+            e.Property(x => x.Fields).AsJson();
+            e.Property(x => x.TargetLanguages).AsJson();
+            e.Property(x => x.SourceLanguage).HasMaxLength(12);
+            e.Property(x => x.Items).AsJson();
+            e.Property(x => x.Error).HasMaxLength(1000);
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.AssetId, x.Id });
             e.HasIndex(x => new { x.TenantId, x.Status });
         });
     }

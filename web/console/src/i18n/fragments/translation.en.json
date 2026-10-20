@@ -1,0 +1,273 @@
+{
+  "nav": {
+    "glossary": "Glossary"
+  },
+  "translation": {
+    "button": "Translate…",
+    "chars_one": "{{count}} character",
+    "chars_other": "{{count}} characters",
+    "charsOf": "{{count}} of {{max}} characters",
+    "overLimit": "Over the limit.",
+    "editor": {
+      "source": "Source",
+      "target": "Target",
+      "sourceLanguage": "Source language of {{field}}",
+      "targetLanguage": "Target language of {{field}}",
+      "layout": "Layout of {{field}}",
+      "sideBySide": "Side by side",
+      "stacked": "Stacked",
+      "swap": "Swap the source and target languages of {{field}}",
+      "empty": "empty"
+    },
+    "inline": {
+      "translate": "Translate with AI",
+      "translateLabel": "Translate {{field}} into {{language}} with AI",
+      "needSource": "Write the {{language}} text first.",
+      "saveFirst": "Save your changes to the {{language}} text first: AI translates the saved text.",
+      "startFailed": "Could not start the translation: {{reason}}",
+      "working": "Translating into {{language}}…",
+      "done": "The {{language}} translation is ready to review.",
+      "skipped": "Skipped: {{reason}}",
+      "failed": "The translation failed: {{reason}}",
+      "failedPlain": "The translation failed.",
+      "off": "AI is off for your organisation, so text cannot be translated automatically.",
+      "unsupported": "The AI provider your organisation uses cannot translate text. Translation needs an OpenAI-compatible provider.",
+      "settings": "AI settings"
+    },
+    "suggestion": {
+      "title": "AI suggestion",
+      "titleFor": "{{field}} · {{language}}",
+      "from": "Translated from {{language}}",
+      "stale": "The {{language}} text has changed since this was suggested. Check that it still fits before you accept it.",
+      "sourceFallback": "source",
+      "glossary": "Glossary terms were kept exactly as defined.",
+      "accept": "Accept",
+      "acceptLabel": "Accept the {{language}} translation of {{field}}",
+      "edit": "Edit",
+      "editLabel": "Edit the {{language}} suggestion for {{field}} before accepting it",
+      "reject": "Reject",
+      "rejectLabel": "Reject the {{language}} translation of {{field}}",
+      "editedLabel": "Edited {{language}} translation of {{field}}",
+      "acceptEdited": "Accept edited text",
+      "acceptEditedLabel": "Accept the edited {{language}} translation of {{field}}",
+      "cancelEdit": "Cancel",
+      "replaceTitle": "{{language}} already has text",
+      "replaceBody": "{{field}} already has {{language}} text. Accepting replaces it with this suggestion.",
+      "replace": "Replace the text",
+      "keep": "Keep the current text",
+      "accepted": "Added the {{language}} translation of {{field}}",
+      "rejected": "Suggestion dismissed",
+      "alreadyDecided": "Someone has already decided this suggestion.",
+      "decideFailed": "Could not save your decision: {{reason}}",
+      "decidedLine": "{{field}} · {{language}}"
+    },
+    "panel": {
+      "title": "Translation suggestions",
+      "hint": "AI translated these fields. Nothing changes on the asset until you accept one.",
+      "hintReader": "AI translated these fields. An editor accepts or rejects each one."
+    },
+    "dialog": {
+      "title": "Translate with AI",
+      "close": "Close",
+      "loading": "Loading the asset's fields",
+      "intro": "AI writes a suggestion for each field and language. Nothing changes on the asset until you review and accept a suggestion.",
+      "fields": "Fields to translate",
+      "needField": "Choose at least one field.",
+      "source": "Translate from",
+      "sourceAuto": "Automatic",
+      "sourceHint": "Optional. Name the language the text is written in if the automatic choice is wrong.",
+      "targets": "Translate into",
+      "targetsHint": "{{count}} chosen. You can choose up to {{max}}.",
+      "needTarget": "Choose at least one language.",
+      "overwrite": "Overwrite existing text",
+      "overwriteHint": "Without this, languages that already have text are skipped. Nothing is replaced until you accept a suggestion.",
+      "submit": "Translate",
+      "cancel": "Cancel",
+      "done": "Done",
+      "another": "Translate more",
+      "failed": "Could not start the translation: {{reason}}",
+      "noFields": "This kind of asset has no fields that hold text in several languages.",
+      "schemaFailed": "Could not load this asset's fields."
+    },
+    "job": {
+      "pending": "Waiting for its turn",
+      "running": "Translating",
+      "keepWorking": "You can close this and keep working; the suggestions appear on the asset when they are ready.",
+      "loadFailed": "Could not check on the translation.",
+      "retry": "Try again",
+      "results": "Results by field and language",
+      "itemWhat": "{{field}} → {{language}}",
+      "item": {
+        "ok": "Translated",
+        "skipped": "Skipped",
+        "failed": "Failed"
+      },
+      "done": {
+        "succeeded": "Finished: {{count}} translations are ready to review.",
+        "partial": "Finished with some problems: {{count}} translations are ready to review.",
+        "failed": "The translation did not produce anything."
+      },
+      "review": "Review the suggestions"
+    }
+  },
+  "aiAsset": {
+    "summary": {
+      "title": "AI-generated summary",
+      "ask": "Summarise",
+      "again": "Summarise again",
+      "none": "No summary yet. AI can write a short one from the text in this document.",
+      "started": "Summary requested",
+      "working": "Writing the summary…",
+      "slow": "This is taking longer than usual. The summary will appear here when it is ready.",
+      "failed": "Could not request a summary: {{reason}}",
+      "language": "Language: {{language}}",
+      "model": "Model: {{model}}"
+    }
+  },
+  "aiAdmin": {
+    "features": {
+      "summaries": "Summarise documents",
+      "summariesHint": "Writes a short summary of longer documents, labelled as AI-generated and searchable. The built-in provider picks key sentences; it does not write new text."
+    }
+  },
+  "tasks": {
+    "badge": {
+      "translations_one": "{{count}} translation to review",
+      "translations_other": "{{count}} translations to review"
+    },
+    "tabs": {
+      "label": "Task lists",
+      "approvals": "Approvals",
+      "translations": "Translations",
+      "translationsCount_one": "Translations ({{count}})",
+      "translationsCount_other": "Translations ({{count}})"
+    },
+    "translations": {
+      "loading": "Loading translations",
+      "list": "Assets with translations to review",
+      "error": "Couldn't load the translations.",
+      "emptyTitle": "No translations to review",
+      "emptyBody": "When AI translates an asset you can edit, it shows up here until you accept or reject its suggestions.",
+      "line": "{{type}} · {{fields}}",
+      "pending_one": "{{count}} suggestion",
+      "pending_other": "{{count}} suggestions",
+      "languages": "Languages",
+      "requestedBy": "Requested by {{name}}",
+      "waiting": "waiting {{when}}",
+      "review": "Review",
+      "reviewLabel": "Review the translations of {{title}}"
+    }
+  },
+  "glossary": {
+    "title": "Glossary",
+    "description": "Terms that translation must treat with care: brand and product names, and words that have a fixed translation.",
+    "explain": "A locked term is kept exactly as written in every language, so a product name is never translated. A mapped term is replaced by the rendering you give for each language. This holds whichever AI provider does the translating.",
+    "loading": "Loading the glossary",
+    "forbidden": {
+      "title": "You do not have access to the glossary",
+      "description": "Managing the glossary needs the glossary.manage permission. Ask an administrator."
+    },
+    "loadFailed": "Could not load the glossary",
+    "loadFailedHint": "Check your connection and try again.",
+    "retry": "Try again",
+    "empty": {
+      "title": "No glossary terms yet",
+      "description": "Add the names and phrases translation must never get wrong, one at a time or pasted in as a list."
+    },
+    "add": "Add term",
+    "edit": "Edit {{term}}",
+    "search": "Search terms",
+    "searchPlaceholder": "Search by term",
+    "table": "Glossary terms",
+    "noMatch": "No terms match \"{{q}}\".",
+    "col": {
+      "term": "Term",
+      "mode": "Type",
+      "languages": "Languages",
+      "note": "Note",
+      "actions": "Actions"
+    },
+    "allLanguages": "All languages",
+    "mode": {
+      "locked": "Locked",
+      "mapped": "Mapped",
+      "lockedDesc": "Kept exactly as written in every language.",
+      "mappedDesc": "Replaced by a fixed rendering for each language you give."
+    },
+    "loadMore": "Load more",
+    "count_one": "{{count}} term shown.",
+    "count_other": "{{count}} terms shown.",
+    "limitNote": "A glossary holds up to {{max}} terms.",
+    "limitReached": "The glossary is full. A glossary holds up to 5,000 terms; delete some before adding more.",
+    "duplicate": "\"{{term}}\" is already in the glossary.",
+    "cancel": "Cancel",
+    "close": "Close",
+    "created": "Added {{term}}",
+    "saved": "Saved {{term}}",
+    "deleted": "Deleted {{term}}",
+    "form": {
+      "addTitle": "Add a glossary term",
+      "editTitle": "Edit glossary term",
+      "term": "Term",
+      "termHint": "Matched exactly as written, including capital letters.",
+      "termRequired": "Enter the term.",
+      "mode": "How translation treats it",
+      "renderings": "Rendering in each language",
+      "rowLanguage": "Language of rendering {{n}}",
+      "rowText": "Rendering {{n}}",
+      "chooseLanguage": "Choose a language",
+      "addLanguage": "Add a language",
+      "removeRow": "Remove rendering {{n}}",
+      "needRendering": "A mapped term needs a rendering in at least one language.",
+      "rowIncomplete": "Give each rendering a language and its text.",
+      "rowDuplicate": "Each language can appear only once.",
+      "note": "Note",
+      "noteHint": "Optional. Why the term is here; only editors of the glossary see it.",
+      "add": "Add term",
+      "save": "Save term",
+      "saveFailed": "Could not save the term. {{reason}}"
+    },
+    "delete": {
+      "label": "Delete {{term}}",
+      "title": "Delete this term?",
+      "body": "{{term}} will no longer be protected when text is translated.",
+      "note": "Text that was already translated does not change.",
+      "confirm": "Delete term",
+      "failed": "Could not delete the term. {{reason}}"
+    },
+    "import": {
+      "open": "Paste terms",
+      "title": "Paste glossary terms",
+      "intro": "One term per line. A term on its own is locked. Add | language=rendering pairs to map it.",
+      "example": "Acme Lumen\nAcme Cloud | hi=ऐक्मे क्लाउड | ta=ஏக்மி கிளவுட்",
+      "exampleLabel": "Example of pasted terms",
+      "label": "Terms",
+      "languagesHint": "Languages you can map: {{languages}}. Up to {{max}} lines at a time.",
+      "summary": "{{count}} terms will be created: {{locked}} locked, {{mapped}} mapped.",
+      "nothing": "No valid lines yet.",
+      "truncated": "Only the first {{max}} lines are used.",
+      "previewLabel": "Terms that will be created",
+      "more": "and {{count}} more",
+      "errors_one": "{{count}} line has a problem and will be skipped",
+      "errors_other": "{{count}} lines have problems and will be skipped",
+      "line": "Line {{line}}:",
+      "error": {
+        "emptyTerm": "The term is empty.",
+        "badSegment": "\"{{detail}}\" is not in the form language=rendering.",
+        "unknownLanguage": "\"{{detail}}\" is not a language this organisation uses.",
+        "duplicateLanguage": "The language \"{{detail}}\" appears twice.",
+        "emptyRendering": "The rendering for \"{{detail}}\" is empty.",
+        "duplicateTerm": "This term repeats line {{detail}}."
+      },
+      "submit_one": "Import {{count}} term",
+      "submit_other": "Import {{count}} terms",
+      "progress": "Importing {{done}} of {{total}}…",
+      "created_one": "{{count}} term was added.",
+      "created_other": "{{count}} terms were added.",
+      "limit": "The glossary reached its limit of {{max}} terms. {{count}} terms were not added.",
+      "failedTitle_one": "{{count}} term could not be added",
+      "failedTitle_other": "{{count}} terms could not be added",
+      "done": "Done"
+    }
+  }
+}

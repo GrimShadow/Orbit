@@ -85,7 +85,7 @@ public sealed class UpdateAiSettingsHandler(
         var features = new AiFeatureFlags
         {
             Tags = input.Features?.Tags ?? true, Ocr = input.Features?.Ocr ?? true,
-            Transcribe = input.Features?.Transcribe ?? true, Embeddings = input.Features?.Embeddings ?? true,
+            Transcribe = input.Features?.Transcribe ?? true, Embeddings = input.Features?.Embeddings ?? true, Summaries = input.Features?.Summaries ?? true,
         };
 
         var existing = await q.FirstOrDefaultAsync(settings.Query(), ct);
@@ -103,7 +103,7 @@ public sealed class UpdateAiSettingsHandler(
         var row = existing;
         if (row is null) { row = AiSettings.Create(tenant.TenantId, clock.UtcNow); settings.Add(row); }
         row.Update(input.Enabled, provider, features, input.OcrLanguage, me == Guid.Empty ? null : me, clock.UtcNow);
-        events.Raise(new AiSettingsChanged(tenant.TenantId, row.Enabled, row.Provider, features.Tags, features.Ocr, features.Transcribe, features.Embeddings));
+        events.Raise(new AiSettingsChanged(tenant.TenantId, row.Enabled, row.Provider, features.Tags, features.Ocr, features.Transcribe, features.Embeddings, features.Summaries));
         return AiSettingsMapping.ToDto(row, resolver);
     }
 
@@ -173,9 +173,10 @@ public sealed class GetAiCapabilitiesHandler(IAiResolver resolver, IVectorIndexI
         var f = ai.Features;
         var text = active && f.Embeddings && caps.TextEmbeddings;
         var image = active && f.Embeddings && caps.ImageEmbeddings;
-        var enrichment = active && (f.Tags || f.Ocr || f.Transcribe || f.Embeddings);
+        var enrichment = active && (f.Tags || f.Ocr || f.Transcribe || f.Embeddings || f.Summaries);
         var semantic = (text || image) && await IndexReadyAsync(ct);
-        return new AiCapabilitiesDto(active, semantic, enrichment, text, image, ai.ProviderKind, active && ai.SendsDataOffSite);
+        return new AiCapabilitiesDto(active, semantic, enrichment, text, image, ai.ProviderKind, active && ai.SendsDataOffSite,
+            Translate: active && caps.Translate, Summarise: active && f.Summaries && caps.Summarise);
     }
 
     private async Task<bool> IndexReadyAsync(CancellationToken ct)

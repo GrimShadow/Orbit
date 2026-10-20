@@ -22,6 +22,10 @@ public sealed class AiRunTracker(IServiceScopeFactory scopes, IClock clock)
     public Task NoteRetryAsync(Guid tenantId, Guid assetId, Guid versionId, string error, CancellationToken ct) =>
         UpdateAsync(tenantId, assetId, versionId, (run, now) => run.NoteRetry(error, now), ct);
 
+    /// <summary>A manual summary the provider would not or could not make, shown among the run's steps; the run's own status is left as it was.</summary>
+    public Task NoteSummaryFailedAsync(Guid tenantId, Guid assetId, Guid versionId, string error, CancellationToken ct) =>
+        UpdateAsync(tenantId, assetId, versionId, (run, _) => run.UpsertStep(new AiStep { Name = "summary", Status = AiStepStatuses.Failed, Detail = error.Length > 400 ? error[..400] : error }), ct);
+
     public Task MarkFailedAsync(Guid tenantId, Guid assetId, Guid versionId, string error, CancellationToken ct) =>
         UpdateAsync(tenantId, assetId, versionId, (run, now) => run.Fail(run.Steps, error, now), ct);
 
@@ -49,11 +53,17 @@ public sealed class AiRunTracker(IServiceScopeFactory scopes, IClock clock)
 public sealed class EnrichConsumer(EnrichmentPipeline pipeline, AiRunTracker tracker, MessagingOptions messaging, ITenantContext tenant, DamDbContext db, ILogger<EnrichConsumer> log) : EventConsumer
 {
     public override string Name => "ai-enrich";
-    public override IReadOnlyList<string> RoutingKeys => ["asset.version.added", AssetAiRequested.EventName];
+    public override IReadOnlyList<string> RoutingKeys => ["asset.version.added", AssetAiRequested.EventName, AssetSummariseRequested.EventName];
 
     public override async Task HandleAsync(EventEnvelope message, CancellationToken ct)
     {
         var (assetId, versionId, force) = Parse(message);
+        if (message.Name == AssetSummariseRequested.EventName)
+        {
+            // A summary asked for by hand is its own small piece of work: it never changes the run's status, and a failure is shown as the run's "summary" step.
+            if (versionId is { } vid) await pipeline.SummariseAsync(assetId, vid, ct);
+            return;
+        }
         try { await pipeline.RunAsync(assetId, versionId, force, ct); }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -66,6 +76,11 @@ public sealed class EnrichConsumer(EnrichmentPipeline pipeline, AiRunTracker tra
     public override async Task OnParkedAsync(EventEnvelope message, string error, CancellationToken ct)
     {
         var (assetId, versionId, _) = Parse(message);
+        if (message.Name == AssetSummariseRequested.EventName)
+        {
+            if (versionId is { } sv) await tracker.NoteSummaryFailedAsync(tenant.TenantId, assetId, sv, $"Gave up after {messaging.MaxAttempts} attempts: {Trim(error)}", ct);
+            return;
+        }
         if (await CurrentVersionAsync(assetId, versionId, ct) is { } vid)
             await tracker.MarkFailedAsync(tenant.TenantId, assetId, vid, $"Gave up after {messaging.MaxAttempts} attempts: {Trim(error)}", ct);
     }

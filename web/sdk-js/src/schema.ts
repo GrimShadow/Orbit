@@ -218,7 +218,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** What the AI found for the asset's current version: status, the run and its steps, suggestions (tags, language), text read from the picture or pages (clipped at 20,000 characters), the transcript, and whether the semantic-search vectors exist. Needs assets.read */
+        /** What the AI found for the asset's current version: status, the run and its steps, suggestions (tags and language for the current version; every translation of the asset), text read from the picture or pages (clipped at 20,000 characters), the transcript, the summary and whether the semantic-search vectors exist. Needs assets.read */
         get: operations["GetAssetAi"];
         put?: never;
         post?: never;
@@ -254,7 +254,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Accepts a suggestion. A tag is added to the asset's tags through the normal update path (audited, re-indexed); a language is written to the asset's 'language' metadata field when its schema has one that accepts it, otherwise only the acceptance is recorded (see notes). Needs assets.update */
+        /** Accepts a suggestion. A tag is added to the asset's tags through the normal update path (audited, re-indexed); a language is written to the asset's 'language' metadata field when its schema has one that accepts it, otherwise only the acceptance is recorded (see notes). A translation is merged into its multilingual field under its language, leaving the other languages untouched, through the normal metadata validation, audit and re-index; the optional body carries the reviewer's edit (text) and replace (allow overwriting text the language already has: otherwise 409). Needs assets.update */
         post: operations["AcceptAiSuggestion"];
         delete?: never;
         options?: never;
@@ -288,8 +288,59 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Accepts every pending suggestion of a kind (query parameter kind: tag, the default, or language) for the current version. Tags beyond the asset's 50-tag limit stay pending. Needs assets.update */
+        /** Accepts every pending suggestion of a kind (query parameter kind: tag, the default, language or translation) for the current version. Tags beyond the asset's 50-tag limit, and translations whose language already has text, stay pending (see notes). Needs assets.update */
         post: operations["AcceptAllAiSuggestions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{id}/ai/summarise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Writes (or rewrites) the summary of the asset's current version from the text already extracted from it (202; poll GET /assets/{id}/ai for the summary). 409 when AI is off, summaries are switched off, the provider cannot summarise, the asset has no file, or no text has been extracted from it yet. Needs assets.update */
+        post: operations["SummariseAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{id}/translate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Asks for translations of multilingual (ml_text) fields into the target languages (202). The worker translates around the tenant's glossary terms and stores each result as a pending suggestion (GET /assets/{id}/ai) for a person to accept; the job (GET /assets/{id}/translations) records what happened to every field and language, and the requester is notified when it is done. At most 20 fields and 10 languages; sourceLanguage defaults per field; languages that already have text are skipped unless overwrite is true. 409 when AI is off or the provider cannot translate; 422 for fields that are not ml_text fields, languages the tenant does not use, limits, or nothing to translate from. Needs assets.update */
+        post: operations["TranslateAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/{id}/translations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The latest ten translation jobs of the asset, newest first, with the outcome (ok, skipped with a reason, failed with a reason) of every field and language. The translations themselves are the suggestions in GET /assets/{id}/ai. Needs assets.read */
+        get: operations["ListAssetTranslations"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1872,8 +1923,42 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** What AI can do for the caller's tenant right now: enabled, semanticSearch (also requires a ready vector index), enrichment, textVectors, imageVectors, provider kind and whether data goes off-site. For any signed-in user; no URLs, keys or models */
+        /** What AI can do for the caller's tenant right now: enabled, semanticSearch (also requires a ready vector index), enrichment, textVectors, imageVectors, translate, summarise, provider kind and whether data goes off-site. For any signed-in user; no URLs, keys or models */
         get: operations["GetAiCapabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The review queue: assets with AI suggestions waiting for a person (kind: translation, the only one), oldest first, with how many wait and in which fields and languages. Only assets the caller can edit (assets.update through role and access rules) are listed. For any signed-in user */
+        get: operations["ListAiReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/reviews/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How many assets have translations waiting for the caller to review (only assets the caller can edit count): the number for the Tasks badge. For any signed-in user */
+        get: operations["GetAiReviewSummary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1891,7 +1976,7 @@ export interface paths {
         };
         /** The tenant's AI settings (off until saved), the deployment's default provider and which providers are configured. Needs ai.manage */
         get: operations["GetAiSettings"];
-        /** Replaces the tenant's AI settings: on/off, provider (empty = deployment default), features and OCR language. Enabling needs a configured provider (422 on provider) and, for one that sends data off-site, acknowledgeOffSite true (422). Needs ai.manage */
+        /** Replaces the tenant's AI settings: on/off, provider (empty = deployment default), features (tags, ocr, transcribe, embeddings, summaries) and OCR language. Enabling needs a configured provider (422 on provider) and, for one that sends data off-site, acknowledgeOffSite true (422). Needs ai.manage */
         put: operations["UpdateAiSettings"];
         post?: never;
         delete?: never;
@@ -1968,10 +2053,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/glossary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The glossary, alphabetical, paged by the term itself (nextCursor is the last term). q keeps terms containing the text, ignoring case. Needs assets.read */
+        get: operations["ListGlossary"];
+        put?: never;
+        /** Adds a term. mode is locked (kept exactly as written in every language) or mapped (a fixed rendering per language; needs at least one translation). Terms are matched exactly, case included, longest first; a term is unique in the tenant and at most 5,000 are kept (422 on term). Needs glossary.manage */
+        post: operations["CreateGlossaryTerm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/glossary/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replaces a term. Text already translated, and translations waiting for review, are not changed. Needs glossary.manage */
+        put: operations["UpdateGlossaryTerm"];
+        post?: never;
+        /** Removes a term. Needs glossary.manage */
+        delete: operations["DeleteGlossaryTerm"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AcceptSuggestionInput: {
+            /** @default null */
+            text: string | null;
+            /** @default false */
+            replace: boolean;
+        } | null;
         AccessRuleDto: {
             /** Format: uuid */
             id: string;
@@ -2036,6 +2163,10 @@ export interface components {
             imageVectors: boolean;
             provider: string;
             sendsDataOffSite: boolean;
+            /** @default false */
+            translate: boolean;
+            /** @default false */
+            summarise: boolean;
         };
         AiCountsDto: {
             /** Format: int32 */
@@ -2065,12 +2196,16 @@ export interface components {
             ocr: boolean;
             transcribe: boolean;
             embeddings: boolean;
+            /** @default true */
+            summaries: boolean;
         };
         AiFeaturesDto2: {
             tags: boolean;
             ocr: boolean;
             transcribe: boolean;
             embeddings: boolean;
+            /** @default true */
+            summaries: boolean;
         } | null;
         AiHealthDto: {
             status: string;
@@ -2100,6 +2235,24 @@ export interface components {
         AiReindexDto: {
             accepted: boolean;
             message: string;
+        };
+        AiReviewItemDto: {
+            /** Format: uuid */
+            assetId: string;
+            title: string;
+            assetType: string;
+            /** Format: int32 */
+            pending: number;
+            languages: string[];
+            fields: string[];
+            /** Format: uuid */
+            requestedBy: string | null;
+            /** Format: date-time */
+            oldestAt: string;
+        };
+        AiReviewSummaryDto: {
+            /** Format: int32 */
+            translation: number;
         };
         AiRunDto: {
             /** Format: uuid */
@@ -2172,7 +2325,23 @@ export interface components {
             decidedBy: string | null;
             /** Format: date-time */
             decidedAt: string | null;
+            /** @default null */
+            field: string | null;
+            /** @default null */
+            language: string | null;
+            /** @default null */
+            sourceLanguage: string | null;
+            /** @default false */
+            sourceStale: boolean;
         };
+        /** @default null */
+        AiSummaryDto: {
+            text: string;
+            language: string | null;
+            model: string;
+            /** Format: date-time */
+            createdAt: string;
+        } | null;
         AiTestResultDto: {
             provider: string;
             ok: boolean;
@@ -2263,6 +2432,7 @@ export interface components {
             ocrLanguage: string | null;
             transcript: components["schemas"]["AiTranscriptDto"];
             embeddingsReady: boolean;
+            summary?: components["schemas"]["AiSummaryDto"];
         };
         AssetDto: {
             /** Format: uuid */
@@ -2304,6 +2474,9 @@ export interface components {
             /** Format: uuid */
             assetId: string;
             rights: components["schemas"]["RightsSummaryDto"];
+        };
+        AssetTranslationsDto: {
+            jobs: components["schemas"]["TranslationJobDto"][];
         };
         AssetVersionDto: {
             /** Format: uuid */
@@ -2649,6 +2822,28 @@ export interface components {
             path: string;
             name: string;
         };
+        GlossaryTermDto: {
+            /** Format: uuid */
+            id: string;
+            term: string;
+            mode: string;
+            translations: {
+                [key: string]: string;
+            };
+            note: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        GlossaryTermInput: {
+            term: string | null;
+            mode: string | null;
+            translations: {
+                [key: string]: string;
+            } | null;
+            note: string | null;
+        };
         GroupDetailDto: {
             group: components["schemas"]["GroupDto"];
             members: components["schemas"]["UserRef"][];
@@ -2780,12 +2975,20 @@ export interface components {
             items: components["schemas"]["ActivityItemDto"][];
             nextCursor: string | null;
         };
+        PageOfAiReviewItemDto: {
+            items: components["schemas"]["AiReviewItemDto"][];
+            nextCursor: string | null;
+        };
         PageOfAssetDto: {
             items: components["schemas"]["AssetDto"][];
             nextCursor: string | null;
         };
         PageOfAuditEntryDto: {
             items: components["schemas"]["AuditEntryDto"][];
+            nextCursor: string | null;
+        };
+        PageOfGlossaryTermDto: {
+            items: components["schemas"]["GlossaryTermDto"][];
             nextCursor: string | null;
         };
         PageOfNotificationDto: {
@@ -3304,6 +3507,40 @@ export interface components {
         } | null;
         TransitionAssetRequest: {
             reason: string | null;
+        };
+        TranslateInput: {
+            fields: string[] | null;
+            targetLanguages: string[] | null;
+            /** @default null */
+            sourceLanguage: string | null;
+            /** @default null */
+            overwrite: boolean | null;
+        };
+        TranslationItemDto: {
+            field: string;
+            language: string;
+            status: string;
+            reason: string | null;
+        };
+        TranslationJobDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            assetId: string;
+            status: string;
+            fields: string[];
+            targetLanguages: string[];
+            sourceLanguage: string | null;
+            overwrite: boolean;
+            /** Format: uuid */
+            requestedBy: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            finishedAt: string | null;
+            items: components["schemas"]["TranslationItemDto"][];
+            /** @default null */
+            error: string | null;
         };
         UnreadCountDto: {
             /** Format: int32 */
@@ -4151,7 +4388,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AcceptSuggestionInput"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -4207,6 +4448,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiDecisionDto"];
+                };
+            };
+        };
+    };
+    SummariseAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetAiDto"];
+                };
+            };
+        };
+    };
+    TranslateAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TranslateInput"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranslationJobDto"];
+                };
+            };
+        };
+    };
+    ListAssetTranslations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetTranslationsDto"];
                 };
             };
         };
@@ -7487,6 +7798,50 @@ export interface operations {
             };
         };
     };
+    ListAiReviews: {
+        parameters: {
+            query?: {
+                kind?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfAiReviewItemDto"];
+                };
+            };
+        };
+    };
+    GetAiReviewSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiReviewSummaryDto"];
+                };
+            };
+        };
+    };
     GetAiSettings: {
         parameters: {
             query?: never;
@@ -7612,6 +7967,100 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AiReindexDto"];
                 };
+            };
+        };
+    };
+    ListGlossary: {
+        parameters: {
+            query?: {
+                q?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfGlossaryTermDto"];
+                };
+            };
+        };
+    };
+    CreateGlossaryTerm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GlossaryTermInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlossaryTermDto"];
+                };
+            };
+        };
+    };
+    UpdateGlossaryTerm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GlossaryTermInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GlossaryTermDto"];
+                };
+            };
+        };
+    };
+    DeleteGlossaryTerm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

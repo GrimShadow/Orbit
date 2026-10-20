@@ -82,6 +82,20 @@ public static class NotificationRules
             $"The licence '{rightsName}' ended on {validTo.ToString("d MMM yyyy", CultureInfo.InvariantCulture)}. {Quote(assetTitle)} can no longer be published or delivered under it; a published asset is moved to expired.",
             AssetPath(assetId), assetId);
 
+    /// <summary>Told to whoever asked for translations when the job is done (ADR-0036): how many wait for review, how many could not be made.</summary>
+    public static NotificationContent TranslationReady(Guid assetId, string assetTitle, string jobStatus, int translated, int skipped, int failed)
+    {
+        if (translated == 0 && (failed > 0 || jobStatus == "failed"))
+            return new("asset.translation.ready", NotificationCategories.Translation, $"Translation failed: {Short(assetTitle)}",
+                $"No translation of {Quote(assetTitle)} could be made" + (failed > 0 ? $" ({failed} failed). Open the asset to see why." : ". Open the asset to see why."), AssetPath(assetId), assetId);
+        if (translated == 0)
+            return new("asset.translation.ready", NotificationCategories.Translation, $"Nothing to translate: {Short(assetTitle)}",
+                $"Nothing was translated for {Quote(assetTitle)}: the languages already have text, or there was no text to translate from.", AssetPath(assetId), assetId);
+        return new("asset.translation.ready", NotificationCategories.Translation, $"Translations ready to review: {Short(assetTitle)}",
+            $"{translated} translation{(translated == 1 ? "" : "s")} of {Quote(assetTitle)} {(translated == 1 ? "is" : "are")} waiting for your review." + (failed > 0 ? $" {failed} could not be made." : ""),
+            AssetPath(assetId), assetId);
+    }
+
     /// <summary>The console deep link to a comment: the asset page, which opens the thread.</summary>
     public static string CommentPath(Guid assetId, Guid commentId) => $"{AssetPath(assetId)}?comment={commentId}";
 
@@ -126,6 +140,7 @@ public static class NotificationRules
             "comment.added" => "New comment",
             "comment.resolved" => "Comment thread resolved",
             "comment.reopened" => "Comment thread reopened",
+            "asset.translation.ready" => "Translations ready",
             "rights.expiring" => "Licence expiring",
             "rights.expired" => "Licence expired",
             _ => eventName,

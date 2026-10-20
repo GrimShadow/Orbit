@@ -10,6 +10,7 @@ import { NotificationsPage } from './features/notifications/NotificationsPage';
 import { WebhooksPage } from './features/webhooks/WebhooksPage';
 import { RightsPage } from './features/rights/admin/RightsPage';
 import { AiSettingsPage } from './features/ai/admin/AiSettingsPage';
+import { GlossaryPage } from './features/glossary/GlossaryPage';
 import { UnusedAssetsPage } from './features/analytics/UnusedAssetsPage';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { AssetDetailPage } from './features/asset/AssetDetailPage';
@@ -50,6 +51,7 @@ export function App() {
                 <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/admin/ai" element={<AiSettingsPage />} />
+                <Route path="/admin/glossary" element={<GlossaryPage />} />
                 <Route path="/admin/rights" element={<RightsPage />} />
                 <Route path="/admin/webhooks" element={<WebhooksPage />} />
                 <Route path="/admin/audit" element={<AuditPage />} />

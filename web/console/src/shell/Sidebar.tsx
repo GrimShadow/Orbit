@@ -1,6 +1,7 @@
 import {
   CaretDoubleLeft,
   CaretDoubleRight,
+  BookOpenText,
   CheckSquareOffset,
   FlowArrow,
   House,
@@ -41,6 +42,7 @@ export const NAV_ITEMS: NavItem[] = [
 export const ADMIN_ITEMS: (NavItem & { permission: string })[] = [
   { to: '/admin/workflows', labelKey: 'nav.workflows', Icon: FlowArrow, permission: 'workflow.manage' },
   { to: '/admin/ai', labelKey: 'nav.ai', Icon: Sparkle, permission: 'ai.manage' },
+  { to: '/admin/glossary', labelKey: 'nav.glossary', Icon: BookOpenText, permission: 'glossary.manage' },
   { to: '/admin/rights', labelKey: 'nav.rights', Icon: SealCheck, permission: 'rights.manage' },
   { to: '/admin/webhooks', labelKey: 'nav.webhooks', Icon: WebhooksLogo, permission: 'webhooks.manage' },
   { to: '/admin/audit', labelKey: 'nav.audit', Icon: ListMagnifyingGlass, permission: 'audit.read' },

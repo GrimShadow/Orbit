@@ -55,6 +55,8 @@ public static class Permissions
     public const string RetentionManage = "retention.manage";
     /// <summary>AI settings, provider health, backfills and the provider test (ADR-0035). Reading an asset's AI results needs assets.read; deciding on them assets.update.</summary>
     public const string AiManage = "ai.manage";
+    /// <summary>The tenant's translation glossary: terms that are never translated, or always rendered one way (ADR-0036). Reading it needs only assets.read.</summary>
+    public const string GlossaryManage = "glossary.manage";
     public const string AuditRead = "audit.read";
     public const string MigrationManage = "migration.manage";
 
@@ -73,7 +75,7 @@ public static class Permissions
         RightsManage, KnowledgeManage, QrManage, ShareManage, PortalsManage,
         AnalyticsRead, UsageWrite,
         TenantsManage, UsersManage, GroupsManage, RolesManage, AccessRulesManage, WebhooksManage, NotificationsManage, ApiClientsManage,
-        RetentionManage, AiManage, AuditRead, MigrationManage,
+        RetentionManage, AiManage, GlossaryManage, AuditRead, MigrationManage,
         SystemPing,
     ];
 

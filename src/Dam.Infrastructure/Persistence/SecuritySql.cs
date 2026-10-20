@@ -230,4 +230,11 @@ public static class SecuritySql
         GRANT SELECT ON ai_settings TO dam_system;
         CREATE POLICY system_read_ai_settings ON ai_settings FOR SELECT TO dam_system USING (true);
         """;
+
+    /// <summary>Glossary terms are edited and deleted freely. Translation jobs are history: created, updated by the worker as they run, never deleted by the app
+    /// (they go with their asset through the foreign key, which needs no grant).</summary>
+    public const string TranslationGrants = """
+        GRANT SELECT, INSERT, UPDATE, DELETE ON glossary_terms TO dam_app;
+        GRANT SELECT, INSERT, UPDATE ON translation_jobs TO dam_app;
+        """;
 }

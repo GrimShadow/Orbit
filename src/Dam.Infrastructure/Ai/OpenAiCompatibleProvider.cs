@@ -121,13 +121,20 @@ public sealed partial class OpenAiCompatibleProvider : IAiProvider, IDisposable
         return new LanguageResult(_o.ChatModel, code, confidence);
     }
 
+    /// <summary>
+    /// Translates with a chat model. The translation service sends text in which glossary terms have already been replaced by placeholders such as <c>⟦G1⟧</c>
+    /// (<see cref="GlossaryProtector"/>), so the prompt always tells the model to copy placeholders unchanged; the caller verifies they came back. A glossary
+    /// passed here is stated in the prompt as well (for callers that do not protect the text themselves). An answer cut off by the output limit is refused, never returned half done.
+    /// </summary>
     public async Task<TextResult> TranslateAsync(string text, string from, string to, Glossary glossary, CancellationToken ct)
     {
         var locked = glossary.Terms is { Count: > 0 } t
             ? " Keep these terms exactly as written, untranslated: " + string.Join("; ", t.Select(kv => string.IsNullOrEmpty(kv.Value) ? kv.Key : $"{kv.Key} (use '{kv.Value}')")) + "."
             : "";
-        var system = $"Translate the user's text from {from} to {to}. Reply with the translation only: no quotes, no notes.{locked}";
-        return new TextResult(_o.ChatModel, (await ChatAsync(_o.ChatModel, system, text, json: false, _o.ChatTimeout, 4000, ct)).Trim());
+        var system = $"Translate the user's text from {from} to {to}. Reply with the translation only: no quotes, no notes, no explanations. Keep the line breaks, the punctuation style and the meaning. "
+            + "The text may contain placeholders written like ⟦G1⟧. Copy every placeholder into the translation exactly as written, once, where its words belong: never translate, change, split, repeat, reorder, remove or add a placeholder." + locked;
+        var answer = await ChatAsync(_o.ChatModel, system, text, json: false, _o.ChatTimeout, Math.Clamp(text.Length * 2, 1000, 12_000), ct, failOnCutOff: true);
+        return new TextResult(_o.ChatModel, answer.Trim());
     }
 
     public async Task<TextResult> SummariseAsync(string text, SummaryOptions options, CancellationToken ct)
@@ -143,7 +150,7 @@ public sealed partial class OpenAiCompatibleProvider : IAiProvider, IDisposable
         new { type = "image_url", image_url = new { url = $"data:{image.Mime};base64,{Convert.ToBase64String(image.Bytes)}", detail = "auto" } };
 
     /// <summary>One chat completion; returns the model's text. The body is rebuilt for each attempt, so a retry is safe.</summary>
-    private async Task<string> ChatAsync(string model, string system, object userContent, bool json, TimeSpan timeout, int maxTokens, CancellationToken ct)
+    private async Task<string> ChatAsync(string model, string system, object userContent, bool json, TimeSpan timeout, int maxTokens, CancellationToken ct, bool failOnCutOff = false)
     {
         var body = new Dictionary<string, object?>
         {
@@ -157,7 +164,11 @@ public sealed partial class OpenAiCompatibleProvider : IAiProvider, IDisposable
         using var doc = await AiHttp.ReadJsonAsync(response, Kind, ct);
         if (doc.RootElement.TryGetProperty("choices", out var choices) && choices.ValueKind == JsonValueKind.Array && choices.GetArrayLength() > 0
             && choices[0].TryGetProperty("message", out var message) && SelfHostedProvider.Str(message, "content") is { } content)
+        {
+            if (failOnCutOff && SelfHostedProvider.Str(choices[0], "finish_reason") == "length")
+                throw new AiRequestException("The model's answer was cut off because it was too long, so it was not used.");
             return content;
+        }
         throw new AiRequestException("The model's answer had no content.");
     }
 

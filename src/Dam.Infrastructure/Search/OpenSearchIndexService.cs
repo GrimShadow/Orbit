@@ -196,7 +196,7 @@ public sealed class OpenSearchIndexService(
                 if (v.Kind == EmbeddingKinds.Text) text = v.ToVector(); else image = v.ToVector();
             }
             if (x is null && text is null && image is null) continue;
-            result[id] = new AiIndexData(Clip(x?.OcrText), Clip(x?.TranscriptText), x?.TranscriptSegments ?? [], text, image);
+            result[id] = new AiIndexData(Clip(x?.OcrText), Clip(x?.TranscriptText), x?.TranscriptSegments ?? [], text, image, Clip(x?.Summary));
         }
         return result;
     }

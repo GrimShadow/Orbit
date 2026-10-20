@@ -270,8 +270,11 @@ public sealed class OpenAiCompatibleProviderTests
         await Assert.ThrowsAsync<AiNotSupportedException>(() => provider.EmbedTextAsync("x", new TextEmbedOptions(TextEmbeddingKind.Clip), default));
 
         var t = await provider.TranslateAsync("Hello", "English", "Hindi", new Glossary(new Dictionary<string, string> { ["Acme Roadster"] = "" }), default);
-        Assert.Equal("A translated or summarised text.", t.Text);
-        Assert.Contains("Acme Roadster", JsonDocument.Parse(fake.Calls.Last().Body).RootElement.GetProperty("messages")[0].GetProperty("content").GetString());
+        Assert.Equal("Hindi: HELLO", t.Text);                       // the fake service's literal translator
+        var instruction = JsonDocument.Parse(fake.Calls.Last().Body).RootElement.GetProperty("messages")[0].GetProperty("content").GetString();
+        Assert.Contains("Acme Roadster", instruction);
+        Assert.Contains("placeholders written like ⟦G1⟧", instruction);                 // always: the translation service sends glossary terms as tokens (ADR-0036)
+        Assert.Contains("exactly as written", instruction);
         var s = await provider.SummariseAsync("A long text", new SummaryOptions(50, "English"), default);
         Assert.Equal("chat-x", s.Model);
         Assert.Contains("50 words", JsonDocument.Parse(fake.Calls.Last().Body).RootElement.GetProperty("messages")[0].GetProperty("content").GetString());

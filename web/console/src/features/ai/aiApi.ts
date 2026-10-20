@@ -3,23 +3,47 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApiClient } from '../../api/apiClient';
 import { useAuth } from '../../auth/AuthProvider';
 
-export type AssetAi = components['schemas']['AssetAiDto'];
-export type AiSuggestion = components['schemas']['AiSuggestionDto'];
+/** The AI summary of a document: derived data labelled as AI-generated, never written into editorial metadata (ADR-0036). */
+export interface AiSummary {
+  text: string;
+  language: string | null;
+  model: string;
+  createdAt: string;
+}
+// Step 2.2 added fields to three existing DTOs (ADR-0036). The generated schema carries them as loosely typed fields; these
+// aliases narrow them to what the server actually sends, and keep every one optional so an older response still type-checks.
+export type AiSuggestion = components['schemas']['AiSuggestionDto'] & {
+  /** Translation suggestions only: the metadata field, the target language, and the language it was translated from. */
+  field?: string | null;
+  language?: string | null;
+  sourceLanguage?: string | null;
+  /** True when the source text has changed since the translation was made. */
+  sourceStale?: boolean;
+};
+export type AssetAi = Omit<components['schemas']['AssetAiDto'], 'suggestions' | 'summary'> & {
+  suggestions: AiSuggestion[];
+  summary?: AiSummary | null;
+};
 export type AiRun = components['schemas']['AiRunDto'];
 export type AiTranscript = NonNullable<components['schemas']['AiTranscriptDto']>;
-export type AiSettings = components['schemas']['AiSettingsDto'];
+/** Which analyses are on. `summaries` (Step 2.2) is optional on the wire: a server that predates it omits it, and it then counts as on. */
+export type AiFeatures = components['schemas']['AiFeaturesDto'] & { summaries?: boolean };
+export type AiSettings = Omit<components['schemas']['AiSettingsDto'], 'features'> & { features: AiFeatures };
 export type AiStatus = components['schemas']['AiStatusDto'];
-export type AiCapabilities = components['schemas']['AiCapabilitiesDto'];
+export type AiCapabilities = components['schemas']['AiCapabilitiesDto'] & { translate?: boolean; summarise?: boolean };
 
 export type AiSuggestionKind = 'tag' | 'language';
+export const TRANSLATION_KIND = 'translation';
 /** The AI state of an asset's current version: none = never analysed, disabled = AI is off for the tenant. */
 export type AiAssetStatus = 'none' | 'pending' | 'running' | 'ready' | 'failed' | 'disabled';
 
-const invalidateAsset = (qc: ReturnType<typeof useQueryClient>, assetId: string) => {
+export const invalidateAsset = (qc: ReturnType<typeof useQueryClient>, assetId: string) => {
   void qc.invalidateQueries({ queryKey: ['ai', 'asset', assetId] });
   void qc.invalidateQueries({ queryKey: ['asset', assetId] });
   void qc.invalidateQueries({ queryKey: ['assets'] });
   void qc.invalidateQueries({ queryKey: ['search'] });
+  // A decided translation leaves the reviewer inbox and the nav count.
+  void qc.invalidateQueries({ queryKey: ['ai', 'reviews'] });
 };
 
 /** What the AI found for an asset's current version. Polls while a run is pending or running so the panel fills in by itself. */
@@ -28,7 +52,7 @@ export function useAssetAi(assetId: string, enabled = true) {
   const { status } = useAuth();
   return useQuery({
     queryKey: ['ai', 'asset', assetId],
-    queryFn: async () => unwrap(await api.GET('/api/v1/assets/{id}/ai', { params: { path: { id: assetId } } })),
+    queryFn: async () => unwrap(await api.GET('/api/v1/assets/{id}/ai', { params: { path: { id: assetId } } })) as AssetAi,
     enabled: enabled && status === 'authenticated',
     staleTime: 10_000,
     refetchInterval: (q) => (q.state.data?.status === 'pending' || q.state.data?.status === 'running' ? 3_000 : false),
@@ -41,6 +65,16 @@ export function useEnrichAsset(assetId: string) {
   return useMutation({
     mutationFn: async () => unwrap(await api.POST('/api/v1/assets/{id}/ai/enrich', { params: { path: { id: assetId } } })),
     onSuccess: () => invalidateAsset(qc, assetId),
+  });
+}
+
+/** Asks for a summary of the text read from the asset (202; it arrives with the AI view, which the caller keeps checking). */
+export function useSummariseAsset(assetId: string) {
+  const api = useApiClient();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => unwrap(await api.POST('/api/v1/assets/{id}/ai/summarise', { params: { path: { id: assetId } } })),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['ai', 'asset', assetId] }),
   });
 }
 
@@ -100,13 +134,15 @@ export class AiApiError extends ApiError {
   }
 }
 
+export type AiSettingsRequest = Omit<components['schemas']['AiSettingsRequest'], 'features'> & { features: AiFeatures | null };
+
 export const isForbidden = (e: unknown) => e instanceof ApiError && e.status === 403;
 
 export function useSaveAiSettings() {
   const api = useApiClient();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: components['schemas']['AiSettingsRequest']) => {
+    mutationFn: async (body: AiSettingsRequest) => {
       const { data, error, response } = await api.PUT('/api/v1/ai/settings', { body });
       if (response.ok) return data as AiSettings;
       const p = (error ?? {}) as { title?: string; detail?: string; correlationId?: string; errors?: Record<string, string[]> };
@@ -181,7 +217,7 @@ export function useAiCapabilities() {
   const { status } = useAuth();
   return useQuery({
     queryKey: ['ai', 'capabilities'],
-    queryFn: async () => unwrap(await api.GET('/api/v1/ai/capabilities')),
+    queryFn: async () => unwrap(await api.GET('/api/v1/ai/capabilities')) as AiCapabilities,
     enabled: status === 'authenticated',
     staleTime: 60_000,
   });

@@ -274,6 +274,27 @@ public sealed class FakeOpenAi : IAsyncDisposable
     public bool EchoKeyInErrors { get; set; }
     public string OcrText { get; set; } = "Acme roadster showroom opening hours";
 
+    /// <summary>One translation call as the service saw it: the instruction, the text it was asked to translate, and the languages.</summary>
+    public sealed record TranslateRequest(string System, string Text, string From, string To);
+
+    /// <summary>Every translation the service was asked for, in order: proves what left the building (glossary terms must be tokens, not words).</summary>
+    public ConcurrentQueue<TranslateRequest> TranslateRequests { get; } = new();
+
+    /// <summary>What the "model" answers when asked to translate: the text, the source and the target language. By default a faithful, literal translator: the
+    /// target code and the text in capitals, with every placeholder left alone. A test replaces it to drop, change, repeat or invent placeholders.</summary>
+    public Func<string, string, string, string>? TranslateWith { get; set; }
+
+    /// <summary>Answer translation calls with a 400, as a service that refuses the input would.</summary>
+    public bool TranslateRefused { get; set; }
+
+    /// <summary>Answer translation calls as if the model ran out of room (finish_reason "length").</summary>
+    public bool TranslateCutOff { get; set; }
+
+    /// <summary>What the "model" answers when asked to summarise.</summary>
+    public Func<string, string>? SummariseWith { get; set; }
+
+    public int Summaries => Calls.Count(c => c.Path.EndsWith("chat/completions", StringComparison.Ordinal) && c.Body.Contains("Summarise the user", StringComparison.Ordinal));
+
     public int CallsTo(string path) => Calls.Count(c => c.Path.EndsWith(path, StringComparison.Ordinal));
 
     private FakeOpenAi(WebApplication app, string url) { _app = app; Url = url; }
@@ -327,7 +348,23 @@ public sealed class FakeOpenAi : IAsyncDisposable
                 var system = messages[0].GetProperty("content").GetString() ?? "";
                 var user = messages[1].GetProperty("content");
                 string content;
-                if (system.Contains("label pictures", StringComparison.Ordinal))
+                var finish = "stop";
+                if (system.Contains("Translate the user's text", StringComparison.Ordinal))
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(system, @"from (\S+) to (\S+)\.");
+                    var (from, to) = (match.Groups[1].Value, match.Groups[2].Value);
+                    var text = user.GetString() ?? "";
+                    s.TranslateRequests.Enqueue(new TranslateRequest(system, text, from, to));
+                    if (s.TranslateRefused) return Results.Json(new { error = new { message = "The input was refused." } }, statusCode: 400);
+                    content = (s.TranslateWith ?? ((t, _, target) => $"{target}: {t.ToUpperInvariant()}"))(text, from, to);
+                    if (s.TranslateCutOff) finish = "length";
+                }
+                else if (system.Contains("Summarise the user's text", StringComparison.Ordinal))
+                {
+                    var text = user.GetString() ?? "";
+                    content = (s.SummariseWith ?? (t => "Overview: " + string.Join(' ', t.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Take(12)) + " summarymarker"))(text);
+                }
+                else if (system.Contains("label pictures", StringComparison.Ordinal))
                 {
                     var data = user.EnumerateArray().First(p => p.GetProperty("type").GetString() == "image_url").GetProperty("image_url").GetProperty("url").GetString()!;
                     var bytes = Convert.FromBase64String(data[(data.IndexOf("base64,", StringComparison.Ordinal) + 7)..]);
@@ -337,7 +374,7 @@ public sealed class FakeOpenAi : IAsyncDisposable
                 else if (system.Contains("language of the text", StringComparison.Ordinal)) content = JsonSerializer.Serialize(new { language = "en", confidence = 0.9 });
                 else content = "A translated or summarised text.";
                 if (s.WrapJsonInFence && content.StartsWith('{')) content = "Here you go:\n```json\n" + content + "\n```";
-                return Results.Json(new { choices = new[] { new { message = new { role = "assistant", content } } } });
+                return Results.Json(new { choices = new[] { new { message = new { role = "assistant", content }, finish_reason = finish } } });
             }
             if (path.EndsWith("embeddings", StringComparison.Ordinal))
             {

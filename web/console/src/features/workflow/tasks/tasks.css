@@ -133,3 +133,13 @@
     white-space: normal;
   }
 }
+
+/* Translations waiting for review. */
+.dam-taskrow__langs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-1);
+}

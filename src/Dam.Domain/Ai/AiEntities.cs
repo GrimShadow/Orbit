@@ -25,7 +25,9 @@ public static class AiSuggestionKinds
 {
     public const string Tag = "tag";
     public const string Language = "language";
-    public static readonly IReadOnlyList<string> All = [Tag, Language];
+    /// <summary>A proposed rendering of one multilingual metadata field in another language (ADR-0036).</summary>
+    public const string Translation = "translation";
+    public static readonly IReadOnlyList<string> All = [Tag, Language, Translation];
     public static bool IsKnown(string? kind) => kind is not null && All.Contains(kind);
 }
 
@@ -65,8 +67,10 @@ public sealed class AiFeatureFlags
     public bool Ocr { get; set; } = true;
     public bool Transcribe { get; set; } = true;
     public bool Embeddings { get; set; } = true;
+    /// <summary>Summaries of long documents (ADR-0036). On unless switched off; settings stored before Step 2.2 lack the key and read as on.</summary>
+    public bool Summaries { get; set; } = true;
 
-    public AiFeatureFlags Copy() => new() { Tags = Tags, Ocr = Ocr, Transcribe = Transcribe, Embeddings = Embeddings };
+    public AiFeatureFlags Copy() => new() { Tags = Tags, Ocr = Ocr, Transcribe = Transcribe, Embeddings = Embeddings, Summaries = Summaries };
 }
 
 /// <summary>
@@ -101,8 +105,10 @@ public sealed class AiSettings : ITenantScoped
 }
 
 /// <summary>
-/// Something the AI proposes and a person decides (a tag, the language of the content). Never written into the asset until accepted
-/// (spec A11). Unique per (asset, version, kind, value), so a re-run never proposes the same thing twice and never resurrects a rejection.
+/// Something the AI proposes and a person decides (a tag, the language of the content, a translation). Never written into the asset until accepted
+/// (spec A11). Tags and languages are unique per (asset, version, kind, value), so a re-run never proposes the same thing twice and never resurrects a
+/// rejection. A translation is the text itself in <see cref="Value"/>; there is at most one pending per (asset, field, language), and a new request
+/// replaces it (ADR-0036).
 /// </summary>
 public sealed class AiSuggestion : TenantEntity
 {
@@ -118,6 +124,14 @@ public sealed class AiSuggestion : TenantEntity
     public Guid? DecidedBy { get; private set; }
     public DateTimeOffset? DecidedAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
+    /// <summary>Translations only: the multilingual metadata field the text is for.</summary>
+    public string? Field { get; private set; }
+    /// <summary>Translations only: the target language.</summary>
+    public string? Language { get; private set; }
+    /// <summary>Translations only: the language that was translated from.</summary>
+    public string? SourceLanguage { get; private set; }
+    /// <summary>Translations only: hash of the source text, so the suggestion can say when the source has changed since.</summary>
+    public string? SourceHash { get; private set; }
 
     public static AiSuggestion Create(Guid tenantId, Guid assetId, Guid versionId, string kind, string value, float confidence, string model, DateTimeOffset now) => new()
     {
@@ -126,7 +140,35 @@ public sealed class AiSuggestion : TenantEntity
         Model = model.Length > 100 ? model[..100] : model, CreatedAt = now,
     };
 
+    /// <summary>A proposed translation. <paramref name="versionId"/> is the asset's current version (an empty id for an asset with no file yet): metadata does not
+    /// belong to a version, so a translation stays valid when a new file arrives.</summary>
+    public static AiSuggestion CreateTranslation(
+        Guid tenantId, Guid assetId, Guid versionId, string field, string language, string sourceLanguage, string sourceHash, string text, string model, DateTimeOffset now) => new()
+    {
+        TenantId = tenantId, AssetId = assetId, VersionId = versionId, Kind = AiSuggestionKinds.Translation, Value = text, Confidence = 0f,
+        Model = model.Length > 100 ? model[..100] : model, Field = field, Language = language, SourceLanguage = sourceLanguage, SourceHash = sourceHash, CreatedAt = now,
+    };
+
     public bool IsPending => Status == AiSuggestionStatuses.Pending;
+    public bool IsTranslation => Kind == AiSuggestionKinds.Translation;
+
+    /// <summary>A newer request for the same field and language replaces a translation still waiting for review.</summary>
+    public void Supersede(Guid versionId, string sourceLanguage, string sourceHash, string text, string model, DateTimeOffset now)
+    {
+        VersionId = versionId;
+        SourceLanguage = sourceLanguage;
+        SourceHash = sourceHash;
+        Value = text;
+        Model = model.Length > 100 ? model[..100] : model;
+        CreatedAt = now;
+    }
+
+    /// <summary>Accepting a translation, optionally as the reviewer edited it: what is kept is the text that went into the asset.</summary>
+    public void AcceptTranslation(string finalText, Guid? by, DateTimeOffset now)
+    {
+        Value = finalText;
+        Accept(by, now);
+    }
 
     public void Accept(Guid? by, DateTimeOffset now) { Status = AiSuggestionStatuses.Accepted; DecidedBy = by; DecidedAt = now; }
     public void Reject(Guid? by, DateTimeOffset now) { Status = AiSuggestionStatuses.Rejected; DecidedBy = by; DecidedAt = now; }
@@ -152,7 +194,11 @@ public sealed class AssetExtract : ITenantScoped
     public List<TranscriptSegment> TranscriptSegments { get; private set; } = [];
     public string? TranscriptText { get; private set; }
     public long? DurationMs { get; private set; }
-    /// <summary>The model that produced each part: keys ocr, transcript.</summary>
+    /// <summary>A short summary of the text (ADR-0036). Derived data like the OCR text: indexed and shown as it is, labelled as AI-written in the console.</summary>
+    public string? Summary { get; private set; }
+    public string? SummaryLanguage { get; private set; }
+    public DateTimeOffset? SummaryAt { get; private set; }
+    /// <summary>The model that produced each part: keys ocr, transcript, summary.</summary>
     public Dictionary<string, string> Model { get; private set; } = [];
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -165,6 +211,15 @@ public sealed class AssetExtract : ITenantScoped
         OcrText = string.IsNullOrWhiteSpace(text) ? null : text.Replace("\0", "", StringComparison.Ordinal);
         OcrLanguage = language;
         Model = new Dictionary<string, string>(Model) { ["ocr"] = model };
+        UpdatedAt = now;
+    }
+
+    public void SetSummary(string? text, string? language, string model, DateTimeOffset now)
+    {
+        Summary = string.IsNullOrWhiteSpace(text) ? null : text.Replace("\0", "", StringComparison.Ordinal).Trim();
+        SummaryLanguage = Summary is null ? null : language;
+        SummaryAt = Summary is null ? null : now;
+        Model = new Dictionary<string, string>(Model) { ["summary"] = model };
         UpdatedAt = now;
     }
 
@@ -242,6 +297,15 @@ public sealed record AssetAiRequested(Guid AssetId, Guid? VersionId, bool Force)
     public Guid EntityId => AssetId;
 }
 
+/// <summary>Asks the worker to (re)write the summary of the asset's current version from the text already extracted from it (ADR-0036).</summary>
+public sealed record AssetSummariseRequested(Guid AssetId, Guid VersionId) : DomainEvent, IEntityEvent
+{
+    public const string EventName = "asset.ai.summarise.requested";
+    public override string Name => EventName;
+    public string EntityType => "asset";
+    public Guid EntityId => AssetId;
+}
+
 /// <summary>A person accepted or rejected a suggestion (audit trail).</summary>
 public sealed record AiSuggestionDecided(Guid AssetId, Guid SuggestionId, string Kind, string Value, string Decision) : DomainEvent, IEntityEvent
 {
@@ -252,7 +316,7 @@ public sealed record AiSuggestionDecided(Guid AssetId, Guid SuggestionId, string
 }
 
 /// <summary>An administrator changed the tenant's AI settings (audit trail). Never carries anything secret.</summary>
-public sealed record AiSettingsChanged(Guid TenantId, bool Enabled, string? Provider, bool Tags, bool Ocr, bool Transcribe, bool Embeddings) : DomainEvent, IEntityEvent
+public sealed record AiSettingsChanged(Guid TenantId, bool Enabled, string? Provider, bool Tags, bool Ocr, bool Transcribe, bool Embeddings, bool Summaries = true) : DomainEvent, IEntityEvent
 {
     public const string EventName = "ai.settings.changed";
     public override string Name => EventName;
@@ -331,6 +395,14 @@ public sealed class AiRun : AggregateRoot
         Steps = [.. steps];
         Error = Clip(error);
         FinishedAt = now;
+    }
+
+    /// <summary>Records what a single step did after the run finished (a manual summary), without changing the run's own status.</summary>
+    public void UpsertStep(AiStep step)
+    {
+        var steps = Steps.Where(x => x.Name != step.Name).ToList();
+        steps.Add(step);
+        Steps = steps;
     }
 
     public void Skip(string reason, IReadOnlyList<AiStep> steps, DateTimeOffset now)

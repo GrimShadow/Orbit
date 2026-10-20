@@ -35,6 +35,8 @@ public static class DependencyInjection
         services.AddScoped<Licensing.RightsMapper>();
         services.AddScoped<Ai.AiSuggestionDecider>();
         services.AddScoped<Ai.AiBackfillService>();
+        services.AddScoped<Ai.TranslationAcceptor>();
+        services.AddScoped<Ai.AiReviewReader>();
         services.AddValidatorsFromAssembly(asm, includeInternalTypes: true);
 
         foreach (var t in asm.GetTypes().Where(t => t is { IsAbstract: false, IsInterface: false }))

@@ -53,6 +53,7 @@ public static class SearchDocumentBuilder
     {
         if (!string.IsNullOrEmpty(ai.OcrText)) doc[IndexMappingBuilder.OcrTextField] = ai.OcrText;
         if (!string.IsNullOrEmpty(ai.TranscriptText)) doc[IndexMappingBuilder.TranscriptTextField] = ai.TranscriptText;
+        if (!string.IsNullOrEmpty(ai.SummaryText)) doc[IndexMappingBuilder.SummaryTextField] = ai.SummaryText;
         if (ai.Segments.Count > 0)
             doc[IndexMappingBuilder.TranscriptSegmentsField] = ai.Segments.Select(s => new Dictionary<string, object?> { ["start_ms"] = s.StartMs, ["end_ms"] = s.EndMs, ["text"] = s.Text }).ToList();
         if (ai.TextVector is not null) doc[IndexMappingBuilder.VectorTextField] = ai.TextVector;
@@ -101,7 +102,8 @@ public static class SearchDocumentBuilder
 }
 
 /// <summary>The AI-derived parts of an asset's search document.</summary>
-public sealed record AiIndexData(string? OcrText, string? TranscriptText, IReadOnlyList<TranscriptSegment> Segments, float[]? TextVector, float[]? ImageVector)
+public sealed record AiIndexData(
+    string? OcrText, string? TranscriptText, IReadOnlyList<TranscriptSegment> Segments, float[]? TextVector, float[]? ImageVector, string? SummaryText = null)
 {
     public static readonly AiIndexData Empty = new(null, null, [], null, null);
 }

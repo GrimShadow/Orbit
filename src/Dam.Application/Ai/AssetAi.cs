@@ -18,14 +18,25 @@ internal static class AiMapping
     public const int OcrTextLimit = 20_000;
     public const int MaxTags = 50;
 
-    public static AiSuggestionDto ToDto(AiSuggestion s) =>
-        new(s.Id, s.Kind, s.Value, s.Confidence, s.Model, s.Status, s.CreatedAt, s.DecidedBy, s.DecidedAt);
+    /// <summary>A suggestion as the caller sees it. A pending translation says whether the text it was made from has changed since (<c>sourceStale</c>).</summary>
+    public static AiSuggestionDto ToDto(AiSuggestion s, Asset asset) =>
+        new(s.Id, s.Kind, s.Value, s.Confidence, s.Model, s.Status, s.CreatedAt, s.DecidedBy, s.DecidedAt, s.Field, s.Language, s.SourceLanguage, IsStale(s, asset));
+
+    private static bool IsStale(AiSuggestion s, Asset asset)
+    {
+        if (!s.IsTranslation || !s.IsPending || s.Field is null || s.SourceLanguage is null) return false;
+        var now = asset.Metadata.TryGetValue(s.Field, out var value) ? TranslationRules.TextOf(value, s.SourceLanguage) : null;
+        return now is null || TranslationRules.Hash(now) != s.SourceHash;
+    }
+
+    public static AiSummaryDto? SummaryOf(AssetExtract? x) =>
+        x is { Summary: { Length: > 0 } text } ? new AiSummaryDto(text, x.SummaryLanguage, x.Model.GetValueOrDefault("summary") ?? "", x.SummaryAt ?? x.UpdatedAt) : null;
 
     public static AiRunDto ToDto(AiRun r) =>
         new(r.Id, r.VersionId, r.Status, r.Steps.Select(s => new AiStepDto(s.Name, s.Status, s.DurationMs, s.Model, s.Detail)).ToList(),
             r.Error.Length == 0 ? null : r.Error, r.Attempts, r.StartedAt, r.FinishedAt);
 
-    public static AiFeaturesDto ToDto(AiFeatureFlags f) => new(f.Tags, f.Ocr, f.Transcribe, f.Embeddings);
+    public static AiFeaturesDto ToDto(AiFeatureFlags f) => new(f.Tags, f.Ocr, f.Transcribe, f.Embeddings, f.Summaries);
 
     public static AiProviderCapabilitiesDto ToDto(AiCapabilities c) =>
         new(c.Tags, c.Ocr, c.Transcribe, c.TextEmbeddings, c.ImageEmbeddings, c.DetectLanguage, c.Translate, c.Summarise);
@@ -50,14 +61,17 @@ public sealed class GetAssetAiHandler(
     {
         var (asset, path) = await AssetAccess.LoadAsync(assets, folders, q, r.AssetId, ct);
         if (asset is null || !await authz.CanAsync(Permissions.AssetsRead, asset.ToResource(path), ct)) return Error.NotFound("Asset not found.");
-        if (asset.CurrentVersionId is not { } versionId) return new AssetAiDto(await IdleStatusAsync(ct), null, [], null, null, false, null, null, false);
 
+        // Tags, languages, text and vectors belong to a file; a translation belongs to the asset's metadata, so it is listed whichever file is current (or none yet).
+        var hasFile = asset.CurrentVersionId is not null;
+        var versionId = asset.CurrentVersionId ?? Guid.Empty;
         var run = await q.FirstOrDefaultAsync(runs.Query().Where(x => x.AssetId == asset.Id && x.VersionId == versionId), ct);
-        var list = await q.ToListAsync(suggestions.Query().Where(x => x.AssetId == asset.Id && x.VersionId == versionId).OrderByDescending(x => x.Confidence).ThenBy(x => x.Value), ct);
+        var list = await q.ToListAsync(suggestions.Query().Where(x => x.AssetId == asset.Id && (x.VersionId == versionId || x.Kind == AiSuggestionKinds.Translation))
+            .OrderByDescending(x => x.Confidence).ThenBy(x => x.Value), ct);
         var extract = await q.FirstOrDefaultAsync(extracts.Query().Where(x => x.AssetId == asset.Id && x.VersionId == versionId), ct);
         var hasVectors = await q.AnyAsync(embeddings.Query().Where(x => x.AssetId == asset.Id && x.VersionId == versionId), ct);
 
-        var status = run?.Status switch
+        var status = !hasFile ? await IdleStatusAsync(ct) : run?.Status switch
         {
             AiRunStatuses.Pending => "pending",
             AiRunStatuses.Running => "running",
@@ -75,8 +89,8 @@ public sealed class GetAssetAiHandler(
             : null;
         var language = list.Where(s => s.Kind == AiSuggestionKinds.Language && s.Status != AiSuggestionStatuses.Rejected).Select(s => s.Value).FirstOrDefault();
 
-        return new AssetAiDto(status, run is null ? null : AiMapping.ToDto(run), list.Select(AiMapping.ToDto).ToList(), language, ocr, truncated,
-            extract?.OcrLanguage, transcript, hasVectors);
+        return new AssetAiDto(status, run is null ? null : AiMapping.ToDto(run), list.Select(s => AiMapping.ToDto(s, asset)).ToList(), language, ocr, truncated,
+            extract?.OcrLanguage, transcript, hasVectors, AiMapping.SummaryOf(extract));
     }
 
     private async Task<string> IdleStatusAsync(CancellationToken ct) => (await resolver.ResolveAsync(ct)).IsActive ? "none" : "disabled";
@@ -89,7 +103,8 @@ public enum AiDecision { Accept, Reject }
 /// <summary>Applies a person's decision to suggestions: accepting a tag adds it to the asset the normal way (audited, re-indexed); accepting a language
 /// sets the asset's <c>language</c> field when its schema has one and records the acceptance either way.</summary>
 public sealed class AiSuggestionDecider(
-    IAuthorizationService authz, AssetMetadataBuilder builder, IRepository<MetadataSchema> schemas, IQueryExecutor q, IEventCollector events, IClock clock)
+    IAuthorizationService authz, AssetMetadataBuilder builder, IRepository<MetadataSchema> schemas, IQueryExecutor q, IEventCollector events, IClock clock,
+    TranslationAcceptor translations)
 {
     public async Task<AiDecisionDto> DecideAsync(Asset asset, IReadOnlyList<AiSuggestion> pending, AiDecision decision, CancellationToken ct)
     {
@@ -134,11 +149,19 @@ public sealed class AiSuggestionDecider(
             events.Raise(new AiSuggestionDecided(asset.Id, s.Id, s.Kind, s.Value, "accepted"));
             changed.Add(s);
         }
+
+        // Translations: each is merged into its field; one that cannot be (the language already has text, the field is gone) stays pending and says why.
+        foreach (var s in pending.Where(s => s.IsPending && s.IsTranslation))
+        {
+            var problem = await translations.ApplyAsync(asset, s, null, replace: false, ct);
+            if (problem is null) changed.Add(s);
+            else notes.Add($"The {s.Language} translation of '{s.Field}' was left pending: {problem.Message}");
+        }
         return Result(asset, pending, changed, notes);
     }
 
     private static AiDecisionDto Result(Asset asset, IReadOnlyList<AiSuggestion> all, List<AiSuggestion> changed, List<string> notes) =>
-        new(all.Select(AiMapping.ToDto).ToList(), asset.Tags, changed.Count, notes);
+        new(all.Select(s => AiMapping.ToDto(s, asset)).ToList(), asset.Tags, changed.Count, notes);
 
     /// <summary>Sets the asset's language metadata when the schema has a field called <c>language</c> that accepts the value; otherwise explains why not.</summary>
     private async Task<string?> ApplyLanguageAsync(Asset asset, string code, DateTimeOffset now, CancellationToken ct)
@@ -181,11 +204,14 @@ internal static class AiAssetAccess
     }
 }
 
-/// <summary>Accepts one suggestion. Needs <c>assets.update</c>. Only suggestions of the asset's current version can be decided.</summary>
-public sealed record AcceptSuggestionCommand(Guid AssetId, Guid SuggestionId) : ICommand<AiDecisionDto>;
+/// <summary>Accepts one suggestion. Needs <c>assets.update</c>. Only tag and language suggestions of the asset's current version can be decided. A translation is merged into
+/// its field under its language (other languages untouched); <paramref name="Text"/> is the reviewer's edit of it, and <paramref name="Replace"/> allows replacing text
+/// the language already has (otherwise 409). Both are ignored for tags and languages.</summary>
+public sealed record AcceptSuggestionCommand(Guid AssetId, Guid SuggestionId, string? Text = null, bool Replace = false) : ICommand<AiDecisionDto>;
 
 public sealed class AcceptSuggestionHandler(
-    IRepository<Asset> assets, IRepository<Folder> folders, IRepository<AiSuggestion> suggestions, IQueryExecutor q, IAuthorizationService authz, AiSuggestionDecider decider)
+    IRepository<Asset> assets, IRepository<Folder> folders, IRepository<AiSuggestion> suggestions, IQueryExecutor q, IAuthorizationService authz, AiSuggestionDecider decider,
+    TranslationAcceptor translations)
     : IRequestHandler<AcceptSuggestionCommand, AiDecisionDto>
 {
     public async Task<Result<AiDecisionDto>> Handle(AcceptSuggestionCommand c, CancellationToken ct)
@@ -194,8 +220,18 @@ public sealed class AcceptSuggestionHandler(
         if (error is not null) return error;
         var s = await q.FirstOrDefaultAsync(suggestions.Query().Where(x => x.Id == c.SuggestionId && x.AssetId == c.AssetId), ct);
         if (s is null) return Error.NotFound("Suggestion not found.");
-        if (s.VersionId != asset!.CurrentVersionId) return Error.Conflict("This suggestion belongs to an older version of the asset.");
         if (!s.IsPending) return Error.Conflict($"This suggestion was already {s.Status}.");
+
+        if (s.IsTranslation)
+        {
+            var problem = await translations.ApplyAsync(asset!, s, c.Text, c.Replace, ct);
+            if (problem is not null) return problem;
+            return new AiDecisionDto(
+                (await q.ToListAsync(suggestions.Query().Where(x => x.AssetId == asset!.Id && (x.VersionId == (asset.CurrentVersionId ?? Guid.Empty) || x.Kind == AiSuggestionKinds.Translation))
+                    .OrderByDescending(x => x.Confidence).ThenBy(x => x.Value), ct)).Select(x => AiMapping.ToDto(x, asset!)).ToList(),
+                asset!.Tags, 1, []);
+        }
+        if (s.VersionId != asset!.CurrentVersionId) return Error.Conflict("This suggestion belongs to an older version of the asset.");
         return await decider.DecideAsync(asset, [s], AiDecision.Accept, ct);
     }
 }
@@ -217,7 +253,7 @@ public sealed class RejectSuggestionHandler(
     }
 }
 
-/// <summary>Accepts every pending suggestion of a kind (default: tag) for the asset's current version. Tags that do not fit under the tag limit stay pending.</summary>
+/// <summary>Accepts every pending suggestion of a kind (default: tag) for the asset's current version (translations: every pending one). Tags that do not fit under the tag limit, and translations whose language already has text, stay pending.</summary>
 public sealed record AcceptAllSuggestionsCommand(Guid AssetId, string? Kind) : ICommand<AiDecisionDto>;
 
 public sealed class AcceptAllSuggestionsValidator : AbstractValidator<AcceptAllSuggestionsCommand>
@@ -236,7 +272,9 @@ public sealed class AcceptAllSuggestionsHandler(
         if (error is not null) return error;
         var kind = c.Kind ?? AiSuggestionKinds.Tag;
         var versionId = asset!.CurrentVersionId;
-        var list = await q.ToListAsync(suggestions.Query().Where(x => x.AssetId == c.AssetId && x.VersionId == versionId && x.Kind == kind && x.Status == AiSuggestionStatuses.Pending)
+        // Translations are the asset's, whichever file is current; tags and languages are the current file's.
+        var list = await q.ToListAsync(suggestions.Query().Where(x => x.AssetId == c.AssetId && x.Kind == kind && x.Status == AiSuggestionStatuses.Pending
+                && (x.Kind == AiSuggestionKinds.Translation || x.VersionId == versionId))
             .OrderByDescending(x => x.Confidence), ct);
         return await decider.DecideAsync(asset, list, AiDecision.Accept, ct);
     }

@@ -34,6 +34,7 @@
  "SelfHostedProviderTests": 9,
  "SiemTests": 96,
  "TemplateTests": 11,
+ "TranslationTests": 60,
  "UploadTests": 27,
  "UsageTests": 35,
  "VideoAndPdfDeliveryTests": 27,

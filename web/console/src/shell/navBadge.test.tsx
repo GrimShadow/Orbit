@@ -58,6 +58,42 @@ describe('Tasks nav badge', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('adds the translations waiting for my review to the count, and names them', async () => {
+    mockApi((c) => (c.pathname === '/api/v1/ai/reviews/summary' ? json({ translation: 2 }) : undefined), {
+      summary: { pendingForMe: 3, overdueForMe: 0 },
+    });
+    const { container } = renderAt('/me');
+    const side = await sidebarLink('Tasks, 3 pending, 2 translations to review');
+    expect(side).toHaveTextContent('5');
+    expect(await tabLink('Tasks, 3 pending, 2 translations to review')).toHaveTextContent('5');
+    expect(container.querySelector('.dam-navbadge--danger')).toBeNull();
+  });
+
+  it('shows translations alone, and keeps the overdue tone for approvals only', async () => {
+    mockApi((c) => (c.pathname === '/api/v1/ai/reviews/summary' ? json({ translation: 1 }) : undefined), {
+      summary: { pendingForMe: 0, overdueForMe: 0 },
+    });
+    renderAt('/me');
+    expect(await sidebarLink('Tasks, 1 translation to review')).toHaveTextContent('1');
+  });
+
+  it('counts approvals and translations together towards 99+', async () => {
+    mockApi((c) => (c.pathname === '/api/v1/ai/reviews/summary' ? json({ translation: 40 }) : undefined), {
+      summary: { pendingForMe: 70, overdueForMe: 2 },
+    });
+    renderAt('/me');
+    const link = await sidebarLink('Tasks, 70 pending, 2 overdue, 40 translations to review');
+    expect(link).toHaveTextContent('99+');
+  });
+
+  it('ignores a translation count that cannot be loaded', async () => {
+    mockApi((c) => (c.pathname === '/api/v1/ai/reviews/summary' ? json({ title: 'Nope', status: 500 }, 500) : undefined), {
+      summary: { pendingForMe: 3, overdueForMe: 0 },
+    });
+    renderAt('/me');
+    expect(await sidebarLink('Tasks, 3 pending')).toHaveTextContent('3');
+  });
+
   it('has no axe violations with the badge showing', async () => {
     mockApi(() => undefined, { summary: { pendingForMe: 3, overdueForMe: 1 } });
     const { container } = renderAt('/me');

@@ -30,7 +30,7 @@ public sealed class SelfHostedProvider : IAiProvider, IDisposable
     public void Dispose() => _http.Dispose();
 
     public AiCapabilities Capabilities { get; } = new(
-        Tags: true, Ocr: true, Transcribe: true, TextEmbeddings: true, ImageEmbeddings: true, DetectLanguage: true, Translate: false, Summarise: false);
+        Tags: true, Ocr: true, Transcribe: true, TextEmbeddings: true, ImageEmbeddings: true, DetectLanguage: true, Translate: false, Summarise: true);
 
     private string Url(string path) =>
         (_o.SidecarUrl ?? throw new AiUnavailableException("The self-hosted AI sidecar is not configured (DAM_AI_SIDECAR_URL).")) + path;
@@ -171,8 +171,9 @@ public sealed class SelfHostedProvider : IAiProvider, IDisposable
     public Task<TextResult> TranslateAsync(string text, string from, string to, Glossary glossary, CancellationToken ct) =>
         throw new AiNotSupportedException("translation", Kind);
 
+    /// <summary>Summaries are made here, not by the sidecar: the most representative sentences of the text itself (<see cref="ExtractiveSummary"/>). Offline, deterministic, free.</summary>
     public Task<TextResult> SummariseAsync(string text, SummaryOptions options, CancellationToken ct) =>
-        throw new AiNotSupportedException("summaries", Kind);
+        Task.FromResult(new TextResult(ExtractiveSummary.ModelName, ExtractiveSummary.Summarise(text, options.MaxWords)));
 
     // ------------------------------------------------------------------------------------------------- plumbing
 

@@ -354,7 +354,7 @@ public sealed class AiProviderShapeTests
     public void Capability_flags_tell_the_truth_for_each_provider()
     {
         var selfHosted = new SelfHostedProvider(new AiOptions { SidecarUrl = "http://x" }, NullLogger<SelfHostedProvider>.Instance);
-        Assert.True(selfHosted.Capabilities is { Tags: true, Ocr: true, Transcribe: true, TextEmbeddings: true, ImageEmbeddings: true, DetectLanguage: true, Translate: false, Summarise: false });
+        Assert.True(selfHosted.Capabilities is { Tags: true, Ocr: true, Transcribe: true, TextEmbeddings: true, ImageEmbeddings: true, DetectLanguage: true, Translate: false, Summarise: true });
 
         var openAi = new OpenAiCompatibleProvider(new AiOptions { BaseUrl = "http://x" }, NullLogger<OpenAiCompatibleProvider>.Instance);
         Assert.True(openAi.Capabilities is { Tags: true, Ocr: true, Transcribe: true, TextEmbeddings: true, ImageEmbeddings: false, DetectLanguage: true, Translate: true, Summarise: true });
@@ -376,7 +376,8 @@ public sealed class AiProviderShapeTests
         var selfHosted = new SelfHostedProvider(new AiOptions { SidecarUrl = "http://x" }, NullLogger<SelfHostedProvider>.Instance);
         var ex = await Assert.ThrowsAsync<AiNotSupportedException>(() => selfHosted.TranslateAsync("a", "en", "hi", Glossary.Empty, default));
         Assert.Equal("self-hosted", ex.Provider);
-        await Assert.ThrowsAsync<AiNotSupportedException>(() => selfHosted.SummariseAsync("a", new SummaryOptions(), default));
+        // Summaries are made locally (extractive), so the self-hosted provider does summarise; translation needs a model it does not have yet.
+        Assert.Equal(ExtractiveSummary.ModelName, (await selfHosted.SummariseAsync("A short note.", new SummaryOptions(), default)).Model);
 
         var openAi = new OpenAiCompatibleProvider(new AiOptions { BaseUrl = "http://x" }, NullLogger<OpenAiCompatibleProvider>.Instance);
         await Assert.ThrowsAsync<AiNotSupportedException>(() => openAi.EmbedImageAsync(Stream.Null, default));
@@ -464,7 +465,7 @@ public sealed class AiMappingTests
         Assert.Equal("nested", segments["type"]);
         var inner = (Dictionary<string, object?>)segments["properties"]!;
         Assert.Equal(["end_ms", "start_ms", "text"], inner.Keys.Order());
-        Assert.Equal(IndexMappingBuilder.BuildExtractProperties().Keys.Order(), ["ocr_text", "transcript_segments", "transcript_text"]);
+        Assert.Equal(IndexMappingBuilder.BuildExtractProperties().Keys.Order(), ["ocr_text", "summary_text", "transcript_segments", "transcript_text"]);
     }
 
     [Fact]
@@ -479,6 +480,7 @@ public sealed class AiMappingTests
         var doc = SearchDocumentBuilder.Build(asset, null, TenantSchemaIndex.Empty, TenantTaxonomyIndex.Empty, TenantCollectionIndex.Empty, ai);
         Assert.Equal("some text", doc["ocr_text"]);
         Assert.Equal("spoken words", doc["transcript_text"]);
+        Assert.DoesNotContain("summary_text", doc.Keys);
         Assert.Equal(new[] { 0.5f, 0.5f }, (float[])doc["vector_text"]!);
         Assert.DoesNotContain("vector_image", doc.Keys);
         var segment = Assert.Single((List<Dictionary<string, object?>>)doc["transcript_segments"]!);

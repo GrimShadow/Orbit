@@ -1,20 +1,23 @@
 // Pure helpers for the AI admin page: the editable draft of the settings, what a save must send, whether the privacy
 // acknowledgement is needed, and the backfill estimate. No React, so they are unit-tested directly.
 import type { components } from '@dam/sdk-js';
-import type { AiSettings, AiStatus } from '../aiApi';
+import type { AiFeatures, AiSettings, AiSettingsRequest, AiStatus } from '../aiApi';
 
 type ProviderInfo = AiSettings['providers'][number];
-export type AiFeatures = AiSettings['features'];
-export type { ProviderInfo };
+export type { AiFeatures, ProviderInfo };
 
-export const FEATURE_KEYS = ['tags', 'ocr', 'transcribe', 'embeddings'] as const;
+export const FEATURE_KEYS = ['tags', 'ocr', 'transcribe', 'embeddings', 'summaries'] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
+
+/** Every switch as a plain boolean: a server that predates summaries (Step 2.2) leaves it out, and it then counts as on. */
+const normalise = (f: AiFeatures): Required<AiFeatures> => ({ ...f, summaries: f.summaries ?? true });
+const featureOn = (f: AiFeatures, key: FeatureKey) => normalise(f)[key];
 
 /** What the page lets an administrator edit. `provider` is the stored override (`null` follows the server default). */
 export interface Draft {
   enabled: boolean;
   provider: string | null;
-  features: AiFeatures;
+  features: Required<AiFeatures>;
   /** Empty means automatic. */
   ocrLanguage: string;
 }
@@ -22,7 +25,7 @@ export interface Draft {
 export const toDraft = (s: AiSettings): Draft => ({
   enabled: s.enabled,
   provider: s.provider,
-  features: { ...s.features },
+  features: normalise(s.features),
   ocrLanguage: s.ocrLanguage ?? '',
 });
 
@@ -31,7 +34,7 @@ export function sameDraft(a: Draft, b: Draft): boolean {
     a.enabled === b.enabled &&
     a.provider === b.provider &&
     a.ocrLanguage.trim() === b.ocrLanguage.trim() &&
-    FEATURE_KEYS.every((k) => a.features[k] === b.features[k])
+    FEATURE_KEYS.every((k) => featureOn(a.features, k) === featureOn(b.features, k))
   );
 }
 
@@ -71,7 +74,7 @@ export function needsAcknowledgement(d: Draft, s: AiSettings): boolean {
   return !already;
 }
 
-export function toRequest(d: Draft, acknowledgeOffSite: boolean): components['schemas']['AiSettingsRequest'] {
+export function toRequest(d: Draft, acknowledgeOffSite: boolean): AiSettingsRequest {
   const language = d.ocrLanguage.trim().toLowerCase();
   return {
     enabled: d.enabled,
@@ -119,13 +122,14 @@ export const CAPABILITIES = [
   { key: 'transcribe', later: false },
   { key: 'textEmbeddings', later: false },
   { key: 'imageEmbeddings', later: false },
-  { key: 'translate', later: true },
-  { key: 'summarise', later: true },
+  { key: 'translate', later: false },
+  { key: 'summarise', later: false },
 ] as const;
 export type CapabilityKey = (typeof CAPABILITIES)[number]['key'];
 
 /** Whether the provider in use can do what a feature switch turns on (`embeddings` needs either kind of vector). */
 export function featureSupported(key: FeatureKey, caps: AiStatus['capabilities']): boolean {
+  if (key === 'summaries') return caps.summarise;
   return key === 'embeddings' ? caps.textEmbeddings || caps.imageEmbeddings : caps[key];
 }
 

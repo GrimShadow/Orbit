@@ -52,6 +52,8 @@ public sealed class AiOptions
     /// <summary>A transcript or document is embedded as the mean of its first chunks (the title and tags are one more).</summary>
     public int MaxEmbedChunks { get; set; } = 16;
     public int ChunkChars { get; set; } = 1000;
+    /// <summary>A summary is at most this many words (DAM_AI_SUMMARY_WORDS).</summary>
+    public int SummaryWords { get; set; } = ExtractiveSummary.DefaultMaxWords;
 
     // ---- semantic search
     public int SemanticDepth { get; set; } = 200;
@@ -147,6 +149,7 @@ public sealed class AiOptions
             RenditionWait = TimeSpan.FromSeconds(I("DAM_AI_RENDITION_WAIT_SECONDS", 60, 0, 600)),
             RetryBaseDelay = TimeSpan.FromMilliseconds(I("DAM_AI_RETRY_BASE_MS", 400, 1, 60_000)),
             BackfillChunk = I("DAM_AI_BACKFILL_CHUNK", 200, 10, 2000),
+            SummaryWords = I("DAM_AI_SUMMARY_WORDS", ExtractiveSummary.DefaultMaxWords, 20, 500),
         };
         // One model named for either role serves both unless the other is named too.
         var visionModel = S("DAM_AI_VISION_MODEL");
@@ -167,6 +170,7 @@ public sealed class AiOptions
         o.TagTimeout = Secs("DAM_AI_TAG_TIMEOUT_SECONDS", o.TagTimeout);
         o.OcrTimeout = Secs("DAM_AI_OCR_TIMEOUT_SECONDS", o.OcrTimeout);
         o.TranscribeTimeout = Secs("DAM_AI_TRANSCRIBE_TIMEOUT_SECONDS", o.TranscribeTimeout);
+        o.ChatTimeout = Secs("DAM_AI_CHAT_TIMEOUT_SECONDS", o.ChatTimeout);
         return o;
     }
 }

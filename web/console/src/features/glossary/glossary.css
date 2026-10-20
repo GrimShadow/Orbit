@@ -1,0 +1,188 @@
+/* The glossary admin page. Tokens only; light and dark. */
+.dam-gpage {
+  max-width: 1040px;
+}
+.dam-gpage__explain {
+  margin: 0;
+  padding: var(--dam-space-3) var(--dam-space-4);
+  border-inline-start: 4px solid var(--dam-brand);
+  border-radius: var(--dam-radius);
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+  font-size: var(--dam-text-sm);
+}
+.dam-gpage__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-gpage__more {
+  display: flex;
+  justify-content: center;
+}
+.dam-gpage__rowactions {
+  display: inline-flex;
+  gap: var(--dam-space-1);
+  justify-content: flex-end;
+}
+.dam-gterm {
+  overflow-wrap: anywhere;
+}
+.dam-gchips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-1);
+}
+.dam-gchip {
+  padding: 1px var(--dam-space-2);
+  border-radius: 999px;
+  background: var(--dam-tone-neutral-bg);
+  color: var(--dam-tone-neutral-text);
+  font-size: var(--dam-text-xs);
+  font-weight: 600;
+}
+
+/* Mode choice: two option cards, like the AI provider choice. */
+.dam-gmode {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.dam-gmode__list,
+.dam-grows__list {
+  list-style: none;
+  margin: var(--dam-space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+}
+.dam-gmode__opt {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dam-space-3);
+  padding: var(--dam-space-3);
+  border: 1px solid var(--dam-border);
+  border-radius: var(--dam-radius);
+  background: var(--dam-surface);
+  cursor: pointer;
+}
+.dam-gmode__opt:hover {
+  border-color: var(--dam-brand);
+}
+.dam-gmode__opt--checked {
+  border-color: var(--dam-brand);
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+}
+.dam-gmode__opt:has(input:focus-visible) {
+  outline: 2px solid var(--dam-focus);
+  outline-offset: 2px;
+}
+.dam-gmode__opt input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  accent-color: var(--dam-brand);
+}
+.dam-gmode__name {
+  display: block;
+  font-weight: 650;
+}
+.dam-gmode__desc {
+  display: block;
+  font-size: var(--dam-text-sm);
+  color: inherit;
+  opacity: 0.85;
+}
+
+/* One rendering per row: language, text, remove. */
+.dam-grows {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+}
+.dam-grows__row {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--dam-space-2);
+}
+@media (max-width: 479px) {
+  .dam-grows__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .dam-grows__row .dam-select-wrap {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Paste import. */
+.dam-gimport__example {
+  margin: 0;
+  padding: var(--dam-space-3);
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-surface-2);
+  color: var(--dam-text);
+  font-family: var(--dam-font-mono);
+  font-size: var(--dam-text-sm);
+  overflow-x: auto;
+}
+.dam-gimport__area {
+  width: 100%;
+  font-family: var(--dam-font-mono);
+}
+.dam-gimport__preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+}
+.dam-gimport__preview p {
+  margin: 0;
+}
+.dam-gimport__summary {
+  font-weight: 650;
+}
+.dam-gimport__list,
+.dam-gimport__errors {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-1);
+  font-size: var(--dam-text-sm);
+}
+.dam-gimport__list li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-gimport__term {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.dam-gimport__errtitle {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-1);
+  color: var(--dam-danger);
+}
+.dam-gimport__errors {
+  color: var(--dam-text);
+}
+.dam-gimport__line {
+  font-weight: 650;
+  color: var(--dam-danger);
+}
+.dam-gimport__result {
+  margin: 0;
+  font-weight: 650;
+}
