@@ -27,6 +27,8 @@ builder.Services.AddScheduledJob<SearchReindexJob>();
 builder.Services.AddDamNotifications(cfg);
 builder.Services.AddDamNotificationJobs(cfg);
 builder.Services.AddDamAiScheduling(cfg);
+// Usage partitions and retention, the daily rollup and the scheduled (emailed) reports (ADR-0037).
+builder.Services.AddDamAnalyticsJobs(cfg);
 
 var app = builder.Build();
 app.MapGet("/healthz", () => Results.Ok("ok"));
@@ -51,4 +53,5 @@ if (string.Equals(cfg["DAM_SIEM_ENABLED"], "true", StringComparison.OrdinalIgnor
 // Optional catch-up for assets uploaded while AI was off or down: set DAM_AI_BACKFILL_CRON (a Quartz cron, e.g. "0 */10 * * * ?"). Otherwise the backfill job runs only when asked.
 if (cfg["DAM_AI_BACKFILL_CRON"] is { Length: > 0 } backfillCron)
     await scheduler.ScheduleCronAsync("ai.backfill", AiBackfillJob.JobKey, backfillCron);
+await scheduler.ScheduleAnalyticsJobsAsync(cfg);
 app.Run();

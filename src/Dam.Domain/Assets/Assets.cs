@@ -78,6 +78,10 @@ public sealed class Asset : AggregateRoot
     public string StatusReason { get; private set; } = "";
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+    /// <summary>The first time the asset became <c>published</c>; never cleared, so a withdrawn or expired asset keeps it. Set by
+    /// <see cref="ChangeStatus"/>, which every publish path (a person, scheduled publish, a workflow's automatic publish) goes through.
+    /// It is what makes "time to publish" a cheap query (ADR-0037). Null for an asset that has never been published.</summary>
+    public DateTimeOffset? FirstPublishedAt { get; private set; }
 
     public static Asset CreateShell(Guid tenantId, Guid? folderId, string type, string title, Guid? ownerId, DateTimeOffset now)
     {
@@ -167,6 +171,7 @@ public sealed class Asset : AggregateRoot
         Status = to;
         StatusReason = reason;
         UpdatedAt = now;
+        if (to == AssetStatuses.Published) FirstPublishedAt ??= now;
         Raise(new AssetStatusChanged(Id, from, to));
     }
 

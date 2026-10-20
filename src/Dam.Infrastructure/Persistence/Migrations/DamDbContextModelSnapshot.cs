@@ -23,6 +23,8 @@ namespace Dam.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.HasSequence("usage_rollup_mark_seq");
+
             modelBuilder.Entity("Dam.Domain.Ai.AiRun", b =>
                 {
                     b.Property<Guid>("Id")
@@ -509,6 +511,102 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Dam.Domain.Analytics.ReportSchedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<int?>("DayOfMonth")
+                        .HasColumnType("integer")
+                        .HasColumnName("day_of_month");
+
+                    b.Property<int?>("DayOfWeek")
+                        .HasColumnType("integer")
+                        .HasColumnName("day_of_week");
+
+                    b.Property<int>("Days")
+                        .HasColumnType("integer")
+                        .HasColumnName("days");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enabled");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("frequency");
+
+                    b.Property<int>("HourUtc")
+                        .HasColumnType("integer")
+                        .HasColumnName("hour_utc");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTimeOffset?>("LastSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_sent_at");
+
+                    b.Property<DateTimeOffset?>("NextRunAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_run_at");
+
+                    b.PrimitiveCollection<List<Guid>>("RecipientUserIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("recipient_user_ids");
+
+                    b.Property<string>("Report")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("report");
+
+                    b.PrimitiveCollection<List<Guid>>("SentTo")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("sent_to");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_report_schedules");
+
+                    b.HasIndex("NextRunAt")
+                        .HasDatabaseName("ix_report_schedules_due")
+                        .HasFilter("enabled AND next_run_at IS NOT NULL");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_report_schedules_tenant_id");
+
+                    b.ToTable("report_schedules", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_report_schedules_frequency", "frequency IN ('daily','weekly','monthly')");
+
+                            t.HasCheckConstraint("ck_report_schedules_hour", "hour_utc BETWEEN 0 AND 23");
+                        });
+                });
+
             modelBuilder.Entity("Dam.Domain.Assets.Asset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -536,6 +634,10 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("ExpireAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expire_at");
+
+                    b.Property<DateTimeOffset?>("FirstPublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_published_at");
 
                     b.Property<Guid?>("FolderId")
                         .HasColumnType("uuid")
@@ -658,6 +760,10 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "ChecksumSha256")
                         .HasDatabaseName("ix_assets_tenant_id_checksum_sha256")
                         .HasFilter("checksum_sha256 IS NOT NULL");
+
+                    b.HasIndex("TenantId", "FirstPublishedAt")
+                        .HasDatabaseName("ix_assets_tenant_id_first_published_at")
+                        .HasFilter("first_published_at IS NOT NULL");
 
                     b.HasIndex("TenantId", "FolderId")
                         .HasDatabaseName("ix_assets_tenant_id_folder_id");
@@ -1072,15 +1178,61 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_uploads_tenant_id_batch_id")
                         .HasFilter("batch_id IS NOT NULL");
 
+                    b.HasIndex("TenantId", "CreatedAt")
+                        .HasDatabaseName("ix_uploads_tenant_id_created_at");
+
                     b.ToTable("uploads", (string)null);
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.UsageDaily", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<string>("EventType")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("event_type");
+
+                    b.Property<string>("Channel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("channel");
+
+                    b.Property<long>("Uses")
+                        .HasColumnType("bigint")
+                        .HasColumnName("uses");
+
+                    b.HasKey("TenantId", "Day", "AssetId", "EventType", "Channel")
+                        .HasName("pk_usage_daily");
+
+                    b.HasIndex("AssetId")
+                        .HasDatabaseName("ix_usage_daily_asset_id");
+
+                    b.HasIndex("TenantId", "AssetId", "Day")
+                        .HasDatabaseName("ix_usage_daily_tenant_id_asset_id_day");
+
+                    b.ToTable("usage_daily", (string)null);
                 });
 
             modelBuilder.Entity("Dam.Domain.Assets.UsageEvent", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
 
                     b.Property<Guid?>("ActorId")
                         .HasColumnType("uuid")
@@ -1114,10 +1266,6 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(16)")
                         .HasColumnName("event_type");
 
-                    b.Property<DateTimeOffset>("OccurredAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("occurred_at");
-
                     b.Property<string>("Rendition")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
@@ -1127,16 +1275,11 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
 
-                    b.HasKey("Id")
+                    b.HasKey("Id", "OccurredAt")
                         .HasName("pk_usage_events");
 
                     b.HasIndex("AssetId")
                         .HasDatabaseName("ix_usage_events_asset_id");
-
-                    b.HasIndex("TenantId", "ClientEventId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_usage_events_tenant_id_client_event_id")
-                        .HasFilter("client_event_id IS NOT NULL");
 
                     b.HasIndex("TenantId", "OccurredAt")
                         .HasDatabaseName("ix_usage_events_tenant_id_occurred_at");
@@ -1146,6 +1289,59 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_usage_events_tenant_id_asset_id_occurred_at");
 
                     b.ToTable("usage_events", (string)null);
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.UsageEventKey", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("ClientEventId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("client_event_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.HasKey("TenantId", "ClientEventId")
+                        .HasName("pk_usage_event_keys");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_usage_event_keys_created_at");
+
+                    b.ToTable("usage_event_keys", (string)null);
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.UsageRollupDirty", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<long>("MarkSeq")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("mark_seq")
+                        .HasDefaultValueSql("nextval('usage_rollup_mark_seq')");
+
+                    b.Property<DateTimeOffset>("MarkedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("marked_at");
+
+                    b.HasKey("TenantId", "Day")
+                        .HasName("pk_usage_rollup_dirty");
+
+                    b.HasIndex("Day")
+                        .HasDatabaseName("ix_usage_rollup_dirty_day");
+
+                    b.ToTable("usage_rollup_dirty", (string)null);
                 });
 
             modelBuilder.Entity("Dam.Domain.Comments.Comment", b =>
@@ -2780,9 +2976,17 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "AssetId")
                         .HasDatabaseName("ix_workflow_tasks_tenant_id_asset_id");
 
+                    b.HasIndex("TenantId", "DecidedAt")
+                        .HasDatabaseName("ix_workflow_tasks_tenant_id_decided_at")
+                        .HasFilter("decided_at IS NOT NULL");
+
                     b.HasIndex("TenantId", "DecidedBy")
                         .HasDatabaseName("ix_workflow_tasks_tenant_id_decided_by")
                         .HasFilter("decided_by IS NOT NULL");
+
+                    b.HasIndex("TenantId", "SlaBreachedAt")
+                        .HasDatabaseName("ix_workflow_tasks_tenant_id_sla_breached_at")
+                        .HasFilter("sla_breached_at IS NOT NULL");
 
                     b.HasIndex("TenantId", "Status")
                         .HasDatabaseName("ix_workflow_tasks_tenant_id_status");
@@ -3056,6 +3260,16 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_uploads_assets_asset_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Assets.UsageDaily", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_usage_daily_assets_asset_id");
                 });
 
             modelBuilder.Entity("Dam.Domain.Assets.UsageEvent", b =>

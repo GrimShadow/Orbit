@@ -72,6 +72,12 @@ export interface BarChartProps {
 }
 
 /** Vertical bars scaled to the largest value; empty (zero) bars keep a hairline so the time axis stays readable. */
+/** Every Nth bar is labelled, and the last one always is; a regular label that sits closer than N bars to the last one is dropped so the two never overlap. */
+function isLabelled(i: number, count: number, every: number): boolean {
+  const last = count - 1;
+  return i === last || (i % every === 0 && last - i >= every);
+}
+
 export function BarChart({ data, label, height = 140, labelEvery, series = 0, fill = false }: BarChartProps) {
   const max = Math.max(...data.map((d) => d.value), 1);
   const every = labelEvery ?? Math.max(1, Math.ceil(data.length / 6));
@@ -95,7 +101,7 @@ export function BarChart({ data, label, height = 140, labelEvery, series = 0, fi
       <div className="dam-bars__axis" aria-hidden="true">
         {data.map((d, i) => (
           <span key={`${d.label}-${i}`} className="dam-bars__tick">
-            {i % every === 0 || i === data.length - 1 ? d.label : ''}
+            {isLabelled(i, data.length, every) ? d.label : ''}
           </span>
         ))}
       </div>

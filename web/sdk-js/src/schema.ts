@@ -1312,6 +1312,127 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analytics/kpis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The four key performance indicators (publishing effort, duplicate reduction, reuse, workflow SLA attainment) for the last N UTC days (days, default 30, 1-365), each with the equal period before it. A ratio is null when there is nothing to measure. Needs analytics.read */
+        get: operations["GetKpis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/assets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How one asset has been used: totals against the previous period, first and last use, a zero-filled daily series, uses by event type and channel, and the 20 most recent uses (days, default 30, 1-365). Needs analytics.read and read access to the asset; otherwise 404 */
+        get: operations["GetAssetAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The reports that can be run or scheduled: kpis, top-assets, unused-assets, storage, workflow-sla. Needs analytics.read */
+        get: operations["ListReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/reports/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Runs a report as JSON (columns and rows) or, with format=csv, as a spreadsheet-ready CSV (content type text/csv instead of JSON; UTF-8 with a byte-order mark; text cells that could be read as formulas get a leading apostrophe). days is the period (default and maximum depend on the report; for unused-assets it is the idle window). Rows that name assets contain only assets the caller may read. Needs analytics.read */
+        get: operations["RunReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/report-schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The emailed (MIS) report schedules of the tenant, with when each last went out, why it did not if it failed, and when it is next due. Needs analytics.manage */
+        get: operations["ListReportSchedules"];
+        put?: never;
+        /** Schedules a report to be emailed daily, weekly (dayOfWeek 1-7) or monthly (dayOfMonth 1-31, the last day in a shorter month) at an hour UTC. Recipients are active users of the tenant (ids), not addresses; at most 50 schedules. Audited. Needs analytics.manage */
+        post: operations["CreateReportSchedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/report-schedules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replaces a schedule's settings; its next run is recalculated from now. Audited. Needs analytics.manage */
+        put: operations["UpdateReportSchedule"];
+        post?: never;
+        /** Deletes a schedule. Audited. Needs analytics.manage */
+        delete: operations["DeleteReportSchedule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/report-schedules/{id}/send-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Emails the report to the schedule's recipients now, each as they may see it, without changing when the schedule next runs. 202 with how many were sent, skipped and failed; 409 when email is not configured on the server or nothing could be sent. Needs analytics.manage */
+        post: operations["SendReportScheduleNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflows": {
         parameters: {
             query?: never;
@@ -2384,6 +2505,16 @@ export interface components {
             uploads: components["schemas"]["UploadWeekDto"][];
             storage: components["schemas"]["StorageSummaryDto"];
         };
+        AnalyticsPeriodDto: {
+            from: string;
+            to: string;
+            /** Format: int32 */
+            days: number;
+        };
+        AnalyticsPreviousPeriodDto: {
+            from: string;
+            to: string;
+        };
         AnchorDto: {
             type: string;
             /**
@@ -2433,6 +2564,27 @@ export interface components {
             transcript: components["schemas"]["AiTranscriptDto"];
             embeddingsReady: boolean;
             summary?: components["schemas"]["AiSummaryDto"];
+        };
+        AssetAnalyticsDto: {
+            /** Format: uuid */
+            assetId: string;
+            title: string;
+            type: string;
+            period: components["schemas"]["AnalyticsPeriodDto"];
+            /** Format: int64 */
+            total: number;
+            /** Format: int64 */
+            previousTotal: number;
+            /** Format: int64 */
+            allTimeTotal: number;
+            /** Format: date-time */
+            firstUsedAt: string | null;
+            /** Format: date-time */
+            lastUsedAt: string | null;
+            byDay: components["schemas"]["UsageDayDto"][];
+            byType: components["schemas"]["UsageTypeDto"][];
+            byChannel: components["schemas"]["UsageChannelDto"][];
+            recent: components["schemas"]["RecentUsageDto"][];
         };
         AssetDto: {
             /** Format: uuid */
@@ -2762,6 +2914,31 @@ export interface components {
                 [key: string]: string;
             };
         };
+        DuplicateKpiDto: {
+            /** Format: int64 */
+            uploads: number;
+            /** Format: int64 */
+            duplicatesPrevented: number;
+            /** Format: double */
+            rate: number | null;
+            /** Format: int64 */
+            bytesNotStored: number;
+            /** Format: int64 */
+            duplicateAssetsInLibrary: number;
+            previous: components["schemas"]["DuplicateMetricsDto"];
+        };
+        DuplicateMetricsDto: {
+            /** Format: int64 */
+            uploads: number;
+            /** Format: int64 */
+            duplicatesPrevented: number;
+            /** Format: double */
+            rate: number | null;
+            /** Format: int64 */
+            bytesNotStored: number;
+            /** Format: int64 */
+            duplicateAssetsInLibrary: number;
+        };
         FacetResultDto: {
             field: string;
             values: components["schemas"]["FacetValueDto"][];
@@ -2871,6 +3048,16 @@ export interface components {
             sha256: string | null;
         };
         JsonElement: unknown;
+        KpiDto: {
+            period: components["schemas"]["AnalyticsPeriodDto"];
+            previous: components["schemas"]["AnalyticsPreviousPeriodDto"];
+            /** Format: date-time */
+            generatedAt: string;
+            publishingEffort: components["schemas"]["PublishingEffortKpiDto"];
+            duplicates: components["schemas"]["DuplicateKpiDto"];
+            reuse: components["schemas"]["ReuseKpiDto"];
+            workflowSla: components["schemas"]["WorkflowSlaKpiDto"];
+        };
         MarkAllReadResultDto: {
             /** Format: int32 */
             marked: number;
@@ -3028,12 +3215,43 @@ export interface components {
         PingResponse: {
             reply: string;
         };
+        PublishingEffortKpiDto: {
+            /** Format: int64 */
+            publishedCount: number;
+            /** Format: double */
+            medianHours: number | null;
+            /** Format: double */
+            p90Hours: number | null;
+            /** Format: double */
+            firstPassRate: number | null;
+            previous: components["schemas"]["PublishingEffortMetricsDto"];
+        };
+        PublishingEffortMetricsDto: {
+            /** Format: int64 */
+            publishedCount: number;
+            /** Format: double */
+            medianHours: number | null;
+            /** Format: double */
+            p90Hours: number | null;
+            /** Format: double */
+            firstPassRate: number | null;
+        };
         ReceivedPartDto: {
             /** Format: int32 */
             partNumber: number;
             /** Format: int64 */
             size: number;
             eTag: string;
+        };
+        RecentUsageDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            actorId: string | null;
+            eventType: string;
+            channel: string | null;
+            /** Format: date-time */
+            occurredAt: string;
         };
         RecordUsageEventsRequest: {
             events: components["schemas"]["UsageEventInput"][];
@@ -3069,6 +3287,68 @@ export interface components {
         ReplaceWorkflowBindingsRequest: {
             bindings: components["schemas"]["WorkflowBindingInput"][];
         };
+        ReportColumnDto: {
+            key: string;
+            label: string;
+            type: string;
+        };
+        ReportDto: {
+            name: string;
+            title: string;
+            /** Format: date-time */
+            generatedAt: string;
+            period: components["schemas"]["AnalyticsPeriodDto"];
+            columns: components["schemas"]["ReportColumnDto"][];
+            rows: Record<string, never>[];
+            truncated: boolean;
+        };
+        ReportInfoDto: {
+            name: string;
+            title: string;
+            description: string;
+            namesAssets: boolean;
+            /** Format: int32 */
+            defaultDays: number;
+            /** Format: int32 */
+            maxDays: number;
+        };
+        ReportScheduleDto: {
+            /** Format: uuid */
+            id: string;
+            report: string;
+            /** Format: int32 */
+            days: number;
+            frequency: string;
+            /** Format: int32 */
+            hourUtc: number;
+            /** Format: int32 */
+            dayOfWeek: number | null;
+            /** Format: int32 */
+            dayOfMonth: number | null;
+            recipientUserIds: string[];
+            enabled: boolean;
+            /** Format: date-time */
+            lastSentAt: string | null;
+            lastError: string | null;
+            /** Format: date-time */
+            nextRunAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ReportScheduleInput: {
+            report: string;
+            /** Format: int32 */
+            days: number;
+            frequency: string;
+            /** Format: int32 */
+            hourUtc: number;
+            /** Format: int32 */
+            dayOfWeek: number | null;
+            /** Format: int32 */
+            dayOfMonth: number | null;
+            recipientUserIds: string[];
+            enabled: boolean;
+        };
         RetentionPolicyDto: {
             /** Format: uuid */
             id: string;
@@ -3089,6 +3369,31 @@ export interface components {
             deleteAfterDays: number | null;
             /** @default false */
             legalHoldExempt: boolean;
+        };
+        ReuseKpiDto: {
+            /** Format: int64 */
+            usedAssets: number;
+            /** Format: int64 */
+            reusedAssets: number;
+            /** Format: double */
+            rate: number | null;
+            /** Format: double */
+            avgUsesPerUsedAsset: number | null;
+            /** Format: int64 */
+            multiChannelAssets: number;
+            previous: components["schemas"]["ReuseMetricsDto"];
+        };
+        ReuseMetricsDto: {
+            /** Format: int64 */
+            usedAssets: number;
+            /** Format: int64 */
+            reusedAssets: number;
+            /** Format: double */
+            rate: number | null;
+            /** Format: double */
+            avgUsesPerUsedAsset: number | null;
+            /** Format: int64 */
+            multiChannelAssets: number;
         };
         RightsCheckDto: {
             allowed: boolean;
@@ -3343,6 +3648,14 @@ export interface components {
             semanticLegs: string[] | null;
             /** @default null */
             semanticFallback: string | null;
+        };
+        SendReportNowResultDto: {
+            /** Format: int32 */
+            sent: number;
+            /** Format: int32 */
+            skipped: number;
+            /** Format: int32 */
+            failed: number;
         };
         SetAssetRightsInput: {
             /** Format: uuid */
@@ -3933,6 +4246,31 @@ export interface components {
             autoPublish: boolean;
             steps: components["schemas"]["WorkflowStepViewDto"][];
         } | null;
+        WorkflowSlaKpiDto: {
+            /** Format: int64 */
+            decided: number;
+            /** Format: int64 */
+            onTime: number;
+            /** Format: double */
+            attainment: number | null;
+            /** Format: int64 */
+            breached: number;
+            /** Format: int64 */
+            overdueOpen: number | null;
+            previous: components["schemas"]["WorkflowSlaMetricsDto"];
+        };
+        WorkflowSlaMetricsDto: {
+            /** Format: int64 */
+            decided: number;
+            /** Format: int64 */
+            onTime: number;
+            /** Format: double */
+            attainment: number | null;
+            /** Format: int64 */
+            breached: number;
+            /** Format: int64 */
+            overdueOpen: number | null;
+        };
         WorkflowStepViewDto: {
             id: string;
             name: string;
@@ -6622,6 +6960,209 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyticsOverviewDto"];
+                };
+            };
+        };
+    };
+    GetKpis: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KpiDto"];
+                };
+            };
+        };
+    };
+    GetAssetAnalytics: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetAnalyticsDto"];
+                };
+            };
+        };
+    };
+    ListReports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportInfoDto"][];
+                };
+            };
+        };
+    };
+    RunReport: {
+        parameters: {
+            query?: {
+                days?: number;
+                format?: string;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportDto"];
+                };
+            };
+        };
+    };
+    ListReportSchedules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportScheduleDto"][];
+                };
+            };
+        };
+    };
+    CreateReportSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportScheduleInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportScheduleDto"];
+                };
+            };
+        };
+    };
+    UpdateReportSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportScheduleInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportScheduleDto"];
+                };
+            };
+        };
+    };
+    DeleteReportSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SendReportScheduleNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendReportNowResultDto"];
                 };
             };
         };

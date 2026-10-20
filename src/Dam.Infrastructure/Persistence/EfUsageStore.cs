@@ -9,30 +9,44 @@ using NpgsqlTypes;
 namespace Dam.Infrastructure.Persistence;
 
 /// <summary>
-/// Appends a batch of usage events and folds it into <c>asset_usage</c> with one statement, inside the request's
-/// transaction. <c>ON CONFLICT DO NOTHING</c> on (tenant, client event id) makes a re-sent event a no-op even when two
-/// requests race, and the counters are incremented in SQL, so concurrent batches for the same asset do not lose updates.
+/// Appends a batch of usage events with ONE statement, inside the request's transaction (ADR-0037, ADR-0029): it records the client event ids that are new
+/// (<c>usage_event_keys</c>, <c>ON CONFLICT DO NOTHING</c>, so a re-sent event is a no-op even when two requests race), stores the events of those ids and of
+/// events without one, increments the per-asset summary in SQL (concurrent batches for a hot asset do not lose updates), and marks each UTC day an event
+/// landed on as needing a rollup. Rows are written in key order everywhere so concurrent batches queue behind each other instead of deadlocking.
 /// </summary>
 public sealed class EfUsageStore(DamDbContext db) : IUsageStore
 {
     private const string Sql = """
         WITH input AS (
-            SELECT * FROM unnest(@ids, @assets, @types, @channels, @renditions, @actors, @occurred, @clients, @contexts)
-                AS t(id, asset_id, event_type, channel, rendition, actor_id, occurred_at, client_event_id, context)
+            SELECT t.*, row_number() OVER (PARTITION BY t.client_event_id ORDER BY t.ord) AS rn
+            FROM unnest(@ids, @assets, @types, @channels, @renditions, @actors, @occurred, @clients, @contexts) WITH ORDINALITY
+                AS t(id, asset_id, event_type, channel, rendition, actor_id, occurred_at, client_event_id, context, ord)
+        ), keys AS (
+            INSERT INTO usage_event_keys (tenant_id, client_event_id, created_at)
+            SELECT @tenant, client_event_id, @now FROM input WHERE client_event_id IS NOT NULL AND rn = 1 ORDER BY client_event_id
+            ON CONFLICT (tenant_id, client_event_id) DO NOTHING
+            RETURNING client_event_id
+        ), fresh AS (
+            SELECT i.* FROM input i
+            WHERE i.client_event_id IS NULL OR (i.rn = 1 AND i.client_event_id IN (SELECT client_event_id FROM keys))
         ), ins AS (
             INSERT INTO usage_events (id, tenant_id, asset_id, event_type, channel, rendition, actor_id, occurred_at, client_event_id, context, created_at)
-            SELECT id, @tenant, asset_id, event_type, channel, rendition, actor_id, occurred_at, client_event_id, context::jsonb, @now FROM input
-            ON CONFLICT (tenant_id, client_event_id) WHERE client_event_id IS NOT NULL DO NOTHING
+            SELECT id, @tenant, asset_id, event_type, channel, rendition, actor_id, occurred_at, client_event_id, context::jsonb, @now FROM fresh
             RETURNING asset_id, occurred_at
         ), summary AS (
             SELECT asset_id, max(occurred_at) AS last_at, min(occurred_at) AS first_at, count(*) AS n FROM ins GROUP BY asset_id
         ), upsert AS (
             INSERT INTO asset_usage (asset_id, tenant_id, last_used_at, first_used_at, use_count)
-            SELECT asset_id, @tenant, last_at, first_at, n FROM summary
+            SELECT asset_id, @tenant, last_at, first_at, n FROM summary ORDER BY asset_id
             ON CONFLICT (asset_id) DO UPDATE SET
                 last_used_at = GREATEST(asset_usage.last_used_at, EXCLUDED.last_used_at),
                 first_used_at = LEAST(asset_usage.first_used_at, EXCLUDED.first_used_at),
                 use_count = asset_usage.use_count + EXCLUDED.use_count
+            RETURNING 1
+        ), dirty AS (
+            INSERT INTO usage_rollup_dirty (tenant_id, day, marked_at)
+            SELECT @tenant, d, @now FROM (SELECT DISTINCT (occurred_at AT TIME ZONE 'UTC')::date AS d FROM ins) days ORDER BY d
+            ON CONFLICT (tenant_id, day) DO UPDATE SET mark_seq = nextval('usage_rollup_mark_seq'), marked_at = EXCLUDED.marked_at
             RETURNING 1
         )
         SELECT count(*) FROM ins

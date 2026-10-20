@@ -2,6 +2,7 @@ using System.Globalization;
 using Dam.Application.Abstractions;
 using Dam.Application.Content;
 using Dam.Application.Messaging;
+using Dam.Domain.Analytics;
 using Dam.Domain.Assets;
 using Dam.Domain.Authorization;
 using Dam.Domain.Common;
@@ -69,9 +70,19 @@ internal readonly record struct UnusedCursor(DateTimeOffset IdleSince, Guid Id)
         idleSince > IdleSince || (idleSince == IdleSince && CompareIds(id, Id) > 0);
 }
 
-public sealed class ListUnusedAssetsHandler(
+public sealed class ListUnusedAssetsHandler(UnusedAssetsReader reader, IAuthorizationService authz) : IRequestHandler<ListUnusedAssetsQuery, UnusedAssetsDto>
+{
+    public async Task<Result<UnusedAssetsDto>> Handle(ListUnusedAssetsQuery r, CancellationToken ct)
+    {
+        if (!await authz.CanAsync(Permissions.AnalyticsRead, ct: ct)) return Error.Forbidden();
+        return await reader.ReadAsync(await authz.GetProfileAsync(ct), r, ct);
+    }
+}
+
+/// <summary>The unused-assets list as seen by one reader (the caller, or a scheduled report's recipient): the same scope rules either way. Knows nothing of who is asking.</summary>
+public sealed class UnusedAssetsReader(
     IRepository<Asset> assets, IRepository<AssetUsage> usage, IRepository<AssetVersion> versions, IRepository<Folder> folders,
-    IQueryExecutor q, IAuthorizationService authz, IClock clock) : IRequestHandler<ListUnusedAssetsQuery, UnusedAssetsDto>
+    IQueryExecutor q, IClock clock)
 {
     /// <summary>The same cap as <see cref="ListAssetsHandler"/>: how many candidate rows are checked against a narrow access scope.</summary>
     private const int MaxRowsScanned = 5000;
@@ -81,16 +92,14 @@ public sealed class ListUnusedAssetsHandler(
         Guid Id, string Title, string Type, string Status, Guid? FolderId, Guid? OwnerId, Dictionary<string, string[]> Attributes,
         DateTimeOffset CreatedAt, DateTimeOffset? LastUsedAt, long UseCount, DateTimeOffset IdleSince, long? SizeBytes);
 
-    public async Task<Result<UnusedAssetsDto>> Handle(ListUnusedAssetsQuery r, CancellationToken ct)
+    public async Task<Result<UnusedAssetsDto>> ReadAsync(AccessProfile profile, ListUnusedAssetsQuery r, CancellationToken ct)
     {
-        if (!await authz.CanAsync(Permissions.AnalyticsRead, ct: ct)) return Error.Forbidden();
         var now = clock.UtcNow;
         var cutoff = IdleWindow.ResolveCutoff(r.Days, r.Before, now, out _)!.Value;
         var status = r.Status ?? AssetStatuses.Published;
         var limit = Math.Clamp(r.Limit ?? 50, 1, 200);
         UnusedCursor? cursor = UnusedCursor.TryParse(r.Cursor, out var parsed) ? parsed : null;
 
-        var profile = await authz.GetProfileAsync(ct);
         var clauses = PolicyEngine.GetScope(profile, Permissions.AssetsRead);
         if (clauses.Count == 0) return new UnusedAssetsDto([], 0, true, null, cutoff);
 
@@ -108,7 +117,7 @@ public sealed class ListUnusedAssetsHandler(
             : await ReadScopedAsync(candidates, clauses, profile.UserId, pathById, limit, cursor, ct);
 
         var items = rows.Select(a => new UnusedAssetDto(
-            a.Id, a.Title, a.Type, a.Status, a.FolderId, FolderPath(a.FolderId, pathById, nameByPath), a.CreatedAt, a.LastUsedAt,
+            a.Id, a.Title, a.Type, a.Status, a.FolderId, FolderLabels.Path(a.FolderId, pathById, nameByPath), a.CreatedAt, a.LastUsedAt,
             (int)Math.Min(a.UseCount, int.MaxValue), a.IdleSince, IdleWindow.IdleDays(a.IdleSince, now), a.SizeBytes)).ToList();
         return new UnusedAssetsDto(items, total, exact, more ? new UnusedCursor(rows[^1].IdleSince, rows[^1].Id).ToString() : null, cutoff);
     }
@@ -205,8 +214,14 @@ public sealed class ListUnusedAssetsHandler(
             if (rows.Count < ChunkSize) return (page, total, true, more);
         }
     }
+}
 
-    private static string? FolderPath(Guid? folderId, Dictionary<Guid, string> pathById, Dictionary<string, string> nameByPath)
+// --------------------------------------------------------------------------------------------------------- overview
+
+/// <summary>Display names of a folder and its ancestors ("Brand / Cars"), for lists and reports.</summary>
+internal static class FolderLabels
+{
+    public static string? Path(Guid? folderId, Dictionary<Guid, string> pathById, Dictionary<string, string> nameByPath)
     {
         if (folderId is not { } id || !pathById.TryGetValue(id, out var path)) return null;
         var labels = path.Split('.');
@@ -215,7 +230,34 @@ public sealed class ListUnusedAssetsHandler(
     }
 }
 
-// --------------------------------------------------------------------------------------------------------- overview
+/// <summary>
+/// The busiest assets of a period that a reader may see (ADR-0029): usage ranks assets across the whole tenant, then each candidate is checked against the reader's
+/// access (a role grant, a folder rule, an attribute limit) in the order of the ranking until enough have passed. Reads usage from the rollup plus today's live events.
+/// </summary>
+public sealed class TopAssetsReader(IAnalyticsStore store, IRepository<Asset> assets, IRepository<Folder> folders, IQueryExecutor q)
+{
+    /// <summary>How many of the busiest assets are looked at to find the ones the reader may see.</summary>
+    public const int DefaultCandidates = 200;
+
+    public async Task<List<TopAssetDto>> ReadAsync(DateOnly from, DateOnly to, DateOnly today, int take, int candidates, AccessProfile profile, CancellationToken ct)
+    {
+        var busiest = await store.TopAssetsAsync(from, to, today, candidates, ct);
+        if (busiest.Count == 0) return [];
+
+        var ids = busiest.Select(x => x.AssetId).ToList();
+        var found = (await q.ToListAsync(assets.Query().Where(a => ids.Contains(a.Id)), ct)).ToDictionary(a => a.Id);
+        var folderIds = found.Values.Where(a => a.FolderId != null).Select(a => a.FolderId!.Value).Distinct().ToList();
+        var pathById = folderIds.Count == 0
+            ? []
+            : (await q.ToListAsync(folders.Query().Where(f => folderIds.Contains(f.Id)).Select(f => new { f.Id, f.Path }), ct)).ToDictionary(f => f.Id, f => f.Path);
+
+        return busiest
+            .Where(x => found.TryGetValue(x.AssetId, out var a) && a.Status is not (AssetStatuses.Deleted or AssetStatuses.Blocked)
+                        && PolicyEngine.Can(profile, Permissions.AssetsRead, a.ToResource(a.FolderId is { } f && pathById.TryGetValue(f, out var p) ? p : null)))
+            .Take(take)
+            .Select(x => new TopAssetDto(x.AssetId, found[x.AssetId].Title, found[x.AssetId].Type, x.Uses)).ToList();
+    }
+}
 
 /// <summary>
 /// The figures behind the dashboard for the last <paramref name="Days"/> days (UTC calendar days, today included, 30 by
@@ -231,66 +273,39 @@ public sealed class GetAnalyticsOverviewValidator : AbstractValidator<GetAnalyti
 }
 
 public sealed class GetAnalyticsOverviewHandler(
-    IRepository<UsageEvent> events, IRepository<Asset> assets, IRepository<AssetVersion> versions, IRepository<Folder> folders,
+    IRepository<Asset> assets, IRepository<AssetVersion> versions, IAnalyticsStore store, TopAssetsReader topAssets,
     IQueryExecutor q, IAuthorizationService authz, IClock clock) : IRequestHandler<GetAnalyticsOverviewQuery, AnalyticsOverviewDto>
 {
     private const int TopAssetCount = 5, TopChannelCount = 6;
-    /// <summary>How many of the busiest assets are looked at to find five the caller may read.</summary>
-    private const int TopAssetCandidates = 200;
 
     public async Task<Result<AnalyticsOverviewDto>> Handle(GetAnalyticsOverviewQuery r, CancellationToken ct)
     {
         if (!await authz.CanAsync(Permissions.AnalyticsRead, ct: ct)) return Error.Forbidden();
         var now = clock.UtcNow;
         var days = r.Days ?? AnalyticsPeriods.DefaultDays;
-        var today = AnalyticsPeriods.StartOfDay(now);
-        var start = today.AddDays(-(days - 1));
-        var previousStart = start.AddDays(-days);
-        var end = today.AddDays(1);
+        var period = KpiPeriod.For(UsagePartitions.DayOf(now), days);
+        var today = period.To;
 
-        // One grouped read covers this period and the one before it: the trend is the second against the first.
-        var perDay = (await q.ToListAsync(events.Query()
-            .Where(e => e.OccurredAt >= previousStart && e.OccurredAt < end)
-            .GroupBy(e => new { e.OccurredAt.UtcDateTime.Year, e.OccurredAt.UtcDateTime.Month, e.OccurredAt.UtcDateTime.Day })
-            .Select(g => new { g.Key.Year, g.Key.Month, g.Key.Day, Count = g.LongCount() }), ct))
-            .ToDictionary(x => new DateOnly(x.Year, x.Month, x.Day), x => x.Count);
-        var byDay = Enumerable.Range(0, days).Select(i => DateOnly.FromDateTime(start.UtcDateTime.AddDays(i)))
-            .Select(d => new UsageDayDto(Iso(d), perDay.GetValueOrDefault(d))).ToList();
-        var previousTotal = Enumerable.Range(1, days).Select(i => DateOnly.FromDateTime(start.UtcDateTime.AddDays(-i)))
-            .Sum(d => perDay.GetValueOrDefault(d));
+        // One read covers this period and the one before it (the trend is the second against the first). It combines the daily rollup for finished days
+        // with the live events of today and of any day not yet rolled up, so the numbers are the same before and after the rollup job has run.
+        var cells = await store.UsageCellsAsync(period.PreviousFrom, today.AddDays(1), today, null, ct);
+        var perDay = cells.GroupBy(c => c.Day).ToDictionary(g => g.Key, g => g.Sum(c => c.Uses));
+        var byDay = Enumerable.Range(0, days).Select(i => period.From.AddDays(i))
+            .Select(d => new UsageDayDto(KpiPeriod.Iso(d), perDay.GetValueOrDefault(d))).ToList();
+        var previousTotal = Enumerable.Range(1, days).Select(i => period.From.AddDays(-i)).Sum(d => perDay.GetValueOrDefault(d));
 
-        var inPeriod = events.Query().Where(e => e.OccurredAt >= start && e.OccurredAt < end);
-        var byType = (await q.ToListAsync(inPeriod.GroupBy(e => e.EventType).Select(g => new { Type = g.Key, Count = g.LongCount() })
-            .OrderByDescending(x => x.Count).ThenBy(x => x.Type), ct)).Select(x => new UsageTypeDto(x.Type, x.Count)).ToList();
-        var byChannel = (await q.ToListAsync(inPeriod.GroupBy(e => e.Channel).Select(g => new { Channel = g.Key, Count = g.LongCount() })
-            .OrderByDescending(x => x.Count).ThenBy(x => x.Channel).Take(TopChannelCount), ct))
-            .Select(x => new UsageChannelDto(x.Channel ?? "unspecified", x.Count)).ToList();
+        var inPeriod = cells.Where(c => c.Day >= period.From).ToList();
+        var byType = inPeriod.GroupBy(c => c.EventType).Select(g => new UsageTypeDto(g.Key, g.Sum(c => c.Uses)))
+            .OrderByDescending(x => x.Count).ThenBy(x => x.EventType, StringComparer.Ordinal).ToList();
+        var byChannel = inPeriod.GroupBy(c => c.Channel).Select(g => (Channel: g.Key, Count: g.Sum(c => c.Uses)))
+            .OrderByDescending(x => x.Count).ThenBy(x => x.Channel.Length == 0 ? 1 : 0).ThenBy(x => x.Channel, StringComparer.Ordinal).Take(TopChannelCount)
+            .Select(x => new UsageChannelDto(x.Channel.Length == 0 ? "unspecified" : x.Channel, x.Count)).ToList();
 
         return new AnalyticsOverviewDto(
             now, days,
             new UsageSummaryDto(byDay.Sum(d => d.Count), previousTotal, byDay, byType, byChannel),
-            await TopAssetsAsync(inPeriod, ct), await UploadsAsync(now, ct), await StorageAsync(ct));
-    }
-
-    private async Task<List<TopAssetDto>> TopAssetsAsync(IQueryable<UsageEvent> inPeriod, CancellationToken ct)
-    {
-        var busiest = await q.ToListAsync(inPeriod.GroupBy(e => e.AssetId).Select(g => new { AssetId = g.Key, Count = g.LongCount() })
-            .OrderByDescending(x => x.Count).ThenBy(x => x.AssetId).Take(TopAssetCandidates), ct);
-        if (busiest.Count == 0) return [];
-
-        var profile = await authz.GetProfileAsync(ct);
-        var ids = busiest.Select(x => x.AssetId).ToList();
-        var found = (await q.ToListAsync(assets.Query().Where(a => ids.Contains(a.Id)), ct)).ToDictionary(a => a.Id);
-        var folderIds = found.Values.Where(a => a.FolderId != null).Select(a => a.FolderId!.Value).Distinct().ToList();
-        var pathById = folderIds.Count == 0
-            ? []
-            : (await q.ToListAsync(folders.Query().Where(f => folderIds.Contains(f.Id)).Select(f => new { f.Id, f.Path }), ct)).ToDictionary(f => f.Id, f => f.Path);
-
-        return busiest
-            .Where(x => found.TryGetValue(x.AssetId, out var a) && a.Status is not (AssetStatuses.Deleted or AssetStatuses.Blocked)
-                        && PolicyEngine.Can(profile, Permissions.AssetsRead, a.ToResource(a.FolderId is { } f && pathById.TryGetValue(f, out var p) ? p : null)))
-            .Take(TopAssetCount)
-            .Select(x => new TopAssetDto(x.AssetId, found[x.AssetId].Title, found[x.AssetId].Type, x.Count)).ToList();
+            await topAssets.ReadAsync(period.From, today.AddDays(1), today, TopAssetCount, TopAssetsReader.DefaultCandidates, await authz.GetProfileAsync(ct), ct),
+            await UploadsAsync(now, ct), await StorageAsync(ct));
     }
 
     /// <summary>Assets created per week for the last twelve weeks, the current (partial) week last; empty weeks are zero.</summary>
@@ -304,7 +319,7 @@ public sealed class GetAnalyticsOverviewHandler(
         var perWeek = perDay.GroupBy(x => DateOnly.FromDateTime(AnalyticsPeriods.StartOfWeek(new DateTimeOffset(x.Year, x.Month, x.Day, 0, 0, 0, TimeSpan.Zero)).UtcDateTime))
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Count));
         return Enumerable.Range(0, AnalyticsPeriods.UploadWeeks).Select(i => DateOnly.FromDateTime(first.UtcDateTime.AddDays(7 * i)))
-            .Select(week => new UploadWeekDto(Iso(week), perWeek.GetValueOrDefault(week))).ToList();
+            .Select(week => new UploadWeekDto(KpiPeriod.Iso(week), perWeek.GetValueOrDefault(week))).ToList();
     }
 
     /// <summary>Storage is the size of each live asset's current version; older versions and renditions are not counted (ADR-0029).</summary>
@@ -316,6 +331,4 @@ public sealed class GetAnalyticsOverviewHandler(
             .OrderByDescending(x => x.Bytes).ThenBy(x => x.Type), ct)).Select(x => new StorageTypeDto(x.Type, x.Count, x.Bytes)).ToList();
         return new StorageSummaryDto(byType.Sum(x => x.Bytes), byType);
     }
-
-    private static string Iso(DateOnly d) => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }

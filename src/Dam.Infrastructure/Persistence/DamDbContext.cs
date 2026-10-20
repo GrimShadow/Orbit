@@ -1,6 +1,7 @@
 using Dam.Application.Abstractions;
 using System.Text.Json;
 using Dam.Domain.Ai;
+using Dam.Domain.Analytics;
 using Dam.Domain.Authorization;
 using Dam.Domain.Assets;
 using Dam.Domain.Comments;
@@ -43,6 +44,10 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<Collection> Collections => Set<Collection>();
     public DbSet<UsageEvent> UsageEvents => Set<UsageEvent>();
     public DbSet<AssetUsage> AssetUsages => Set<AssetUsage>();
+    public DbSet<UsageDaily> UsageDaily => Set<UsageDaily>();
+    public DbSet<UsageRollupDirty> UsageRollupDirty => Set<UsageRollupDirty>();
+    public DbSet<UsageEventKey> UsageEventKeys => Set<UsageEventKey>();
+    public DbSet<ReportSchedule> ReportSchedules => Set<ReportSchedule>();
     public DbSet<WorkflowDefinition> WorkflowDefinitions => Set<WorkflowDefinition>();
     public DbSet<WorkflowBinding> WorkflowBindings => Set<WorkflowBinding>();
     public DbSet<WorkflowInstance> WorkflowInstances => Set<WorkflowInstance>();
@@ -252,6 +257,8 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasIndex(x => new { x.TenantId, x.FolderId });
             e.HasIndex(x => new { x.TenantId, x.Status });
             e.HasIndex(x => new { x.TenantId, x.ChecksumSha256 }).HasFilter("checksum_sha256 IS NOT NULL");
+            // Publishing effort (ADR-0037) reads the assets first published in a period.
+            e.HasIndex(x => new { x.TenantId, x.FirstPublishedAt }).HasFilter("first_published_at IS NOT NULL");
             // The scheduled-publish/expire and retention jobs poll across every tenant (spec Step 1.6b), so these are plain
             // (not tenant-prefixed) partial indexes on exactly what each poll filters by.
             e.HasIndex(x => new { x.Status, x.PublishAt }).HasFilter("publish_at IS NOT NULL");
@@ -277,6 +284,8 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasIndex(x => new { x.TenantId, x.AssetId });
             e.HasIndex(x => new { x.TenantId, x.BatchId }).HasFilter("batch_id IS NOT NULL");
             e.HasIndex(x => x.StorageKey).IsUnique();
+            // Duplicate reduction (ADR-0037) counts the uploads created in a period.
+            e.HasIndex(x => new { x.TenantId, x.CreatedAt });
         });
     }
 
@@ -342,7 +351,9 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         b.Entity<UsageEvent>(e =>
         {
             e.ToTable("usage_events");
-            e.HasKey(x => x.Id);
+            // Range-partitioned by month on occurred_at (ADR-0037), so the partition key is part of the primary key. The migration creates the
+            // partitioned table by hand; this mapping describes its columns, key and indexes.
+            e.HasKey(x => new { x.Id, x.OccurredAt });
             e.Property(x => x.EventType).HasMaxLength(16);
             e.Property(x => x.Channel).HasMaxLength(UsageRules.MaxChannelLength);
             e.Property(x => x.Rendition).HasMaxLength(UsageRules.MaxRenditionLength);
@@ -352,8 +363,52 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.TenantId, x.AssetId, x.OccurredAt }).IsDescending(false, false, true);
             e.HasIndex(x => new { x.TenantId, x.OccurredAt });
-            // A re-sent event is recognised by its reporter-supplied id; events without one are never deduplicated.
-            e.HasIndex(x => new { x.TenantId, x.ClientEventId }).IsUnique().HasFilter("client_event_id IS NOT NULL");
+            // A re-sent event is recognised by its reporter-supplied id in usage_event_keys (a unique index cannot span partitions).
+        });
+        b.Entity<UsageEventKey>(e =>
+        {
+            e.ToTable("usage_event_keys");
+            e.HasKey(x => new { x.TenantId, x.ClientEventId });
+            e.Property(x => x.ClientEventId).HasMaxLength(UsageRules.MaxClientEventIdLength);
+            // Retention prunes keys by the time they were recorded.
+            e.HasIndex(x => x.CreatedAt);
+        });
+        b.Entity<UsageDaily>(e =>
+        {
+            e.ToTable("usage_daily");
+            e.HasKey(x => new { x.TenantId, x.Day, x.AssetId, x.EventType, x.Channel });
+            e.Property(x => x.Day).HasColumnType("date");
+            e.Property(x => x.EventType).HasMaxLength(16);
+            e.Property(x => x.Channel).HasMaxLength(UsageRules.MaxChannelLength);
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.TenantId, x.AssetId, x.Day });
+        });
+        b.HasSequence<long>("usage_rollup_mark_seq");
+        b.Entity<UsageRollupDirty>(e =>
+        {
+            e.ToTable("usage_rollup_dirty");
+            e.HasKey(x => new { x.TenantId, x.Day });
+            e.Property(x => x.Day).HasColumnType("date");
+            e.Property(x => x.MarkSeq).HasDefaultValueSql("nextval('usage_rollup_mark_seq')");
+            e.HasIndex(x => x.Day);
+        });
+        b.Entity<ReportSchedule>(e =>
+        {
+            e.ToTable("report_schedules", t =>
+            {
+                t.HasCheckConstraint("ck_report_schedules_frequency", "frequency IN ('daily','weekly','monthly')");
+                t.HasCheckConstraint("ck_report_schedules_hour", "hour_utc BETWEEN 0 AND 23");
+            });
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.Report).HasMaxLength(32);
+            e.Property(x => x.Frequency).HasMaxLength(16);
+            e.Property(x => x.LastError).HasMaxLength(500);
+            e.Property(x => x.RecipientUserIds).HasColumnType("uuid[]");
+            e.Property(x => x.SentTo).HasColumnType("uuid[]");
+            e.HasIndex(x => x.TenantId);
+            // The report job sweeps every tenant for enabled schedules that have come due.
+            e.HasIndex(x => x.NextRunAt).HasFilter("enabled AND next_run_at IS NOT NULL").HasDatabaseName("ix_report_schedules_due");
         });
         b.Entity<AssetUsage>(e =>
         {
@@ -424,6 +479,9 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasIndex(x => x.AssigneeUserIds).HasMethod("gin");
             e.HasIndex(x => new { x.TenantId, x.DecidedBy }).HasFilter("decided_by IS NOT NULL");
             e.HasIndex(x => new { x.TenantId, x.AssetId });
+            // SLA attainment (ADR-0037) reads the tasks decided, or breached, in a period.
+            e.HasIndex(x => new { x.TenantId, x.DecidedAt }).HasFilter("decided_at IS NOT NULL");
+            e.HasIndex(x => new { x.TenantId, x.SlaBreachedAt }).HasFilter("sla_breached_at IS NOT NULL");
             e.HasIndex(x => new { x.InstanceId, x.StepId, x.Round });
             // The SLA job sweeps every tenant for open, not-yet-breached tasks past their due time.
             e.HasIndex(x => new { x.Status, x.DueAt }).HasFilter("status = 'pending' AND sla_breached_at IS NULL AND due_at IS NOT NULL").HasDatabaseName("ix_workflow_tasks_sla_sweep");

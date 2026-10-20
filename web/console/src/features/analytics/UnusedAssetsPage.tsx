@@ -1,7 +1,8 @@
-import { ArrowLeft, Lock } from '@phosphor-icons/react';
-import { Link } from 'react-router-dom';
+import { Lock } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, PageHeader } from '@dam/ui-kit';
+import { InsightsTabs } from '../insights/InsightsTabs';
+import '../insights/insights.css';
 import { useDocumentTitle } from '../library/useDocumentTitle';
 import { isForbidden, useOverview } from './analyticsApi';
 import { UnusedAssetsPanel } from './UnusedAssets';
@@ -15,11 +16,12 @@ export function UnusedAssetsPage() {
   const probe = useOverview(30);
   return (
     <div className="dam-page dam-unusedpage">
-      <Link to="/" className="dam-unusedpage__back">
-        <ArrowLeft size={14} weight="bold" aria-hidden="true" />
-        {t('analytics.unused.back')}
-      </Link>
-      <PageHeader title={t('analytics.unused.pageTitle')} description={t('analytics.unused.pageDesc')} />
+      <PageHeader
+        eyebrow={t('insights.title')}
+        title={t('analytics.unused.pageTitle')}
+        description={t('analytics.unused.pageDesc')}
+      />
+      <InsightsTabs />
       {probe.error && isForbidden(probe.error) ? (
         <EmptyState icon={<Lock />} title={t('analytics.noAccessTitle')} description={t('analytics.noAccessBody')} />
       ) : (

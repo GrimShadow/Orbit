@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<Ai.AiSuggestionDecider>();
         services.AddScoped<Ai.AiBackfillService>();
         services.AddScoped<Ai.TranslationAcceptor>();
+        services.AddDamAnalytics();
         services.AddScoped<Ai.AiReviewReader>();
         services.AddValidatorsFromAssembly(asm, includeInternalTypes: true);
 
@@ -49,6 +50,19 @@ public static class DependencyInjection
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(AuthorizationBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(TransactionBehavior<,>));
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(OutboxBehavior<,>));
+        return services;
+    }
+
+    /// <summary>The analytics services (ADR-0037): the KPI calculator, the report runner and the scheduled-report mailer. The scheduler host registers the same set
+    /// (it has no interactive user), so a scheduled report is built by exactly the code that serves the report API.</summary>
+    public static IServiceCollection AddDamAnalytics(this IServiceCollection services)
+    {
+        services.AddScoped<Assets.TopAssetsReader>();
+        services.AddScoped<Assets.UnusedAssetsReader>();
+        services.AddScoped<Assets.KpiService>();
+        services.AddScoped<Assets.ReportService>();
+        services.AddScoped<Assets.ReportMailer>();
+        services.AddScoped<Notifications.UserProfiles>();
         return services;
     }
 }

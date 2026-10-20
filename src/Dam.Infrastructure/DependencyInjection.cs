@@ -25,6 +25,8 @@ public static class DependencyInjection
         services.AddScoped<IEventCollector>(sp => sp.GetRequiredService<EfDomainEventSource>());
         services.AddScoped<IOutbox, EfOutbox>();
         services.AddScoped<IUsageStore, EfUsageStore>();
+        services.AddScoped<IAnalyticsStore, EfAnalyticsStore>();
+        services.AddScoped<IUsageRollup, EfUsageRollup>();
         services.AddScoped<IWorkflowStore, EfWorkflowStore>();
         services.AddScoped<IAssetActivityReader, EfAssetActivityReader>();
         return services;

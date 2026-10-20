@@ -1,6 +1,6 @@
 import { ToastProvider } from '@dam/ui-kit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { ApiError } from './api/client';
 import { TasksPage } from './features/workflow/tasks/TasksPage';
 import { WorkflowDesignerPage } from './features/workflow/designer/WorkflowDesignerPage';
@@ -12,6 +12,9 @@ import { RightsPage } from './features/rights/admin/RightsPage';
 import { AiSettingsPage } from './features/ai/admin/AiSettingsPage';
 import { GlossaryPage } from './features/glossary/GlossaryPage';
 import { UnusedAssetsPage } from './features/analytics/UnusedAssetsPage';
+import { KeyResultsPage } from './features/insights/KeyResultsPage';
+import { ReportLinkRedirect } from './features/insights/ReportLinkRedirect';
+import { ReportsPage } from './features/insights/ReportsPage';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { AssetDetailPage } from './features/asset/AssetDetailPage';
 import { CollectionDetailPage } from './features/collections/CollectionDetailPage';
@@ -47,7 +50,11 @@ export function App() {
                 <Route path="/search" element={<SearchPage />} />
                 <Route path="/collections" element={<CollectionsPage />} />
                 <Route path="/collections/:id" element={<CollectionDetailPage />} />
+                <Route path="/insights" element={<Navigate to="/insights/kpis" replace />} />
+                <Route path="/insights/kpis" element={<KeyResultsPage />} />
                 <Route path="/insights/unused" element={<UnusedAssetsPage />} />
+                <Route path="/insights/reports" element={<ReportsPage />} />
+                <Route path="/insights/reports/:name" element={<ReportLinkRedirect />} />
                 <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/admin/ai" element={<AiSettingsPage />} />

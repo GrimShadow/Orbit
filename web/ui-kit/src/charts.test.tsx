@@ -8,8 +8,16 @@ describe('charts', () => {
     const { container } = render(<BarChart data={data} label="Downloads per day" labelEvery={4} />);
     expect(screen.getByRole('img', { name: 'Downloads per day' })).toBeInTheDocument();
     const ticks = [...container.querySelectorAll('.dam-bars__tick')].map((t) => t.textContent);
-    expect(ticks.filter(Boolean)).toEqual(['D0', 'D4', 'D8', 'D9']);
+    // D8 is dropped: it sits one bar from the last label and the two would overlap
+    expect(ticks.filter(Boolean)).toEqual(['D0', 'D4', 'D9']);
     expect(container.querySelectorAll('.dam-bars__bar--zero')).toHaveLength(1);
+  });
+
+  it('BarChart keeps a regular label when it has room before the last one', () => {
+    const data = Array.from({ length: 13 }, (_, i) => ({ label: `D${i}`, value: i }));
+    const { container } = render(<BarChart data={data} label="Downloads per day" labelEvery={4} />);
+    const ticks = [...container.querySelectorAll('.dam-bars__tick')].map((t) => t.textContent);
+    expect(ticks.filter(Boolean)).toEqual(['D0', 'D4', 'D8', 'D12']);
   });
 
   it('DistributionBar lists every segment with its share and hides empty ones from the bar', async () => {

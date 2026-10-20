@@ -41,6 +41,8 @@ public static class Permissions
     public const string PortalsManage = "portals.manage";
 
     public const string AnalyticsRead = "analytics.read";
+    /// <summary>Scheduled (emailed) reports: create, edit, delete and send them (ADR-0037). Running a report needs only analytics.read.</summary>
+    public const string AnalyticsManage = "analytics.manage";
     public const string UsageWrite = "usage.write";
 
     public const string TenantsManage = "tenants.manage";
@@ -73,7 +75,7 @@ public static class Permissions
         FoldersManage, CollectionsManage, MetadataSchemaManage, TaxonomyManage,
         WorkflowManage, WorkflowTasksDecide, CommentsWrite,
         RightsManage, KnowledgeManage, QrManage, ShareManage, PortalsManage,
-        AnalyticsRead, UsageWrite,
+        AnalyticsRead, AnalyticsManage, UsageWrite,
         TenantsManage, UsersManage, GroupsManage, RolesManage, AccessRulesManage, WebhooksManage, NotificationsManage, ApiClientsManage,
         RetentionManage, AiManage, GlossaryManage, AuditRead, MigrationManage,
         SystemPing,

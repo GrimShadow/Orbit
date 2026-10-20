@@ -13,8 +13,21 @@ function useDebounced<T>(value: T, ms: number): T {
   return v;
 }
 
-/** An accessible combobox over the tenant's users: type to search by name or email, arrow keys and Enter to pick. */
-function PeopleCombobox({ chosen, onPick }: { chosen: string[]; onPick: (u: UserDto) => void }) {
+/** An accessible combobox over the tenant's users: type to search by name or email, arrow keys and Enter to pick. The label
+ * and placeholder default to the workflow assignee wording; other pickers (report recipients) pass their own. */
+export function PeopleCombobox({
+  chosen,
+  onPick,
+  label,
+  placeholder,
+  hint,
+}: {
+  chosen: string[];
+  onPick: (u: UserDto) => void;
+  label?: string;
+  placeholder?: string;
+  hint?: string;
+}) {
   const { t } = useTranslation();
   const id = useId();
   const [q, setQ] = useState('');
@@ -54,14 +67,15 @@ function PeopleCombobox({ chosen, onPick }: { chosen: string[]; onPick: (u: User
   return (
     <div className="dam-wfcombo">
       <Input
-        label={t('workflows.picker.people')}
+        label={label ?? t('workflows.picker.people')}
+        hint={hint}
         role="combobox"
         aria-expanded={showList}
         aria-controls={showList ? `${id}-list` : undefined}
         aria-autocomplete="list"
         aria-activedescendant={showList ? optionId(Math.min(active, results.length - 1)) : undefined}
         autoComplete="off"
-        placeholder={t('workflows.picker.peoplePlaceholder')}
+        placeholder={placeholder ?? t('workflows.picker.peoplePlaceholder')}
         value={q}
         onChange={(e) => {
           setQ(e.target.value);
@@ -73,7 +87,7 @@ function PeopleCombobox({ chosen, onPick }: { chosen: string[]; onPick: (u: User
         onFocus={() => setOpen(true)}
       />
       {showList && (
-        <ul id={`${id}-list`} role="listbox" aria-label={t('workflows.picker.people')} className="dam-wfcombo__list">
+        <ul id={`${id}-list`} role="listbox" aria-label={label ?? t('workflows.picker.people')} className="dam-wfcombo__list">
           {results.map((u, i) => (
             // Options are driven from the input (aria-activedescendant); a mouse press picks without stealing focus.
             <li
