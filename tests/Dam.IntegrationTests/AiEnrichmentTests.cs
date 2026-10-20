@@ -1,9 +1,11 @@
 using System.Net;
 using System.Text.Json;
+using Dam.Infrastructure.Messaging;
 using Dam.Infrastructure.Search;
 using Dam.UnitTests.Support;
 using Microsoft.Extensions.Hosting;
 using OpenSearch.Net;
+using RabbitMQ.Client;
 using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace Dam.IntegrationTests;
@@ -16,6 +18,7 @@ namespace Dam.IntegrationTests;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1001", Justification = "Disposed in DisposeAsync (xUnit IAsyncLifetime).")]
 public sealed class AiEnrichmentTests(PostgresFixture pg, RabbitFixture mq, SearchFixture os) : PipelineTestBase(pg, mq), IClassFixture<RabbitFixture>, IClassFixture<SearchFixture>
 {
+    private readonly string _rabbitUrl = mq.Url;
     private FakeSidecar _sidecar = null!;
     private FakeOpenAi _openAi = null!;
     private static int _variant;
@@ -48,6 +51,24 @@ public sealed class AiEnrichmentTests(PostgresFixture pg, RabbitFixture mq, Sear
         await base.DisposeAsync();
         await _sidecar.DisposeAsync();
         await _openAi.DisposeAsync();
+    }
+
+    /// <summary>
+    /// The database and the RabbitMQ queue are shared across this class's tests, so events an earlier test left unpublished (outbox) or unconsumed
+    /// (queue) belong to tenants that DID enable AI; this test's worker would process them and call this test's fake sidecar. Drop that leftover
+    /// work before the worker starts so a "nothing was sent anywhere" assertion is about this test's tenant only.
+    /// </summary>
+    private async Task DropLeftoverWork()
+    {
+        Sql("UPDATE outbox SET published_at = now() WHERE published_at IS NULL");
+        var conn = await new ConnectionFactory { Uri = new Uri(_rabbitUrl) }.CreateConnectionAsync();
+        try
+        {
+            await using var ch = await conn.CreateChannelAsync();
+            try { await ch.QueuePurgeAsync(Topology.Queue("ai-enrich")); }
+            catch (RabbitMQ.Client.Exceptions.OperationInterruptedException) { /* the queue does not exist yet: nothing is left over */ }
+        }
+        finally { await conn.CloseAsync(); }
     }
 
     private IHost Worker()
@@ -231,10 +252,7 @@ public sealed class AiEnrichmentTests(PostgresFixture pg, RabbitFixture mq, Sear
     public async Task A_tenant_with_ai_off_gets_a_skipped_run_and_nothing_is_sent_anywhere()
     {
         var (t, admin, folder) = await TenantWithPacks();     // never enabled
-        // The database is shared across this class's tests: events an earlier test left unpublished belong to tenants that DID enable AI, and
-        // this test's worker would otherwise process them and call this test's fake sidecar. Drop that leftover work before the worker starts
-        // so the "nothing was sent anywhere" assertion below is about this tenant only.
-        Sql("UPDATE outbox SET published_at = now() WHERE published_at IS NULL");
+        await DropLeftoverWork();
         using var worker = Worker(); await worker.StartAsync();
         _sidecar.Calls.Clear();
         _openAi.Calls.Clear();
@@ -367,7 +385,9 @@ public sealed class AiEnrichmentTests(PostgresFixture pg, RabbitFixture mq, Sear
     public async Task A_backfill_enriches_assets_that_arrived_while_ai_was_off_in_chunks_and_only_those()
     {
         var (t, admin, folder) = await TenantWithPacks();
+        await DropLeftoverWork();
         using var worker = Worker(); await worker.StartAsync();
+        _sidecar.Calls.Clear();
         var assets = new List<Guid>();
         for (var i = 0; i < 3; i++) assets.Add(await IngestedAsset(admin, folder, Picture(10, (byte)(30 + i), 200), "image", "photo.jpg", "image/jpeg", $"IMG_{i}"));
         for (var i = 0; i < 200 && Count(t, "SELECT count(*) FROM ai_runs WHERE status = 'skipped'") < 3; i++) await Task.Delay(100);
