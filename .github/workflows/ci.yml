@@ -48,7 +48,7 @@ jobs:
           dotnet test tests/Dam.IntegrationTests -c Release --no-build --list-tests > tests-list.txt
           filter="$(python3 tools/ci/test-shard.py ${{ matrix.shard }} 4 < tests-list.txt)"
           echo "shard ${{ matrix.shard }}/4 filter: $filter"
-          dotnet test tests/Dam.IntegrationTests -c Release --no-build --filter "$filter" --logger "trx;LogFileName=results-${{ matrix.shard }}.trx" --logger GitHubActions --blame-hang --blame-hang-timeout 12m
+          dotnet test tests/Dam.IntegrationTests -c Release --no-build --filter "$filter" --logger "trx;LogFileName=results-${{ matrix.shard }}.trx" --logger GitHubActions --logger "console;verbosity=normal" --blame-hang --blame-hang-dump-type none --blame-hang-timeout 6m
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with: { name: "dotnet-integration-results-${{ matrix.shard }}", path: "**/TestResults/**" }

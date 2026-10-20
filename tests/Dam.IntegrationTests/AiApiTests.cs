@@ -159,7 +159,9 @@ public class AiApiTests(PostgresFixture pg, SearchFixture os) : AssetTestBase(pg
         Assert.All(new[] { "enabled", "semanticSearch", "enrichment", "textVectors", "imageVectors" }, k => Assert.True(on.GetProperty(k).GetBoolean(), k));
         Assert.False(on.GetProperty("sendsDataOffSite").GetBoolean());
         Assert.DoesNotContain(Sidecar.Url, on.GetRawText());                    // no addresses, keys or models
-        Assert.Equal(["enabled", "enrichment", "imageVectors", "provider", "semanticSearch", "sendsDataOffSite", "textVectors"], on.EnumerateObject().Select(p => p.Name).Order());
+        Assert.Equal(["enabled", "enrichment", "imageVectors", "provider", "semanticSearch", "sendsDataOffSite", "summarise", "textVectors", "translate"], on.EnumerateObject().Select(p => p.Name).Order());
+        // The self-hosted provider summarises on its own (extractive) but cannot translate yet; summaries can be switched off.
+        Assert.Equal((false, true), (on.GetProperty("translate").GetBoolean(), on.GetProperty("summarise").GetBoolean()));
 
         await Put(admin, new { enabled = true, features = new { tags = true, ocr = false, transcribe = false, embeddings = false } });
         var noVectors = await Caps(viewer);
@@ -167,7 +169,10 @@ public class AiApiTests(PostgresFixture pg, SearchFixture os) : AssetTestBase(pg
             noVectors.GetProperty("textVectors").GetBoolean(), noVectors.GetProperty("imageVectors").GetBoolean()));
 
         await Put(admin, new { enabled = true, features = new { tags = false, ocr = false, transcribe = false, embeddings = false } });
-        Assert.False((await Caps(viewer)).GetProperty("enrichment").GetBoolean());
+        Assert.True((await Caps(viewer)).GetProperty("enrichment").GetBoolean());       // summaries are still on
+        await Put(admin, new { enabled = true, features = new { tags = false, ocr = false, transcribe = false, embeddings = false, summaries = false } });
+        var allOff = await Caps(viewer);
+        Assert.Equal((false, false), (allOff.GetProperty("enrichment").GetBoolean(), allOff.GetProperty("summarise").GetBoolean()));
 
         await Put(admin, new { enabled = false });
         Assert.False((await Caps(viewer)).GetProperty("enabled").GetBoolean());

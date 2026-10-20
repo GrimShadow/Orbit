@@ -2,15 +2,27 @@ import { CheckCircle, ClipboardText } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Badge, Button, EmptyState, FileTypeIcon, LoadingRegion, PageHeader, SegmentedControl, Skeleton } from '../../../ui';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  FileTypeIcon,
+  LoadingRegion,
+  PageHeader,
+  SegmentedControl,
+  Skeleton,
+  Tabs,
+} from '../../../ui';
 import { useMe } from '../../../api/me';
 import { relativeTime } from '../../../lib/relativeTime';
 import { useThumbnailLinks } from '../../asset/assetApi';
+import { useReviewSummary } from '../../translation/translationApi';
 import { useDocumentTitle } from '../../library/useDocumentTitle';
 import { DueBadge } from '../DueBadge';
 import { sortPending, useNow } from '../dueText';
 import { TaskDecision } from '../TaskDecision';
 import { useTaskSummary, useTasks, type TaskScope, type TaskStatus, type WorkflowTask } from '../workflowApi';
+import { TranslationsTab } from './TranslationsTab';
 import './tasks.css';
 
 type View = Exclude<TaskStatus, 'all'>;
@@ -103,11 +115,8 @@ function RowsSkeleton() {
   );
 }
 
-/** `/tasks` - the approval inbox: what is waiting for me (overdue first), and what I have already decided. Managers can
- * look at everyone's. */
-export function TasksPage() {
+function ApprovalTasks() {
   const { t } = useTranslation();
-  useDocumentTitle(t('tasks.title'));
   const { data: me } = useMe();
   const [params, setParams] = useSearchParams();
   const manager = !!me?.permissions.includes('workflow.manage');
@@ -154,36 +163,34 @@ export function TasksPage() {
   const empty = { title: t(`tasks.empty.${emptyKey}Title`), body: t(`tasks.empty.${emptyKey}Body`) };
 
   return (
-    <div className="dam-page dam-tasks">
-      <PageHeader title={t('tasks.title')} description={t('tasks.description')}>
-        <div className="dam-tasks__controls">
+    <>
+      <div className="dam-tasks__controls">
+        <SegmentedControl
+          label={t('tasks.viewLabel')}
+          value={view}
+          onChange={(v) => set('view', v, 'pending')}
+          options={[
+            { value: 'pending', label: t('tasks.pending') },
+            { value: 'decided', label: t('tasks.decided') },
+          ]}
+        />
+        {manager && (
           <SegmentedControl
-            label={t('tasks.viewLabel')}
-            value={view}
-            onChange={(v) => set('view', v, 'pending')}
+            label={t('tasks.scopeLabel')}
+            value={scope}
+            onChange={(v) => set('scope', v, 'me')}
             options={[
-              { value: 'pending', label: t('tasks.pending') },
-              { value: 'decided', label: t('tasks.decided') },
+              { value: 'me', label: t('tasks.mine') },
+              { value: 'all', label: t('tasks.everyone') },
             ]}
           />
-          {manager && (
-            <SegmentedControl
-              label={t('tasks.scopeLabel')}
-              value={scope}
-              onChange={(v) => set('scope', v, 'me')}
-              options={[
-                { value: 'me', label: t('tasks.mine') },
-                { value: 'all', label: t('tasks.everyone') },
-              ]}
-            />
-          )}
-          {summaryText && (
-            <p className="dam-tasks__summary" aria-live="polite">
-              {summaryText}
-            </p>
-          )}
-        </div>
-      </PageHeader>
+        )}
+        {summaryText && (
+          <p className="dam-tasks__summary" aria-live="polite">
+            {summaryText}
+          </p>
+        )}
+      </div>
 
       {query.isPending ? (
         <LoadingRegion label={t('tasks.loading')}>
@@ -217,6 +224,42 @@ export function TasksPage() {
             </div>
           )}
         </>
+      )}
+    </>
+  );
+}
+
+/** `/tasks`: the approval inbox, plus (for people who edit assets) the translations waiting for review. The approvals view is
+ * the default and unchanged; the Translations tab appears for editors and whenever something is waiting for the reader. */
+export function TasksPage() {
+  const { t } = useTranslation();
+  useDocumentTitle(t('tasks.title'));
+  const { data: me } = useMe();
+  const [params, setParams] = useSearchParams();
+  const waiting = useReviewSummary().data?.translation ?? 0;
+  const tab = params.get('tab') === 'translations' ? 'translations' : 'approvals';
+  const showTranslations = !!me?.permissions.includes('assets.update') || waiting > 0 || tab === 'translations';
+
+  return (
+    <div className="dam-page dam-tasks">
+      <PageHeader title={t('tasks.title')} description={t('tasks.description')} />
+      {showTranslations ? (
+        <Tabs
+          label={t('tasks.tabs.label')}
+          value={tab}
+          // Each tab keeps its own filters out of the address: switching drops the other's.
+          onChange={(id) => setParams(id === 'approvals' ? {} : { tab: id }, { replace: true })}
+          tabs={[
+            { id: 'approvals', label: t('tasks.tabs.approvals'), content: <ApprovalTasks /> },
+            {
+              id: 'translations',
+              label: waiting > 0 ? t('tasks.tabs.translationsCount', { count: waiting }) : t('tasks.tabs.translations'),
+              content: <TranslationsTab />,
+            },
+          ]}
+        />
+      ) : (
+        <ApprovalTasks />
       )}
     </div>
   );

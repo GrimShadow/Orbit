@@ -128,5 +128,12 @@ describe('small formatters', () => {
     expect(hasAiContent({ ...base, status: 'disabled' })).toBe(false);
     expect(hasAiContent({ ...base, status: 'running' })).toBe(true);
     expect(hasAiContent({ ...base, status: 'disabled', ocrText: 'hello' })).toBe(true);
+    expect(
+      hasAiContent({
+        ...base,
+        status: 'disabled',
+        summary: { text: 'A summary.', language: 'en', model: 'm', createdAt: '2026-01-01T00:00:00Z' },
+      }),
+    ).toBe(true);
   });
 });

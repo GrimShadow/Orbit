@@ -161,17 +161,37 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("decided_by");
 
+                    b.Property<string>("Field")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("field");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)")
                         .HasColumnName("kind");
 
+                    b.Property<string>("Language")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("language");
+
                     b.Property<string>("Model")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("model");
+
+                    b.Property<string>("SourceHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_hash");
+
+                    b.Property<string>("SourceLanguage")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("source_language");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -185,8 +205,7 @@ namespace Dam.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Value")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("text")
                         .HasColumnName("value");
 
                     b.Property<Guid>("VersionId")
@@ -196,18 +215,32 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_ai_suggestions");
 
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("ix_ai_suggestions_translation_review")
+                        .HasFilter("kind = 'translation' AND status = 'pending'");
+
+                    b.HasIndex("AssetId", "Field", "Language")
+                        .IsUnique()
+                        .HasDatabaseName("ux_ai_suggestions_translation_pending")
+                        .HasFilter("kind = 'translation' AND status = 'pending'");
+
                     b.HasIndex("TenantId", "AssetId", "Status")
                         .HasDatabaseName("ix_ai_suggestions_tenant_id_asset_id_status");
 
                     b.HasIndex("AssetId", "VersionId", "Kind", "Value")
                         .IsUnique()
-                        .HasDatabaseName("ux_ai_suggestions_once");
+                        .HasDatabaseName("ux_ai_suggestions_once")
+                        .HasFilter("kind <> 'translation'");
 
                     b.ToTable("ai_suggestions", null, t =>
                         {
-                            t.HasCheckConstraint("ck_ai_suggestions_kind", "kind IN ('tag','language')");
+                            t.HasCheckConstraint("ck_ai_suggestions_kind", "kind IN ('tag','language','translation')");
 
                             t.HasCheckConstraint("ck_ai_suggestions_status", "status IN ('pending','accepted','rejected')");
+
+                            t.HasCheckConstraint("ck_ai_suggestions_translation_shape", "kind <> 'translation' OR (field IS NOT NULL AND language IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_ai_suggestions_value_length", "kind = 'translation' OR char_length(value) <= 200");
                         });
                 });
 
@@ -295,6 +328,19 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("ocr_text");
 
+                    b.Property<string>("Summary")
+                        .HasColumnType("text")
+                        .HasColumnName("summary");
+
+                    b.Property<DateTimeOffset?>("SummaryAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("summary_at");
+
+                    b.Property<string>("SummaryLanguage")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("summary_language");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -324,6 +370,143 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_asset_extracts_tenant_id");
 
                     b.ToTable("asset_extracts", (string)null);
+                });
+
+            modelBuilder.Entity("Dam.Domain.Ai.GlossaryTerm", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("mode");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Term")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("term");
+
+                    b.Property<string>("Translations")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("translations");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_glossary_terms");
+
+                    b.HasIndex("TenantId", "Term")
+                        .IsUnique()
+                        .HasDatabaseName("ux_glossary_terms_term");
+
+                    b.ToTable("glossary_terms", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_glossary_terms_mode", "mode IN ('locked','mapped')");
+                        });
+                });
+
+            modelBuilder.Entity("Dam.Domain.Ai.TranslationJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Error")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("error");
+
+                    b.Property<string>("Fields")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("fields");
+
+                    b.Property<DateTimeOffset?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finished_at");
+
+                    b.Property<string>("Items")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("items");
+
+                    b.Property<bool>("Overwrite")
+                        .HasColumnType("boolean")
+                        .HasColumnName("overwrite");
+
+                    b.Property<Guid?>("RequestedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by");
+
+                    b.Property<string>("SourceLanguage")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("source_language");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("TargetLanguages")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("target_languages");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_translation_jobs");
+
+                    b.HasIndex("AssetId", "Id")
+                        .HasDatabaseName("ix_translation_jobs_asset_id_id");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("ix_translation_jobs_tenant_id_status");
+
+                    b.ToTable("translation_jobs", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_translation_jobs_status", "status IN ('pending','running','succeeded','partial','failed')");
+                        });
                 });
 
             modelBuilder.Entity("Dam.Domain.Assets.Asset", b =>
@@ -2802,6 +2985,16 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_asset_extracts_assets_asset_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Ai.TranslationJob", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_translation_jobs_assets_asset_id");
                 });
 
             modelBuilder.Entity("Dam.Domain.Assets.Asset", b =>

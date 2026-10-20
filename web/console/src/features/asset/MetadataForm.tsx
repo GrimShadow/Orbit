@@ -1,20 +1,21 @@
 import { useTranslation } from 'react-i18next';
 import { Button, EmptyState, LoadingRegion, Skeleton } from '../../ui';
+import { TranslateAssetButton } from '../translation/TranslateAssetButton';
 import { isEmptyValue, MetadataFields } from './MetadataFields';
 import type { AssetDraft } from './useAssetDraft';
-import { useSchema } from './assetApi';
+import { useSchema, type AssetDto } from './assetApi';
 
 interface MetadataFormProps {
-  assetType: string;
+  asset: Pick<AssetDto, 'id' | 'type' | 'status'>;
   draft: AssetDraft;
 }
 
 /** The form generated from the asset type's current schema (spec Step 1.8: "metadata form generated from schema"). The
  * values live in `draft` (see `useAssetDraft`), which also keeps fields the schema no longer knows about untouched in the
  * saved document; this only renders the fields it is told about. */
-export function MetadataForm({ assetType, draft }: MetadataFormProps) {
+export function MetadataForm({ asset, draft }: MetadataFormProps) {
   const { t } = useTranslation();
-  const schemaQuery = useSchema(assetType);
+  const schemaQuery = useSchema(asset.type);
 
   if (schemaQuery.isPending)
     return (
@@ -44,6 +45,7 @@ export function MetadataForm({ assetType, draft }: MetadataFormProps) {
   const missing = fields.filter((f) => f.required && isEmptyValue(draft.values[f.name])).length;
   return (
     <div className="dam-stack dam-stack--fill">
+      <TranslateAssetButton asset={asset} />
       {missing > 0 && (
         <p className="dam-asset-note" role="note">
           {t('asset.requiredMissing', { count: missing })}

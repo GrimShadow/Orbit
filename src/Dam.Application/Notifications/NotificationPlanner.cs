@@ -2,6 +2,7 @@ using System.Text.Json;
 using Dam.Application.Abstractions;
 using Dam.Application.Comments;
 using Dam.Application.Workflow;
+using Dam.Domain.Ai;
 using Dam.Domain.Assets;
 using Dam.Domain.Authorization;
 using Dam.Domain.Comments;
@@ -106,6 +107,7 @@ public sealed class NotificationPlanner(
             case "comment.added": return await CommentAddedAsync(payload, ct);
             case CommentEdited.EventName: return One(await CommentEditedAsync(payload, ct));
             case "comment.resolved": return One(await CommentResolvedAsync(payload, ct));
+            case AssetTranslationReady.EventName: return One(await TranslationReadyAsync(payload, ct));
             case RightsExpiring.EventName: return One(await LicenceAsync(payload, expired: false, ct));
             case RightsExpired.EventName: return One(await LicenceAsync(payload, expired: true, ct));
             default: return [];
@@ -180,6 +182,21 @@ public sealed class NotificationPlanner(
         var content = NotificationRules.AssetLifecycle(asset.Id, asset.Title, status, asset.StatusReason);
         var recipients = await ActiveAsync([owner], ct);
         return content is null || recipients.Count == 0 ? null : new NotificationPlan(content, recipients);
+    }
+
+    // ---- translations (ADR-0036) --------------------------------------------------------------------------------
+
+    /// <summary>The person who asked for the translations is told they are ready (or that none could be made), if they can still open the asset. Nobody else.</summary>
+    private async Task<NotificationPlan?> TranslationReadyAsync(JsonElement payload, CancellationToken ct)
+    {
+        if (!TryGuid(payload, "AssetId", out var assetId) || !TryGuid(payload, "RequestedBy", out var requester)) return null;
+        var loaded = await access.LoadAssetsAsync([assetId], ct);
+        if (!loaded.TryGetValue(assetId, out var a)) return null;
+        var recipients = (await readers.ReadersAsync(a.Asset, a.Path, [requester], ct)).Keys.ToList();
+        if (recipients.Count == 0) return null;
+        int Count(string name) => payload.TryGetProperty(name, out var n) && n.TryGetInt32(out var v) ? v : 0;
+        var status = payload.TryGetProperty("Status", out var st) && st.GetString() is { } text ? text : "succeeded";
+        return new NotificationPlan(NotificationRules.TranslationReady(a.Asset.Id, a.Asset.Title, status, Count("Translated"), Count("Skipped"), Count("Failed")), recipients);
     }
 
     // ---- licences (ADR-0033) -------------------------------------------------------------------------------------
@@ -284,6 +301,8 @@ public sealed class NotificationPlanner(
         else if (eventName == "asset.version.added" && payload.TryGetProperty("VersionNo", out var no)) detail = $"Version {no}";
         else if (eventName == "rendition.ready" && payload.TryGetProperty("Profile", out var profile)) detail = $"Profile {profile.GetString()}";
         else if (eventName == "workflow.task.created" && payload.TryGetProperty("StepName", out var step)) detail = $"Step: {step.GetString()}";
+        else if (eventName == AssetTranslationReady.EventName && payload.TryGetProperty("Translated", out var made))
+            detail = $"{made.GetInt32()} translated" + (payload.TryGetProperty("Failed", out var bad) && bad.GetInt32() > 0 ? $", {bad.GetInt32()} failed" : "");
         else if (eventName is "rights.expiring" or "rights.expired" && payload.TryGetProperty("RightsName", out var rightsName))
             detail = $"{rightsName.GetString()}, ends {(payload.TryGetProperty("ValidTo", out var validTo) ? validTo.GetString() : "")}";
         else if (eventName == "workflow.task.completed" && payload.TryGetProperty("Decision", out var decision))

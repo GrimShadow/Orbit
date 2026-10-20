@@ -4,7 +4,7 @@ namespace Dam.Shared.Content;
 /// <c>Query</c> is empty (a pure filter/browse request) or a request sorted by something other than relevance.</param>
 /// <param name="Highlights">Field name to matched fragments, only present when the request asked for highlighting.</param>
 /// <param name="MatchedBy">Why the asset matched: text (title or metadata words, or the meaning of the text), image (the query looks like the picture),
-/// ocr (words read from the picture or pages) and transcript (words spoken). Null for a browse request with no text query.</param>
+/// ocr (words read from the picture or pages), summary (words in the AI-written summary of a document) and transcript (words spoken). Null for a browse request with no text query.</param>
 /// <param name="TranscriptMatches">Up to three transcript lines containing the query, with their start time, for "jump to this moment".</param>
 public sealed record SearchHitDto(
     Guid Id, string Type, string Status, string Title, Guid? FolderId, string? FolderPath, IReadOnlyList<string> Tags,

@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMe } from '../../../api/me';
 import { Badge, Button, Card, Skeleton, useToast, type BadgeTone } from '../../../ui';
+import { TranslateAssetButton } from '../../translation/TranslateAssetButton';
 import { errorMessage, type AssetDto } from '../../asset/assetApi';
 import { useAiCapabilities, useAssetAi, useEnrichAsset, type AssetAi } from '../aiApi';
 import { OcrBlock } from './OcrBlock';
 import { RunDetails } from './RunDetails';
+import { SummaryBlock } from './SummaryBlock';
 import { Suggestions } from './Suggestions';
 import { TranscriptView } from './TranscriptView';
 import { AI_TYPES, expectedSteps, hasAiContent } from './aiFormat';
@@ -155,6 +157,9 @@ export function AiPanel({ asset }: { asset: AssetDto }) {
   const run = ai.run;
   const segments = ai.transcript?.segments ?? [];
   const document = asset.type === 'document' || asset.type === 'manual';
+  // A summary is made from the text read from the asset, so it can only be asked for once there is some.
+  const canSummarise =
+    canEdit && !!caps.data?.enabled && !!caps.data.summarise && status !== 'disabled' && (!!ai.ocrText || segments.length > 0);
   const tagsStep = run?.steps.find((s) => s.name === 'tags');
   const expectTags = status === 'ready' && tagsStep?.status === 'ok';
   // "Analysed on..." once there is an analysis; before that (or while it runs) "Analysis runs on...".
@@ -178,6 +183,7 @@ export function AiPanel({ asset }: { asset: AssetDto }) {
           )}
         </div>
       </div>
+      <TranslateAssetButton asset={asset} />
 
       {status === 'disabled' && <p className="dam-hint dam-ai-hint">{t('aiAsset.disabled.note')}</p>}
 
@@ -226,7 +232,15 @@ export function AiPanel({ asset }: { asset: AssetDto }) {
         </p>
       )}
 
-      <Suggestions assetId={asset.id} suggestions={ai.suggestions} canDecide={canEdit} expectTags={expectTags} />
+      <SummaryBlock assetId={asset.id} ai={ai} canSummarise={canSummarise} />
+
+      <Suggestions
+        assetId={asset.id}
+        assetType={asset.type}
+        suggestions={ai.suggestions}
+        canDecide={canEdit}
+        expectTags={expectTags}
+      />
 
       {ai.transcript && segments.length > 0 && <TranscriptView transcript={ai.transcript} deepLinkMs={deepLinkMs} />}
 

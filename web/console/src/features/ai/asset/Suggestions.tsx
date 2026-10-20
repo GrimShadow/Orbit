@@ -4,8 +4,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, IconButton, useToast } from '../../../ui';
+import { TranslationSuggestions } from '../../translation/TranslationSuggestions';
 import { errorMessage } from '../../asset/assetApi';
-import { useAcceptAll, useDecideSuggestion, type AiSuggestion } from '../aiApi';
+import { TRANSLATION_KIND, useAcceptAll, useDecideSuggestion, type AiSuggestion } from '../aiApi';
 import { Disclosure } from './Disclosure';
 import { languageName, percent } from './aiFormat';
 
@@ -18,11 +19,13 @@ const isPending = (s: AiSuggestion) => s.status === 'pending';
  */
 export function Suggestions({
   assetId,
+  assetType,
   suggestions,
   canDecide,
   expectTags,
 }: {
   assetId: string;
+  assetType: string;
   suggestions: AiSuggestion[];
   canDecide: boolean;
   /** The run looked for tags: say so when it found none worth proposing. */
@@ -43,7 +46,10 @@ export function Suggestions({
   const languages = suggestions.filter((s) => s.kind === 'language');
   const pendingTags = tags.filter(isPending);
   const pendingLanguages = languages.filter(isPending);
-  const decided = [...tags, ...languages].filter((s) => !isPending(s));
+  // Translations have their own heading and cards (they carry a field, a language and text to review, ADR-0036).
+  const translations = suggestions.filter((s) => s.kind === TRANSLATION_KIND);
+  const pendingTranslations = translations.filter(isPending);
+  const decided = [...tags, ...languages, ...translations].filter((s) => !isPending(s));
   const order = [...pendingTags, ...pendingLanguages];
   const langName = (code: string) => languageName(code, i18n.language);
 
@@ -231,6 +237,8 @@ export function Suggestions({
         </section>
       )}
 
+      <TranslationSuggestions assetId={assetId} assetType={assetType} pending={pendingTranslations} canDecide={canDecide} />
+
       {error && (
         <p className="dam-error dam-ai-error" role="alert">
           {error}
@@ -249,7 +257,11 @@ export function Suggestions({
             {decided.map((s) => (
               <li key={s.id} className="dam-ai-decided__item" data-status={s.status}>
                 <span className="dam-ai-decided__value">
-                  {s.kind === 'language' ? t('aiAsset.language.accepted', { language: langName(s.value) }) : s.value}
+                  {s.kind === 'language'
+                    ? t('aiAsset.language.accepted', { language: langName(s.value) })
+                    : s.kind === TRANSLATION_KIND
+                      ? t('translation.suggestion.decidedLine', { field: s.field ?? '', language: langName(s.language ?? '') })
+                      : s.value}
                 </span>
                 <span className="dam-ai-decided__status">
                   {s.status === 'accepted' ? t('aiAsset.tags.statusAccepted') : t('aiAsset.tags.statusRejected')}

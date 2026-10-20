@@ -1,11 +1,9 @@
-import { useId, useMemo, useState, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CaretDown, CheckboxGroup, Input, SegmentedControl, Skeleton, TagInput, WarningCircle } from '../../ui';
+import { Card, CaretDown, CheckboxGroup, Input, Skeleton, TagInput, WarningCircle } from '../../ui';
+import { MlTextField } from '../translation/MlTextField';
 import { useTerms, useVocabularies, type FieldDto } from './assetApi';
 
-/** The same five languages the search index analyzes (ADR-0011) - every multilingual field edits all of them, not just
- * the console's own current UI language, since metadata content and UI locale are independent. */
-const ML_LANGUAGES = ['en', 'hi', 'mr', 'ta', 'te'];
 /** Lists longer than this scroll inside the form instead of pushing everything below them off-screen. */
 const LONG_LIST = 8;
 
@@ -203,71 +201,6 @@ function VocabularyField({
   );
 }
 
-/** Five languages in one compact block: a language switch and the one input being edited, instead of five stacked inputs. */
-function MlTextField({
-  field,
-  value,
-  onChange,
-  onTouch,
-  error,
-}: { field: FieldDto; value: Json | undefined; onChange: (v: Json) => void } & Shared) {
-  const { t, i18n } = useTranslation();
-  const id = useId();
-  const current = asMlText(value);
-  const [lang, setLang] = useState(ML_LANGUAGES[0]!);
-  const names = useMemo(() => {
-    try {
-      return new Intl.DisplayNames([i18n.language], { type: 'language' });
-    } catch {
-      return null;
-    }
-  }, [i18n.language]);
-  const filled = ML_LANGUAGES.filter((l) => (current[l] ?? '').trim() !== '').length;
-  const langName = names?.of(lang) ?? lang;
-
-  return (
-    <div className="dam-field dam-ml">
-      <div className="dam-ml__head">
-        <span className="dam-label">{withMarker(field)}</span>
-        <span className="dam-hint">{t('asset.ml.filled', { filled, total: ML_LANGUAGES.length })}</span>
-      </div>
-      <SegmentedControl
-        label={t('asset.ml.language', { field: field.label })}
-        value={lang}
-        onChange={setLang}
-        options={ML_LANGUAGES.map((l) => ({
-          value: l,
-          label: l.toUpperCase(),
-          icon: (current[l] ?? '').trim() ? <span className="dam-ml__dot" aria-hidden="true" /> : undefined,
-        }))}
-      />
-      <label className="dam-sr-only" htmlFor={id}>
-        {`${field.label} - ${langName}`}
-      </label>
-      <textarea
-        id={id}
-        key={lang}
-        lang={lang}
-        rows={3}
-        className="dam-input dam-metafield__textarea"
-        placeholder={langName}
-        value={current[lang] ?? ''}
-        aria-required={field.required || undefined}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
-        onBlur={onTouch}
-        onChange={(e) => onChange({ ...current, [lang]: e.target.value })}
-      />
-      {error && (
-        <span id={`${id}-error`} className="dam-error" role="alert">
-          <WarningCircle size={14} weight="bold" aria-hidden="true" />
-          {error}
-        </span>
-      )}
-    </div>
-  );
-}
-
 function FieldInput({
   field,
   value,
@@ -279,7 +212,18 @@ function FieldInput({
   const id = useId();
   switch (field.type) {
     case 'ml_text':
-      return <MlTextField field={field} value={value} onChange={onChange} onTouch={onTouch} error={error} />;
+      return (
+        <MlTextField
+          name={field.name}
+          label={field.label}
+          required={field.required}
+          maxLength={field.maxLength}
+          value={asMlText(value)}
+          onChange={onChange}
+          onTouch={onTouch}
+          error={error}
+        />
+      );
     case 'number':
       return (
         <Input

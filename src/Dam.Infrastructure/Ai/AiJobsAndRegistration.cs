@@ -86,7 +86,7 @@ public static class AiRegistration
         return services;
     }
 
-    /// <summary>The worker side: the enrichment pipeline and its consumer, and the index rebuild consumer. Needs rendering, search and messaging registered too.</summary>
+    /// <summary>The worker side: the enrichment pipeline and its consumer, the translation pipeline and its consumer, and the index rebuild consumer. Needs rendering, search and messaging registered too.</summary>
     public static IServiceCollection AddDamAiWorker(this IServiceCollection services, IConfiguration cfg)
     {
         services.AddDamAi(cfg);
@@ -94,7 +94,10 @@ public static class AiRegistration
         services.TryAddSingleton<AiRunTracker>();
         services.TryAddSingleton<AudioExtractor>();
         services.TryAddScoped<EnrichmentPipeline>();
+        services.TryAddSingleton<TranslationJobTracker>();
+        services.TryAddScoped<TranslationPipeline>();
         services.AddEventConsumer<EnrichConsumer>();
+        services.AddEventConsumer<TranslationConsumer>();
         services.AddEventConsumer<SearchReindexConsumer>();
         return services;
     }

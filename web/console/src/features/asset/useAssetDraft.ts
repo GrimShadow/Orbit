@@ -25,6 +25,32 @@ function canonical(v: unknown): string {
   return JSON.stringify(strip(v) ?? null);
 }
 
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/** One value of a three-way merge: what the person has now (`mine`), what the server held when they started (`base`), and
+ * what it holds now (`theirs`). Untouched means `mine` equals `base`: take `theirs`. Objects (a multilingual field is one)
+ * merge key by key, so editing Hindi while an English translation is accepted keeps both. */
+function mergeValue(mine: unknown, base: unknown, theirs: unknown): unknown {
+  if (canonical(mine) === canonical(base)) return theirs;
+  if (isObject(mine) && (isObject(base) || base == null) && (isObject(theirs) || theirs == null)) {
+    const keys = new Set([...Object.keys(mine), ...Object.keys(base ?? {}), ...Object.keys(theirs ?? {})]);
+    const out: Record<string, unknown> = {};
+    for (const k of keys) {
+      const merged = mergeValue(mine[k], (base ?? {})[k], (theirs ?? {})[k]);
+      if (merged !== undefined) out[k] = merged;
+    }
+    return out;
+  }
+  return mine;
+}
+
+/** The draft after the server copy moved from `base` to `theirs` while the draft holds unsaved edits: every field the person
+ * has not touched follows the server, every field they have touched keeps their edit. Without this, saving would send the
+ * stale value of a field changed meanwhile (an accepted AI translation, say) and silently undo it. */
+export function rebaseValues(mine: Values, base: Values, theirs: Values): Values {
+  return mergeValue(mine, base, theirs) as Values;
+}
+
 export interface AssetDraft {
   values: Values;
   tags: string[];
@@ -42,7 +68,8 @@ export interface AssetDraft {
  * Metadata and Versions never loses an edit and one "unsaved changes" bar covers both. Saving sends the WHOLE metadata
  * document (`PATCH /assets/{id}` replaces it; fields the schema no longer knows are carried along untouched) and only the
  * parts that actually changed. When the server copy changes underneath (a save, a restored version, a channel toggled from the
- * library) an untouched draft follows it; one with unsaved edits is kept. */
+ * library, an accepted AI translation) an untouched draft follows it; one with unsaved edits keeps those edits and follows the
+ * server for every field it has not touched. */
 export function useAssetDraft(asset: AssetDto): AssetDraft {
   const { t } = useTranslation();
   const { push } = useToast();
@@ -57,7 +84,7 @@ export function useAssetDraft(asset: AssetDto): AssetDraft {
 
   if (seen.meta !== serverMeta || seen.tags !== serverTags) {
     // The server copy moved. Follow it unless this draft holds edits made against the previous copy.
-    if (canonical(values) === canonical(seen.meta)) setValues(serverMeta);
+    setValues(canonical(values) === canonical(seen.meta) ? serverMeta : rebaseValues(values, seen.meta, serverMeta));
     if (canonical(tags) === canonical(seen.tags)) setTagsState(serverTags);
     setSeen({ meta: serverMeta, tags: serverTags });
   }

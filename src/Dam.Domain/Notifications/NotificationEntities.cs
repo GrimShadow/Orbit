@@ -16,6 +16,7 @@ public static class NotificationCategories
     public const string Mention = "mention";
     public const string Comments = "comments";
     public const string Rights = "rights";
+    public const string Translation = "translation";
 
     public static readonly IReadOnlyList<NotificationCategory> All =
     [
@@ -26,6 +27,7 @@ public static class NotificationCategories
         new(Mention, "Mentions", "Someone mentions you in a comment on an asset you can see.", true, true),
         new(Comments, "Comments and replies", "Someone replies to your comment, comments on an asset you own or submitted, or resolves your comment.", true, false),
         new(Rights, "Licence alerts", "The licence of an asset you own is about to end (30, 7 and 1 days before) or has ended.", true, true),
+        new(Translation, "Translations ready", "Translations you asked for are ready to review (or could not be made).", true, false),
     ];
 
     public static NotificationCategory? Find(string key) => All.FirstOrDefault(c => c.Key == key);

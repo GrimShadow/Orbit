@@ -92,6 +92,51 @@ public sealed class EnrichmentPipeline(
             assetId, vid, run.Status, work.Ok, work.Failed, suggestions);
     }
 
+    /// <summary>
+    /// Writes the summary again from the text already extracted from the version (<c>POST /assets/{id}/ai/summarise</c>). The outcome is recorded as the run's "summary" step; the
+    /// run's own status is not touched. An unreachable provider throws, so the message is retried; a refusal is recorded and not retried.
+    /// </summary>
+    public async Task SummariseAsync(Guid assetId, Guid versionId, CancellationToken ct)
+    {
+        var asset = await db.Assets.AsNoTracking().FirstOrDefaultAsync(a => a.Id == assetId, ct);
+        if (asset is null || asset.Status is AssetStatuses.Deleted or AssetStatuses.Blocked || asset.CurrentVersionId != versionId) return;
+        var ai = await resolver.ResolveAsync(ct);
+        if (!ai.IsActive || !ai.Features.Summaries || !ai.Provider.Capabilities.Summarise) return;   // switched off since it was asked for
+
+        var extract = await db.AssetExtracts.FirstOrDefaultAsync(e => e.AssetId == assetId && e.VersionId == versionId, ct);
+        var source = extract?.OcrText ?? extract?.TranscriptText;
+        if (extract is null || string.IsNullOrWhiteSpace(source)) return;
+        var run = await db.AiRuns.FirstOrDefaultAsync(r => r.AssetId == assetId && r.VersionId == versionId, ct);
+
+        var sw = Stopwatch.StartNew();
+        await gate.WaitAsync(ct);
+        try
+        {
+            var language = extract.OcrText is not null ? extract.OcrLanguage : extract.TranscriptLanguage;
+            var r = await ai.Provider.SummariseAsync(Clip(source, SummarySourceChars), new SummaryOptions(opts.SummaryWords, language), ct);
+            var now = clock.UtcNow;
+            if (string.IsNullOrWhiteSpace(r.Text))
+            {
+                run?.UpsertStep(new AiStep { Name = "summary", Status = AiStepStatuses.Skipped, DurationMs = (int)sw.ElapsedMilliseconds, Model = r.Model, Detail = "Nothing to summarise." });
+                return;
+            }
+            extract.SetSummary(r.Text, language, r.Model, now);
+            run?.UpsertStep(new AiStep { Name = "summary", Status = AiStepStatuses.Ok, DurationMs = (int)sw.ElapsedMilliseconds, Model = r.Model, Detail = $"{ExtractiveSummary.WordCount(extract.Summary!)} words, written on request" });
+            var announced = new AssetAiEnriched(assetId, versionId, 0);
+            db.Outbox.Add(new OutboxMessage { EventType = AssetAiEnriched.EventName, Payload = JsonSerializer.Serialize(announced), CorrelationId = Activity.Current?.TraceId.ToString(), CreatedAt = now });
+        }
+        catch (AiRequestException e)
+        {
+            log.LogInformation("Summary of asset {Asset} was refused: {Reason}", assetId, e.Message);
+            run?.UpsertStep(new AiStep { Name = "summary", Status = AiStepStatuses.Failed, DurationMs = (int)sw.ElapsedMilliseconds, Detail = Trim(e.Message) });
+        }
+        catch (AiNotSupportedException e)
+        {
+            run?.UpsertStep(new AiStep { Name = "summary", Status = AiStepStatuses.Skipped, DurationMs = (int)sw.ElapsedMilliseconds, Detail = e.Message });
+        }
+        finally { gate.Release(); }
+    }
+
     private async Task SkipAsync(Guid assetId, Guid versionId, string reason, CancellationToken ct)
     {
         var run = await db.AiRuns.FirstOrDefaultAsync(r => r.AssetId == assetId && r.VersionId == versionId, ct)
@@ -155,6 +200,7 @@ public sealed class EnrichmentPipeline(
             });
         if (w.OcrText is null) await OcrPagesStepAsync(w, ct);
 
+        await SummaryStepAsync(w, ct);
         await LanguageStepAsync(w, ct);
         await TextEmbeddingStepAsync(w, ct);
     }
@@ -204,6 +250,38 @@ public sealed class EnrichmentPipeline(
             w.OcrModel = model;
             return (model, model, w.OcrText is null ? "no text found" : $"{pages.Count} page(s), {w.OcrText.Length} characters");
         });
+
+    /// <summary>Documents longer than this many pages get a summary when they are ingested (spec Step 2.2: "PDFs > 2 pages").</summary>
+    public const int SummaryAfterPages = 2;
+    /// <summary>The most text sent to a provider to be summarised.</summary>
+    public const int SummarySourceChars = 20_000;
+
+    /// <summary>Summarises a long document's extracted text (ADR-0036). A document of two pages or fewer, or whose page count ingest could not read, is skipped on the record.</summary>
+    private async Task SummaryStepAsync(Work w, CancellationToken ct)
+    {
+        var allowed = Allowed(w, w.Ai.Features.Summaries, w.Caps.Summarise, out var why);
+        var pages = KnownPageCount(w.Version);
+        if (allowed && pages is not > SummaryAfterPages)
+        {
+            allowed = false;
+            why = pages is null ? "The number of pages is not known." : $"Only documents of more than {SummaryAfterPages} pages are summarised ({pages} here).";
+        }
+        else if (allowed && string.IsNullOrWhiteSpace(w.OcrText))
+        {
+            allowed = false;
+            why = "There is no extracted text to summarise.";
+        }
+        await StepAsync(w, "summary", allowed, why, async () =>
+        {
+            var r = await w.Provider.SummariseAsync(Clip(w.OcrText!, SummarySourceChars), new SummaryOptions(opts.SummaryWords, w.OcrLanguage), ct);
+            w.Summary = string.IsNullOrWhiteSpace(r.Text) ? null : r.Text.Trim();
+            w.SummaryModel = r.Model;
+            w.SummaryLanguage = w.OcrLanguage;
+            return (r, r.Model, w.Summary is null ? "nothing to summarise" : $"{ExtractiveSummary.WordCount(w.Summary)} words");
+        });
+    }
+
+    private static string Clip(string text, int max) => text.Length > max ? text[..max] : text;
 
     /// <summary>The page count ingest recorded for a PDF (or an Office document's own page or slide count), if any.</summary>
     private static int? KnownPageCount(AssetVersion v)
@@ -411,6 +489,7 @@ public sealed class EnrichmentPipeline(
             if (extract is null) { extract = AssetExtract.Create(a.TenantId, a.Id, w.Version.Id, now); db.AssetExtracts.Add(extract); }
             if (w.OcrText is not null) extract.SetOcr(w.OcrText, w.OcrLanguage, string.IsNullOrEmpty(w.OcrModel) ? "pdf-text-layer" : w.OcrModel, now);
             if (w.Transcript is { } t) extract.SetTranscript(t.Segments, t.Language, t.DurationMs, t.Model, now);
+            if (w.Summary is not null) extract.SetSummary(w.Summary, w.SummaryLanguage, w.SummaryModel, now);
         }
 
         await UpsertEmbeddingAsync(w, EmbeddingKinds.Image, w.ImageVector, w.ImageModel, now, ct);
@@ -450,6 +529,9 @@ public sealed class EnrichmentPipeline(
         public string? OcrText { get; set; }
         public string? OcrLanguage { get; set; }
         public string OcrModel { get; set; } = "";
+        public string? Summary { get; set; }
+        public string? SummaryLanguage { get; set; }
+        public string SummaryModel { get; set; } = "";
         public TranscriptResult? Transcript { get; set; }
         public bool TranscriptCapped { get; set; }
         public float[]? ImageVector { get; set; }

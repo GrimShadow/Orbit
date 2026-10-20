@@ -23,6 +23,8 @@ public static class IndexMappingBuilder
     public const string VectorImageField = "vector_image";
     public const string OcrTextField = "ocr_text";
     public const string TranscriptTextField = "transcript_text";
+    /// <summary>The AI-written summary of a long document (ADR-0036).</summary>
+    public const string SummaryTextField = "summary_text";
     public const string TranscriptSegmentsField = "transcript_segments";
 
     public static string AnalyzerFor(string language) => $"dam_text_{language}";
@@ -39,12 +41,13 @@ public static class IndexMappingBuilder
         ["mappings"] = BuildMappings(mergedFields, dimensions ?? VectorDimensions.Default),
     };
 
-    /// <summary>The fields that came with AI enrichment (extracted text and the transcript), which can be added to a live index with put-mapping.
+    /// <summary>The fields that came with AI enrichment (extracted text, the transcript and the summary), which can be added to a live index with put-mapping.
     /// The vector fields are not here: their size cannot be added or changed afterwards.</summary>
     public static Dictionary<string, object?> BuildExtractProperties() => new()
     {
         [OcrTextField] = new Dictionary<string, object?> { ["type"] = "text", ["analyzer"] = GenericAnalyzer },
         [TranscriptTextField] = new Dictionary<string, object?> { ["type"] = "text", ["analyzer"] = GenericAnalyzer },
+        [SummaryTextField] = new Dictionary<string, object?> { ["type"] = "text", ["analyzer"] = GenericAnalyzer },
         // One entry per spoken line, so a match can say when it was said (the start time) and the UI can jump there.
         [TranscriptSegmentsField] = new Dictionary<string, object?>
         {

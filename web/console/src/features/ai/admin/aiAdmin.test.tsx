@@ -67,10 +67,10 @@ describe('status', () => {
     expect(within(card).getByText('clip-vit-base-patch32')).toBeInTheDocument();
     expect(within(card).getByText('rapidocr-pp-ocrv4')).toBeInTheDocument();
 
-    // Capabilities say yes or no in words, and translation and summaries are "coming later".
+    // Capabilities say yes or no in words: this provider can summarise but not translate (ADR-0036).
     expect(within(card).getByText('Suggest tags').closest('li')).toHaveTextContent('available');
-    expect(within(card).getByText('Translation').closest('li')).toHaveTextContent('coming later');
-    expect(within(card).getByText('Summaries').closest('li')).toHaveTextContent('coming later');
+    expect(within(card).getByText('Translation').closest('li')).toHaveTextContent('not available');
+    expect(within(card).getByText('Summaries').closest('li')).toHaveTextContent('available');
 
     expect(within(card).getByText('0 of 39 assets analysed')).toBeInTheDocument();
     expect(within(card).getByRole('group', { name: 'Assets analysed' })).toHaveTextContent('Not started');
@@ -248,7 +248,7 @@ describe('provider and privacy', () => {
     expect(await writes(calls, 'PUT', '/api/v1/ai/settings')[0]!.json()).toEqual({
       enabled: true,
       provider: 'openai-compatible',
-      features: { tags: true, ocr: true, transcribe: true, embeddings: true },
+      features: { tags: true, ocr: true, transcribe: true, embeddings: true, summaries: true },
       ocrLanguage: null,
       acknowledgeOffSite: true,
     });
@@ -369,13 +369,46 @@ describe('features and OCR language', () => {
     expect(await writes(calls, 'PUT', '/api/v1/ai/settings')[0]!.json()).toEqual({
       enabled: true,
       provider: 'self-hosted',
-      features: { tags: false, ocr: true, transcribe: false, embeddings: true },
+      features: { tags: false, ocr: true, transcribe: false, embeddings: true, summaries: true },
       ocrLanguage: null,
       acknowledgeOffSite: false,
     });
     expect(await screen.findByText('AI settings saved')).toBeInTheDocument();
     expect(featureSwitch('Suggest tags')).toHaveAttribute('aria-checked', 'false');
     expect(screen.getByText(/All changes are saved\./)).toBeInTheDocument();
+  });
+
+  it('has a switch for summaries, on by default, that is saved with the others', async () => {
+    const calls = install(world());
+    renderAt();
+    await loaded();
+    expect(featureSwitch('Summarise documents')).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(featureSwitch('Summarise documents'));
+    expect(featureSwitch('Summarise documents')).toHaveAttribute('aria-checked', 'false');
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(writes(calls, 'PUT', '/api/v1/ai/settings')).toHaveLength(1));
+    expect(await writes(calls, 'PUT', '/api/v1/ai/settings')[0]!.json()).toMatchObject({
+      features: { summaries: false, tags: true },
+    });
+  });
+
+  it('treats a server that does not send the summaries switch as on, and does not call that an edit', async () => {
+    const old = settings();
+    delete (old.features as { summaries?: boolean }).summaries;
+    install(world({ settings: old }));
+    renderAt();
+    await loaded();
+    expect(featureSwitch('Summarise documents')).toHaveAttribute('aria-checked', 'true');
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it('warns when the provider cannot summarise and the switch is on', async () => {
+    install(world({ status: status({ capabilities: { ...status().capabilities, summarise: false } }) }));
+    renderAt();
+    await loaded();
+    expect(
+      screen.getByText(/Writes a short summary.*The provider in use cannot do this, so the step is skipped\./),
+    ).toBeInTheDocument();
   });
 
   it('turning a switch off and on again leaves nothing to save', async () => {
@@ -839,7 +872,7 @@ describe('model helpers', () => {
     expect(toRequest({ ...toDraft(s), ocrLanguage: ' HI ' }, true)).toEqual({
       enabled: true,
       provider: 'self-hosted',
-      features: { tags: true, ocr: true, transcribe: true, embeddings: true },
+      features: { tags: true, ocr: true, transcribe: true, embeddings: true, summaries: true },
       ocrLanguage: 'hi',
       acknowledgeOffSite: true,
     });

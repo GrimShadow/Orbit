@@ -101,7 +101,7 @@ public sealed class OpenSearchQueryService(IOpenSearchLowLevelClient client, Dam
     }
 
     /// <summary>
-    /// Words in the title or metadata, words read from a picture or page (ocr_text) and words said in a recording (the nested transcript segments, whose best
+    /// Words in the title or metadata, words read from a picture or page (ocr_text), words in the AI summary of a document (summary_text) and words said in a recording (the nested transcript segments, whose best
     /// lines come back as inner hits so a match can say when it was said). Each clause is named so a hit can report which of them matched.
     /// </summary>
     private static Dictionary<string, object?> TextQuery(string text) => new()
@@ -116,6 +116,7 @@ public sealed class OpenSearchQueryService(IOpenSearchLowLevelClient client, Dam
                 // whole search (search_phase_execution_exception) instead of just not matching on that field.
                 new Dictionary<string, object?> { ["multi_match"] = new Dictionary<string, object?> { ["query"] = text, ["fields"] = new[] { "title^3", "metadata.*" }, ["lenient"] = true, ["_name"] = "text" } },
                 new Dictionary<string, object?> { ["match"] = new Dictionary<string, object?> { [IndexMappingBuilder.OcrTextField] = new Dictionary<string, object?> { ["query"] = text, ["_name"] = "ocr" } } },
+                new Dictionary<string, object?> { ["match"] = new Dictionary<string, object?> { [IndexMappingBuilder.SummaryTextField] = new Dictionary<string, object?> { ["query"] = text, ["_name"] = "summary" } } },
                 // The whole transcript as text: catches a phrase that runs across two lines, and is what gets highlighted.
                 new Dictionary<string, object?> { ["match"] = new Dictionary<string, object?> { [IndexMappingBuilder.TranscriptTextField] = new Dictionary<string, object?> { ["query"] = text, ["_name"] = "transcript" } } },
                 new Dictionary<string, object?>
@@ -140,7 +141,7 @@ public sealed class OpenSearchQueryService(IOpenSearchLowLevelClient client, Dam
 
     // ---------------------------------------------------------------------------------------------- hybrid search
 
-    private static readonly string[] MatchOrder = ["text", "image", "ocr", "transcript"];
+    private static readonly string[] MatchOrder = ["text", "image", "ocr", "summary", "transcript"];
 
     private const string LexicalLeg = "lexical", ImageLeg = "image", MeaningLeg = "meaning";
 
@@ -375,6 +376,7 @@ public sealed class OpenSearchQueryService(IOpenSearchLowLevelClient client, Dam
         {
             ["title"] = new Dictionary<string, object?>(), ["metadata.*"] = new Dictionary<string, object?>(),
             [IndexMappingBuilder.OcrTextField] = new Dictionary<string, object?> { ["fragment_size"] = 160, ["number_of_fragments"] = 2 },
+            [IndexMappingBuilder.SummaryTextField] = new Dictionary<string, object?> { ["fragment_size"] = 160, ["number_of_fragments"] = 2 },
             [IndexMappingBuilder.TranscriptTextField] = new Dictionary<string, object?> { ["fragment_size"] = 160, ["number_of_fragments"] = 2 },
         },
         ["pre_tags"] = new[] { "<em>" },

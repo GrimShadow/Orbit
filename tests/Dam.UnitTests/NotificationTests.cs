@@ -20,11 +20,11 @@ public sealed class NotificationTests
     // ---- categories and preference defaults -------------------------------------------------------------------
 
     [Fact]
-    public void There_are_seven_categories_with_in_app_on_everywhere_and_email_on_only_for_tasks_overdue_mentions_and_licences()
+    public void There_are_eight_categories_with_in_app_on_everywhere_and_email_on_only_for_tasks_overdue_mentions_and_licences()
     {
-        Assert.Equal(["workflow_task", "workflow_outcome", "sla", "asset_lifecycle", "mention", "comments", "rights"], NotificationCategories.All.Select(c => c.Key));
+        Assert.Equal(["workflow_task", "workflow_outcome", "sla", "asset_lifecycle", "mention", "comments", "rights", "translation"], NotificationCategories.All.Select(c => c.Key));
         Assert.All(NotificationCategories.All, c => Assert.True(c.DefaultInApp, c.Key));
-        Assert.Equal([true, false, true, false, true, false, true], NotificationCategories.All.Select(c => c.DefaultEmail));
+        Assert.Equal([true, false, true, false, true, false, true, false], NotificationCategories.All.Select(c => c.DefaultEmail));
         Assert.True(NotificationCategories.IsKnown("sla"));
         Assert.False(NotificationCategories.IsKnown("marketing"));
     }

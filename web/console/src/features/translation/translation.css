@@ -1,0 +1,292 @@
+/* Side-by-side multilingual editing, AI translation suggestions and the translate dialog. Tokens only; light and dark. */
+
+/* ---- The editor ---------------------------------------------------------------------------------------------------- */
+.dam-ml {
+  container-type: inline-size;
+}
+.dam-ml__tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-ml__panes {
+  display: grid;
+  gap: var(--dam-space-3);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+.dam-ml__panes[data-layout='side'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+/* Two columns need room: in a narrow container (a phone, a slim side panel) the panes stack whatever was chosen. */
+@container (max-width: 339px) {
+  .dam-ml__panes[data-layout='side'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.dam-ml__pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+  min-width: 0;
+}
+.dam-ml__panehead {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+  min-width: 0;
+}
+.dam-ml__role {
+  flex: none;
+  color: var(--dam-muted);
+  font-size: var(--dam-text-xs);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dam-ml__select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dam-ml__count {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.dam-ml__count[data-over] {
+  color: var(--dam-danger);
+  font-weight: 600;
+}
+.dam-ml__ai {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+  min-width: 0;
+}
+.dam-ml__aibar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-ml__aibar .dam-btn {
+  gap: var(--dam-space-1);
+}
+.dam-ml__nohint {
+  margin: 0;
+}
+.dam-ml__live {
+  font-size: var(--dam-text-sm);
+  color: var(--dam-muted);
+}
+.dam-ml__live:empty {
+  display: none;
+}
+
+/* ---- An AI translation suggestion ---------------------------------------------------------------------------------- */
+.dam-tsug {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+  min-width: 0;
+  padding: var(--dam-space-3);
+  border: 1px solid var(--dam-border);
+  border-inline-start: 4px solid var(--dam-brand);
+  border-radius: var(--dam-radius);
+  background: var(--dam-brand-soft);
+  color: var(--dam-brand-soft-text);
+}
+.dam-tsug:focus-visible {
+  outline: 2px solid var(--dam-focus);
+  outline-offset: 2px;
+}
+.dam-tsug[data-stale] {
+  border-inline-start-color: var(--dam-warning);
+}
+.dam-tsug__title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+  margin: 0;
+  font-size: var(--dam-text-sm);
+  font-weight: 650;
+}
+.dam-tsug__title svg {
+  flex: none;
+}
+.dam-tsug__badge {
+  padding: 1px var(--dam-space-2);
+  border-radius: 999px;
+  background: var(--dam-surface);
+  color: var(--dam-text);
+  font-size: var(--dam-text-xs);
+  font-weight: 600;
+}
+.dam-tsug__warn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dam-space-2);
+  margin: 0;
+  padding: var(--dam-space-2) var(--dam-space-3);
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-tone-warning-bg);
+  color: var(--dam-tone-warning-text);
+  font-size: var(--dam-text-sm);
+}
+.dam-tsug__warn svg {
+  flex: none;
+  margin-top: 2px;
+}
+.dam-tsug__text {
+  margin: 0;
+  padding: var(--dam-space-2) var(--dam-space-3);
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-surface);
+  color: var(--dam-text);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.dam-tsug__edit .dam-input {
+  width: 100%;
+}
+.dam-tsug__meta {
+  margin: 0;
+  color: inherit;
+  opacity: 0.85;
+  overflow-wrap: anywhere;
+}
+.dam-tsug__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+  padding: var(--dam-space-3);
+  border-radius: var(--dam-radius-sm);
+  background: var(--dam-tone-warning-bg);
+  color: var(--dam-tone-warning-text);
+  font-size: var(--dam-text-sm);
+}
+.dam-tsug__confirm p {
+  margin: 0;
+}
+.dam-tsug__confirmtitle {
+  font-weight: 650;
+}
+.dam-tsug__error {
+  margin: 0;
+}
+.dam-tsug__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-tsuglist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+}
+
+/* ---- The AI panel's summary ---------------------------------------------------------------------------------------- */
+.dam-summary__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+}
+.dam-summary__title svg {
+  color: var(--dam-brand);
+}
+.dam-summary__text {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.dam-summary__live {
+  font-size: var(--dam-text-sm);
+  color: var(--dam-muted);
+}
+.dam-summary__live:empty {
+  display: none;
+}
+
+/* ---- The translate button and dialog ------------------------------------------------------------------------------- */
+.dam-tbtn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--dam-space-2);
+}
+.dam-tbtn .dam-btn {
+  gap: var(--dam-space-1);
+}
+.dam-tbtn__hint {
+  margin: 0;
+}
+.dam-tdlg {
+  min-width: 0;
+}
+/* The kit truncates a checkbox label to one line; this one carries a sentence of explanation. */
+.dam-tdlg .dam-check__label {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+.dam-tdlg__sub {
+  display: block;
+}
+.dam-tjob {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-3);
+}
+.dam-tjob p {
+  margin: 0;
+}
+.dam-tjob__wait {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-tjob__summary {
+  font-weight: 650;
+}
+.dam-tjob__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dam-space-2);
+}
+.dam-tjob__item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--dam-space-2);
+}
+.dam-tjob__item[data-status='ok'] > svg {
+  color: var(--dam-success);
+}
+.dam-tjob__item[data-status='skipped'] > svg {
+  color: var(--dam-warning);
+}
+.dam-tjob__item[data-status='failed'] > svg {
+  color: var(--dam-danger);
+}
+.dam-tjob__what {
+  font-weight: 600;
+}
+.dam-tjob__reason {
+  flex-basis: 100%;
+  padding-inline-start: 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dam-tsug,
+  .dam-tjob__wait .dam-spinner {
+    transition: none;
+  }
+}

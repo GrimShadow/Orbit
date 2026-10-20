@@ -26,6 +26,7 @@ export function hasAiContent(ai: AssetAi | undefined): boolean {
   if (!ai) return false;
   return (
     ai.suggestions.length > 0 ||
+    !!ai.summary ||
     !!ai.ocrText ||
     (ai.transcript?.segments.length ?? 0) > 0 ||
     ai.embeddingsReady ||
