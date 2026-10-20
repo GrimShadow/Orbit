@@ -27,6 +27,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Fixtures\*.csv" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Dam.Infrastructure\Dam.Infrastructure.csproj" />
     <Compile Include="..\Dam.UnitTests\Support\TestImages.cs" Link="Support\TestImages.cs" />
     <ProjectReference Include="..\..\src\Dam.Api\Dam.Api.csproj" />

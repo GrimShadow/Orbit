@@ -123,7 +123,7 @@ public sealed class IdentityTests(PostgresFixture pg) : IAsyncLifetime
         Assert.Equal(1, await Count(t, "SELECT count(*) FROM users"));
         Assert.Equal(1, await Count(t, "SELECT count(*) FROM groups WHERE source = 'Idp'"));
         Assert.Equal(1, await Count(t, "SELECT count(*) FROM audit_log WHERE action = 'user.provisioned'"));
-        Assert.Equal(8, await Count(t, "SELECT count(*) FROM roles WHERE is_built_in"));
+        Assert.Equal(9, await Count(t, "SELECT count(*) FROM roles WHERE is_built_in"));
 
         await Call(HttpMethod.Get, "/api/v1/me", token); // again: no duplicates
         Assert.Equal(1, await Count(t, "SELECT count(*) FROM users"));
@@ -212,7 +212,7 @@ public sealed class IdentityTests(PostgresFixture pg) : IAsyncLifetime
     {
         var t = await NewTenantAsync(); var admin = Admin(t);
         var list = await Call(HttpMethod.Get, "/api/v1/roles", admin);
-        Assert.Equal(8, list.Body.GetArrayLength());
+        Assert.Equal(9, list.Body.GetArrayLength());
         var builtInAdmin = list.Body.EnumerateArray().First(r => r.GetProperty("name").GetString() == "Admin");
         Assert.True(builtInAdmin.GetProperty("isBuiltIn").GetBoolean());
 

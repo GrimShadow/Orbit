@@ -55,6 +55,7 @@ public sealed class PolicyMatrixTests
         [BuiltInRoles.Viewer] = [AssetsRead],
         [BuiltInRoles.Dealer] = [AssetsRead],
         [BuiltInRoles.ApiClient] = [AssetsRead, UsageWrite],
+        [BuiltInRoles.AskAssist] = [AssetsRead, AssetsReadInReview],
     };
 
     public static IEnumerable<object[]> RolePermissionCells() =>
@@ -113,6 +114,39 @@ public sealed class PolicyMatrixTests
     {
         var dealer = Profile([BuiltInRoles.Dealer], Attrs(region: "North"));
         Assert.Equal(expected, PolicyEngine.Can(dealer, AssetsRead, ResourceContext.Asset(status, region: region)));
+    }
+
+    // ---- 2b. Ask Assist: ready-for-review (in_review) and reviewed (published) assets, read-only ------------------
+
+    public static IEnumerable<object[]> AskAssistCases() =>
+    [
+        ["published", AssetStatuses.Published, true],
+        ["in_review", AssetStatuses.InReview, true],
+        ["draft", AssetStatuses.Draft, false],
+        ["approved", AssetStatuses.Approved, false],
+        ["expired", AssetStatuses.Expired, false],
+        ["archived", AssetStatuses.Archived, false],
+        ["deleted", AssetStatuses.Deleted, false],
+        ["blocked", AssetStatuses.Blocked, false],
+    ];
+
+    [Theory]
+    [MemberData(nameof(AskAssistCases))]
+    public void Ask_assist_reads_published_and_in_review_assets_only(string _, string status, bool expected)
+    {
+        var assist = Profile([BuiltInRoles.AskAssist]);
+        Assert.Equal(expected, PolicyEngine.Can(assist, AssetsRead, ResourceContext.Asset(status, region: ["North"])));
+    }
+
+    [Fact]
+    public void Ask_assist_is_read_only_and_a_dealer_still_sees_published_only()
+    {
+        var assist = Profile([BuiltInRoles.AskAssist]);
+        Assert.False(PolicyEngine.Can(assist, AssetsUpdate));
+        Assert.False(PolicyEngine.Can(assist, KnowledgeManage));
+        Assert.False(PolicyEngine.Can(assist, AssetsCreate));
+        var dealer = Profile([BuiltInRoles.Dealer], Attrs(region: "North"));
+        Assert.False(PolicyEngine.Can(dealer, AssetsRead, ResourceContext.Asset(AssetStatuses.InReview, region: ["North"])));
     }
 
     [Fact]

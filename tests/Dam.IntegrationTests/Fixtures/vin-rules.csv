@@ -1,0 +1,15 @@
+name,pattern,model,variant,year,theme,priority,enabled
+roadster base,ACMRD1*,roadster,base,vin,ice,10,true
+roadster gt,ACMRD2*,roadster,gt,vin,ice,10,true
+roadster (any variant),ACMRD*,roadster,,vin,ice,0,true
+voyager lx,ACMVY1*,voyager,lx,vin,ice,10,true
+voyager xl,ACMVY2*,voyager,xl,vin,ice,10,true
+voyager (any variant),ACMVY*,voyager,,vin,ice,0,true
+spark std,ACMSP1??*,spark,std,vin,ev,10,true
+spark max,ACMSP2??*,spark,max,vin,ev,10,true
+spark (any variant),ACMSP*,spark,,vin,ev,0,true
+terra s,ACMTR[13]*,terra,s,vin,ev,10,true
+terra x,ACMTR[24]*,terra,x,vin,ev,10,true
+terra (any variant),ACMTR*,terra,,vin,ev,0,true
+spark fleet,ACMSP9*,spark,fleet,2025,ev,20,true
+retired roadster rule,ACMRD*,roadster,base,vin,ice,99,false

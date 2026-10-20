@@ -2,6 +2,7 @@ import { useRecordUsage } from '../analytics/analyticsApi';
 import { ArrowSquareOut, CaretLeft, CaretRight, Copy, Play, Prohibit } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { relativeTime } from '../../lib/relativeTime';
 import { useCommentsUi } from '../comments/CommentsContext';
 import { AnnotationLayer } from '../comments/annotations/AnnotationLayer';
@@ -25,6 +26,7 @@ import {
 import { rightsBlockReasons } from '../rights/asset/rightsFormat';
 import { useAssetRights } from '../rights/rightsApi';
 import { useAssetRenditions, useDeliveryLink } from './assetApi';
+import { parseDeepLinkPage } from './deepLinkPage';
 
 interface AssetPreviewProps {
   assetId: string;
@@ -414,6 +416,19 @@ function PdfStage({ assetId, title, pages }: { assetId: string; title: string; p
     registerShowPage(showPage);
     return () => registerShowPage(null);
   }, [registerShowPage, showPage]);
+  // `?page=<n>` (a chapter link from the Knowledge card or the VIN resolver) opens the document at that page.
+  const [params] = useSearchParams();
+  const wantedPage = parseDeepLinkPage(params.get('page'));
+  const [shownPage, setShownPage] = useState<number | null>(null);
+  if (wantedPage !== shownPage) {
+    // Adjusted while rendering, so the page is right on the first paint (no effect, no flash of page 1).
+    setShownPage(wantedPage);
+    const i = wantedPage === null ? -1 : pages.indexOf(wantedPage);
+    if (i >= 0) {
+      setBroken(false);
+      setIndex(i);
+    }
+  }
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const ann = useImageAnnotations({ assetId, img, page: pages[index], zoom, onNavigate: showPage });
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {

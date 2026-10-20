@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<Ai.AiSuggestionDecider>();
         services.AddScoped<Ai.AiBackfillService>();
         services.AddScoped<Ai.TranslationAcceptor>();
+        services.AddScoped<Knowledge.KnowledgeReader>();
         services.AddDamAnalytics();
         services.AddScoped<Ai.AiReviewReader>();
         services.AddValidatorsFromAssembly(asm, includeInternalTypes: true);

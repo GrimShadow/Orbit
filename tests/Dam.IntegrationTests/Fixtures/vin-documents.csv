@@ -1,0 +1,15 @@
+key,model,variant,year_from,year_to
+roadster-all,roadster,,,
+roadster-base,roadster,base,,
+roadster-gt-2022-2024,roadster,gt,2022,2024
+roadster-gt-2025-2026,roadster,gt,2025,2026
+spark-all,spark,,,
+spark-fleet,spark,fleet,,
+spark-max,spark,max,,
+spark-std,spark,std,,
+terra-all,terra,,,
+terra-s,terra,s,,
+terra-x,terra,x,,
+voyager-all,voyager,,,
+voyager-lx,voyager,lx,,
+voyager-xl,voyager,xl,,

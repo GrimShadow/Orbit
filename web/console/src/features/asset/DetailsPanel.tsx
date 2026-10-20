@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge, Card, Skeleton, TagInput } from '../../ui';
 import { AiPanel } from '../ai/asset/AiPanel';
 import { AssetUsageCard } from '../insights/AssetUsageCard';
+import { KnowledgeCard } from '../knowledge/KnowledgeCard';
 import { RightsPanel } from '../rights/asset/RightsPanel';
 import { FileInfo } from './FileInfo';
 import { WorkflowPanel } from './WorkflowPanel';
@@ -80,6 +81,7 @@ export function DetailsPanel({ asset, draft }: { asset: AssetDto; draft: AssetDr
         />
       </Card>
       <AiPanel asset={asset} />
+      <KnowledgeCard asset={asset} />
       <AssetUsageCard assetId={asset.id} />
       {(schedule.length > 0 || asset.legalHold) && (
         <Card as="section" padding="md" aria-labelledby="dam-asset-lifecycle">

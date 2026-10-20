@@ -18,6 +18,7 @@ public static class BuiltInRoles
     public const string Viewer = "Viewer";
     public const string Dealer = "Dealer";
     public const string ApiClient = "ApiClient";
+    public const string AskAssist = "Ask Assist";
 
     public static readonly IReadOnlyList<BuiltInRole> All =
     [
@@ -50,6 +51,9 @@ public static class BuiltInRoles
         new(ApiClient, "Machine client (apps, PADS4 plugin): published assets for its channel; writes usage.",
             [Permissions.AssetsRead, Permissions.UsageWrite],
             AttributeRestricted: true, RequiredAttributes: [Dimensions.Channel]),
+        // The BRD's Ask Assist role (spec A4.2): "Ready for Review" (in_review) and "Reviewed" (published) assets, read-only. It uses the same status-visibility
+        // grant that lets other roles read unpublished work, limited to the review state, so it needs no special case anywhere.
+        new(AskAssist, "Read-only: published assets and assets that are ready for review.", [Permissions.AssetsRead, Permissions.AssetsReadInReview]),
     ];
 
     public static BuiltInRole? Find(string name) =>

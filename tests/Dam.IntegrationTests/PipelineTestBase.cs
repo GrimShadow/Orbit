@@ -6,6 +6,7 @@ using Dam.Infrastructure.Ai;
 using Dam.Infrastructure.Consumers;
 using Dam.Infrastructure.Delivery;
 using Dam.Infrastructure.Ingest;
+using Dam.Infrastructure.Knowledge;
 using Dam.Infrastructure.Messaging;
 using Dam.Infrastructure.Search;
 using Dam.Infrastructure.Storage;
@@ -63,7 +64,8 @@ public abstract class PipelineTestBase(PostgresFixture pg, RabbitFixture mq) : A
     /// <param name="indexing">Register the search index consumer (spec Step 1.7). Off by default: most pipeline tests
     /// have nothing to do with search and would otherwise need an OpenSearch URL they never use.</param>
     /// <param name="ai">Register the AI enrichment consumer and the index rebuild consumer (ADR-0035). Needs <paramref name="indexing"/>, and DAM_AI_* settings in <paramref name="settings"/>.</param>
-    protected IHost StartWorker(Dictionary<string, string?>? settings = null, bool renditions = true, bool indexing = false, bool ai = false)
+    /// <param name="knowledge">Register the knowledge chapters consumer (ADR-0039).</param>
+    protected IHost StartWorker(Dictionary<string, string?>? settings = null, bool renditions = true, bool indexing = false, bool ai = false, bool knowledge = false)
     {
         var b = Host.CreateApplicationBuilder();
         b.Logging.SetMinimumLevel(LogLevel.Warning);
@@ -95,6 +97,7 @@ public abstract class PipelineTestBase(PostgresFixture pg, RabbitFixture mq) : A
         if (renditions) b.Services.AddEventConsumer<RenditionConsumer>();
         if (indexing) b.Services.AddEventConsumer<IndexConsumer>();
         if (ai) b.Services.AddDamAiWorker(cfg);
+        if (knowledge) b.Services.AddDamKnowledgeWorker();
         b.Services.AddOutboxRelay(Pg.SystemConnection);
         return b.Build();
     }

@@ -101,6 +101,79 @@ public static class TestImages
         return Encoding.ASCII.GetBytes(sb.ToString());
     }
 
+    /// <summary>One bookmark of a hand-written PDF outline. <see cref="Page"/> is a 1-based page, or null for a bookmark that points nowhere.</summary>
+    /// <param name="Named">A named destination: the bookmark names its target instead of pointing at the page. With a <see cref="Page"/> the name resolves to it (through the
+    /// /Names tree, or the catalog's /Dests dictionary for a legacy file); without one the name resolves to nothing.</param>
+    public sealed record OutlineEntry(string Title, int Level, int? Page, bool Named = false);
+
+    /// <summary>
+    /// A PDF with <paramref name="pages"/> blank pages and an /Outlines tree built from <paramref name="outline"/> (an entry nests under the nearest earlier entry of a lower
+    /// level), with a correct cross-reference table. <paramref name="loop"/> makes the last top-level entry's /Next point back to the first, an outline that cycles.
+    /// A page number outside the document gives a destination that points at an object that is not there.
+    /// </summary>
+    public static byte[] PdfWithOutline(int pages, IReadOnlyList<OutlineEntry> outline, bool loop = false, bool legacyDests = false)
+    {
+        string Esc(string t) => t.Replace("\\", "\\\\").Replace("(", "\\(").Replace(")", "\\)");
+        var objects = new List<string>();           // object n is objects[n - 1]
+        var firstPage = 3;
+        var outlinesNo = 3 + pages;
+        var firstItem = outlinesNo + 1;
+        var resolvable = outline.Select((e, i) => (e, i)).Where(x => x.e is { Named: true, Page: >= 1 } && x.e.Page <= pages).ToList();
+        var treeNo = firstItem + outline.Count;
+        var useTree = resolvable.Count > 0 && !legacyDests;
+        var infoNo = treeNo + (useTree ? 1 : 0);
+        string DestArray(int page) => $"[{firstPage + page - 1} 0 R /Fit]";
+
+        // parent index (or -1) of every entry, and its children
+        var parent = new int[outline.Count];
+        var stack = new List<int>();
+        for (var i = 0; i < outline.Count; i++)
+        {
+            while (stack.Count > 0 && outline[stack[^1]].Level >= outline[i].Level) stack.RemoveAt(stack.Count - 1);
+            parent[i] = stack.Count > 0 ? stack[^1] : -1;
+            stack.Add(i);
+        }
+        List<int> Kids(int p) => Enumerable.Range(0, outline.Count).Where(i => parent[i] == p).ToList();
+        int DescendantCount(int p) => Kids(p).Sum(k => 1 + DescendantCount(k));
+
+        var catalogExtra = useTree ? $" /Names << /Dests {treeNo} 0 R >>"
+            : resolvable.Count > 0 ? $" /Dests << {string.Join(' ', resolvable.Select(x => $"/named-{x.i} {DestArray(x.e.Page!.Value)}"))} >>" : "";
+        objects.Add($"<< /Type /Catalog /Pages 2 0 R{(outline.Count > 0 ? $" /Outlines {outlinesNo} 0 R" : "")}{catalogExtra} >>");
+        objects.Add($"<< /Type /Pages /Kids [{string.Join(' ', Enumerable.Range(firstPage, pages).Select(n => $"{n} 0 R"))}] /Count {pages} >>");
+        for (var p = 0; p < pages; p++) objects.Add("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> >>");
+
+        var tops = Kids(-1);
+        if (outline.Count > 0)
+            objects.Add($"<< /Type /Outlines /First {firstItem + tops[0]} 0 R /Last {firstItem + tops[^1]} 0 R /Count {outline.Count} >>");
+        for (var i = 0; i < outline.Count; i++)
+        {
+            var e = outline[i];
+            var sibs = Kids(parent[i]);
+            var pos = sibs.IndexOf(i);
+            var kids = Kids(i);
+            var sb = new StringBuilder($"<< /Title ({Esc(e.Title)}) /Parent {(parent[i] < 0 ? outlinesNo : firstItem + parent[i])} 0 R");
+            if (pos > 0) sb.Append($" /Prev {firstItem + sibs[pos - 1]} 0 R");
+            if (pos < sibs.Count - 1) sb.Append($" /Next {firstItem + sibs[pos + 1]} 0 R");
+            else if (loop && parent[i] < 0) sb.Append($" /Next {firstItem + sibs[0]} 0 R");
+            if (kids.Count > 0) sb.Append($" /First {firstItem + kids[0]} 0 R /Last {firstItem + kids[^1]} 0 R /Count {DescendantCount(i)}");
+            if (e.Named) sb.Append(legacyDests ? $" /Dest /named-{i}" : $" /Dest (named-{i})");
+            else if (e.Page is { } pg) sb.Append(pg >= 1 && pg <= pages ? $" /Dest [{firstPage + pg - 1} 0 R /Fit]" : $" /Dest [{infoNo + 50} 0 R /Fit]");
+            sb.Append(" >>");
+            objects.Add(sb.ToString());
+        }
+        if (useTree) objects.Add($"<< /Names [{string.Join(' ', resolvable.Select(x => $"(named-{x.i}) {DestArray(x.e.Page!.Value)}"))}] >>");
+        objects.Add("<< /Title (Outlined manual) /Author (Acme Docs) /Producer (Orbit tests) >>");
+
+        var pdf = new StringBuilder("%PDF-1.4\n");
+        var offsets = new List<int>();
+        for (var i = 0; i < objects.Count; i++) { offsets.Add(pdf.Length); pdf.Append($"{i + 1} 0 obj\n{objects[i]}\nendobj\n"); }
+        var xref = pdf.Length;
+        pdf.Append($"xref\n0 {objects.Count + 1}\n0000000000 65535 f \n");
+        foreach (var o in offsets) pdf.Append($"{o:D10} 00000 n \n");
+        pdf.Append($"trailer\n<< /Size {objects.Count + 1} /Root 1 0 R /Info {objects.Count} 0 R >>\nstartxref\n{xref}\n%%EOF\n");
+        return Encoding.ASCII.GetBytes(pdf.ToString());
+    }
+
     /// <summary>A scratch folder marked so desktop search (Spotlight and equivalents) never indexes the short-lived fixture files
     /// this class and the media renderers under test churn through.</summary>
     private static string ScratchDir()

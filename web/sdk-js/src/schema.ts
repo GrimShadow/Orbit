@@ -2227,6 +2227,165 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/knowledge/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The document that describes a vehicle: validates the VIN (422 when it is not 17 letters and digits without I, O or Q), chooses the VIN rule (highest priority, then most specific; 404 when none matches), then the best document of the rule's model for type (default owner_manual) among those the caller may read, exactly as for assets (RBAC, ABAC, status). Published documents come before ones in review (the Ask Assist role sees both); then an exact variant over an empty one, a narrower model-year range over a wider one, the most recently updated. The language is lang, else the tenant's default, else en, else any; otherLanguages lists the rest. 404 with code knowledge.no_document (and the matched vehicle) when there is no readable document, 404 with code knowledge.no_rule when no rule matches, 422 with code knowledge.invalid_vin for a malformed VIN. Never reveals documents the caller cannot read. Needs assets.read */
+        get: operations["ResolveKnowledge"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Knowledge documents whose assets the caller can read, newest first, paged by id (limit 50, at most 200). Filters: assetId (the mapping of one asset), type, model and variant codes, lang, year (documents for that model year or for no year in particular), q (title, model or variant contains the text). Needs assets.read */
+        get: operations["ListKnowledgeDocuments"];
+        put?: never;
+        /** Maps a manual, document or html5 asset as a knowledge document (one per asset; 409 if it already has one). docType is owner_manual, faq, service, training or product_info; model, variant and theme are lower-case codes; modelYearFrom and modelYearTo come together; language defaults to the tenant's default language. The worker then reads the chapters. Needs knowledge.manage and assets.update on the asset */
+        post: operations["CreateKnowledgeDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/documents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One knowledge document with its chapters. 404 when it does not exist or its asset cannot be read. Needs assets.read on the asset */
+        get: operations["GetKnowledgeDocument"];
+        /** Replaces the document's mapping (the asset cannot change). Needs knowledge.manage and assets.update on the asset */
+        put: operations["UpdateKnowledgeDocument"];
+        post?: never;
+        /** Removes the mapping; the asset and its versions are untouched. Needs knowledge.manage and assets.update on the asset */
+        delete: operations["DeleteKnowledgeDocument"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/documents/{id}/chapters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The document's table of contents: source (none, pdf, html or manual), when it was indexed, and the chapters. Needs assets.read on the asset */
+        get: operations["GetKnowledgeChapters"];
+        /** Enters or corrects the chapters by hand (source manual; at most 500; titles up to 300 characters). An empty list clears them and hands the document back to automatic indexing. A later re-index leaves manual chapters alone unless forced. Needs knowledge.manage */
+        put: operations["SetKnowledgeChapters"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/documents/{id}/reindex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Asks the worker to read the chapters again from the asset's current version (202). Manual chapters are kept unless force=true. Needs knowledge.manage */
+        post: operations["ReindexKnowledgeDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/vin-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** VIN rules by name, paged by the lower-cased name (limit 100, at most 500; nextCursor is the last name, null at the end). q keeps rules whose name, pattern or model contains the text; model keeps one model. Needs knowledge.manage or assets.update */
+        get: operations["ListVinRules"];
+        put?: never;
+        /** Adds a rule: a pattern (letters, digits, ? for any character, [ABC] or [A-C] sets, a final * for anything after; without it all 17 characters), the model (and optionally variant, fixed model year or the year read from the VIN's tenth character, theme), a priority (higher wins) and an enabled flag. The name is unique in the tenant, ignoring case; at most 5,000 rules (422). Needs knowledge.manage */
+        post: operations["CreateVinRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/vin-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replaces a rule. Needs knowledge.manage */
+        put: operations["UpdateVinRule"];
+        post?: never;
+        /** Removes a rule. Needs knowledge.manage */
+        delete: operations["DeleteVinRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/vin-rules/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Weighs every rule against a VIN without changing anything: the chosen rule and vehicle, and for each rule whether it matched and why (or the first character that disagrees). A malformed VIN answers 200 with valid=false and a reason. Needs knowledge.manage */
+        post: operations["TestVinRules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/vin-rules/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Creates or updates rules from CSV (columns name,pattern,model,variant,year,theme,priority,enabled; a first row starting with 'name' is a header and may reorder or omit optional columns; year is 'vin', empty or a number; enabled defaults to true), matched by name, in one transaction. Send the CSV as the request body (text/csv, or JSON {"csv": "..."}), at most 2 MB. With any invalid line nothing is changed unless partial=true; dryRun=true changes nothing and reports what would happen. The answer lists created, updated, skipped (identical to the stored rule) and per-line errors (200 even with line errors; 422 when the file as a whole is unusable). Needs knowledge.manage */
+        post: operations["ImportVinRules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2779,6 +2938,25 @@ export interface components {
             /** Format: int32 */
             durationMs: number;
         };
+        ChapterDto: {
+            title: string;
+            anchor: string | null;
+            /** Format: int32 */
+            level: number;
+            /** Format: int32 */
+            pageFrom: number | null;
+            /** Format: int32 */
+            pageTo: number | null;
+        };
+        ChaptersDto: {
+            source: string;
+            /** Format: date-time */
+            indexedAt: string | null;
+            chapters: components["schemas"]["ChapterDto"][];
+        };
+        ChaptersInput: {
+            chapters: components["schemas"]["ChapterDto"][] | null;
+        };
         CollectionDto: {
             /** Format: uuid */
             id: string;
@@ -2879,6 +3057,19 @@ export interface components {
             name: string;
             label: string | null;
             inheritedMetadata: components["schemas"]["NullableOfJsonElement"];
+        };
+        CreateKnowledgeDocumentInput: {
+            /** Format: uuid */
+            assetId: string | null;
+            docType: string | null;
+            model: string | null;
+            variant: string | null;
+            /** Format: int32 */
+            modelYearFrom: number | null;
+            /** Format: int32 */
+            modelYearTo: number | null;
+            language: string | null;
+            theme: string | null;
         };
         CreateLinkRequest: {
             renditions: string[] | null;
@@ -3071,6 +3262,65 @@ export interface components {
             sha256: string | null;
         };
         JsonElement: unknown;
+        KnowledgeDocumentDetailDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            assetId: string;
+            title: string;
+            assetType: string;
+            assetStatus: string;
+            docType: string;
+            model: string;
+            variant: string | null;
+            /** Format: int32 */
+            modelYearFrom: number | null;
+            /** Format: int32 */
+            modelYearTo: number | null;
+            language: string;
+            theme: string | null;
+            /** Format: int32 */
+            chapterCount: number;
+            chaptersSource: string;
+            /** Format: date-time */
+            chaptersIndexedAt: string | null;
+            /** Format: uuid */
+            currentVersionId: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            chapters: components["schemas"]["ChapterDto"][];
+        };
+        KnowledgeDocumentDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            assetId: string;
+            title: string;
+            assetType: string;
+            assetStatus: string;
+            docType: string;
+            model: string;
+            variant: string | null;
+            /** Format: int32 */
+            modelYearFrom: number | null;
+            /** Format: int32 */
+            modelYearTo: number | null;
+            language: string;
+            theme: string | null;
+            /** Format: int32 */
+            chapterCount: number;
+            chaptersSource: string;
+            /** Format: date-time */
+            chaptersIndexedAt: string | null;
+            /** Format: uuid */
+            currentVersionId: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         KpiDto: {
             period: components["schemas"]["AnalyticsPeriodDto"];
             previous: components["schemas"]["AnalyticsPreviousPeriodDto"];
@@ -3181,6 +3431,13 @@ export interface components {
             emailAvailable: boolean;
         };
         NullableOfJsonElement: unknown;
+        OtherLanguageDto: {
+            language: string;
+            /** Format: uuid */
+            documentId: string;
+            /** Format: uuid */
+            assetId: string;
+        };
         PageOfActivityItemDto: {
             items: components["schemas"]["ActivityItemDto"][];
             nextCursor: string | null;
@@ -3205,12 +3462,20 @@ export interface components {
             items: components["schemas"]["GlossaryTermDto"][];
             nextCursor: string | null;
         };
+        PageOfKnowledgeDocumentDto: {
+            items: components["schemas"]["KnowledgeDocumentDto"][];
+            nextCursor: string | null;
+        };
         PageOfNotificationDto: {
             items: components["schemas"]["NotificationDto"][];
             nextCursor: string | null;
         };
         PageOfUserDto: {
             items: components["schemas"]["UserDto"][];
+            nextCursor: string | null;
+        };
+        PageOfVinRuleDto: {
+            items: components["schemas"]["VinRuleDto"][];
             nextCursor: string | null;
         };
         PageOfWebhookDeliveryDto: {
@@ -3375,6 +3640,47 @@ export interface components {
             dayOfMonth: number | null;
             recipientUserIds: string[];
             enabled: boolean;
+        };
+        ResolvedDocumentDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            assetId: string;
+            title: string;
+            assetType: string;
+            assetStatus: string;
+            docType: string;
+            model: string;
+            variant: string | null;
+            /** Format: int32 */
+            modelYearFrom: number | null;
+            /** Format: int32 */
+            modelYearTo: number | null;
+            language: string;
+            theme: string | null;
+            /** Format: int32 */
+            chapterCount: number;
+            chaptersSource: string;
+            /** Format: date-time */
+            chaptersIndexedAt: string | null;
+            /** Format: uuid */
+            currentVersionId: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            chapters: components["schemas"]["ChapterDto"][];
+            /** Format: uuid */
+            versionId: string | null;
+            /** Format: int32 */
+            versionNumber: number | null;
+        };
+        ResolveDto: {
+            vin: string;
+            rule: components["schemas"]["VinRuleRefDto"];
+            vehicle: components["schemas"]["VehicleDto"];
+            document: components["schemas"]["ResolvedDocumentDto"];
+            otherLanguages: components["schemas"]["OtherLanguageDto"][];
         };
         RetentionPolicyDto: {
             /** Format: uuid */
@@ -3942,6 +4248,17 @@ export interface components {
             /** @default false */
             clearDefaultWorkflow: boolean;
         };
+        UpdateKnowledgeDocumentInput: {
+            docType: string | null;
+            model: string | null;
+            variant: string | null;
+            /** Format: int32 */
+            modelYearFrom: number | null;
+            /** Format: int32 */
+            modelYearTo: number | null;
+            language: string | null;
+            theme: string | null;
+        };
         UpdateNotificationPreferencesInput: {
             preferences: components["schemas"]["NotificationPreferenceInput"][];
         };
@@ -4094,6 +4411,20 @@ export interface components {
             /** Format: int32 */
             schemaVersion: number;
         };
+        VehicleDto: {
+            model: string;
+            variant: string | null;
+            /** Format: int32 */
+            modelYear: number | null;
+            theme: string | null;
+        };
+        VehicleDto2: {
+            model: string;
+            variant: string | null;
+            /** Format: int32 */
+            modelYear: number | null;
+            theme: string | null;
+        } | null;
         VersionDiffDto: {
             /** Format: int32 */
             versionNo: number;
@@ -4102,6 +4433,88 @@ export interface components {
             fields: {
                 [key: string]: components["schemas"]["FieldDiffDto"];
             };
+        };
+        VinCandidateDto: {
+            /** Format: uuid */
+            ruleId: string;
+            name: string;
+            /** Format: int32 */
+            priority: number;
+            /** Format: int32 */
+            specificity: number;
+            matched: boolean;
+            reason: string;
+        };
+        VinChosenDto: {
+            /** Format: uuid */
+            ruleId: string;
+            name: string;
+        } | null;
+        VinImportErrorDto: {
+            /** Format: int32 */
+            line: number;
+            message: string;
+        };
+        VinImportResultDto: {
+            /** Format: int32 */
+            created: number;
+            /** Format: int32 */
+            updated: number;
+            /** Format: int32 */
+            skipped: number;
+            errors: components["schemas"]["VinImportErrorDto"][];
+            dryRun: boolean;
+        };
+        VinRuleDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            pattern: string;
+            model: string;
+            variant: string | null;
+            /** Format: int32 */
+            modelYear: number | null;
+            yearFromVin: boolean;
+            theme: string | null;
+            /** Format: int32 */
+            priority: number;
+            enabled: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        VinRuleInput: {
+            name: string | null;
+            pattern: string | null;
+            model: string | null;
+            variant: string | null;
+            /** Format: int32 */
+            modelYear: number | null;
+            yearFromVin: boolean | null;
+            theme: string | null;
+            /** Format: int32 */
+            priority: number | null;
+            enabled: boolean | null;
+        };
+        VinRuleRefDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int32 */
+            priority: number;
+        };
+        VinTestDto: {
+            vin: string;
+            valid: boolean;
+            chosen: components["schemas"]["VinChosenDto"];
+            vehicle: components["schemas"]["VehicleDto2"];
+            candidates: components["schemas"]["VinCandidateDto"][];
+            /** @default null */
+            reason: string | null;
+        };
+        VinTestInput: {
+            vin: string | null;
         };
         VocabularyDto: {
             /** Format: uuid */
@@ -8653,6 +9066,372 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    ResolveKnowledge: {
+        parameters: {
+            query?: {
+                vin?: string;
+                type?: string;
+                lang?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolveDto"];
+                };
+            };
+        };
+    };
+    ListKnowledgeDocuments: {
+        parameters: {
+            query?: {
+                type?: string;
+                model?: string;
+                variant?: string;
+                year?: number;
+                lang?: string;
+                q?: string;
+                assetId?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfKnowledgeDocumentDto"];
+                };
+            };
+        };
+    };
+    CreateKnowledgeDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateKnowledgeDocumentInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeDocumentDetailDto"];
+                };
+            };
+        };
+    };
+    GetKnowledgeDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeDocumentDetailDto"];
+                };
+            };
+        };
+    };
+    UpdateKnowledgeDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateKnowledgeDocumentInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeDocumentDetailDto"];
+                };
+            };
+        };
+    };
+    DeleteKnowledgeDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetKnowledgeChapters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChaptersDto"];
+                };
+            };
+        };
+    };
+    SetKnowledgeChapters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChaptersInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChaptersDto"];
+                };
+            };
+        };
+    };
+    ReindexKnowledgeDocument: {
+        parameters: {
+            query?: {
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeDocumentDetailDto"];
+                };
+            };
+        };
+    };
+    ListVinRules: {
+        parameters: {
+            query?: {
+                q?: string;
+                model?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfVinRuleDto"];
+                };
+            };
+        };
+    };
+    CreateVinRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VinRuleInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VinRuleDto"];
+                };
+            };
+        };
+    };
+    UpdateVinRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VinRuleInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VinRuleDto"];
+                };
+            };
+        };
+    };
+    DeleteVinRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TestVinRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VinTestInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VinTestDto"];
+                };
+            };
+        };
+    };
+    ImportVinRules: {
+        parameters: {
+            query?: {
+                dryRun?: boolean;
+                partial?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "text/csv": string;
+                "text/plain": string;
+                "application/json": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VinImportResultDto"];
+                };
             };
         };
     };

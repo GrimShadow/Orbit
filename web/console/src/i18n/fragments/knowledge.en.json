@@ -1,0 +1,399 @@
+{
+  "nav": {
+    "knowledge": "Knowledge"
+  },
+  "knowledge": {
+    "title": "Knowledge",
+    "cancel": "Cancel",
+    "close": "Close",
+    "retry": "Try again",
+    "loadMore": "Load more",
+    "none": "None",
+    "allVariants": "All variants",
+    "tabs": {
+      "label": "Knowledge pages",
+      "documents": "Documents",
+      "rules": "VIN rules",
+      "resolver": "VIN resolver"
+    },
+    "forbidden": {
+      "title": "You do not have access to knowledge documents",
+      "description": "Ask an administrator for read access to assets if you need to see owner manuals and other documents."
+    },
+    "docType": {
+      "owner_manual": "Owner manual",
+      "faq": "FAQ",
+      "service": "Service document",
+      "training": "Training material",
+      "product_info": "Product information"
+    },
+    "source": {
+      "pdf": "PDF bookmarks",
+      "html": "HTML headings",
+      "manual": "Entered by hand",
+      "none": "No chapters found"
+    },
+    "years": {
+      "all": "All years",
+      "single": "{{year}}",
+      "range": "{{from}}-{{to}}"
+    },
+    "col": {
+      "title": "Title",
+      "type": "Type",
+      "vehicle": "Model / variant",
+      "years": "Model years",
+      "language": "Language",
+      "theme": "Theme",
+      "status": "Status",
+      "chapters": "Chapters",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "field": {
+      "docType": "Document type",
+      "model": "Model",
+      "modelHint": "A code: lower-case letters, digits, dots, dashes and underscores.",
+      "variant": "Variant",
+      "variantHint": "Leave empty for all variants of the model.",
+      "years": "Model years",
+      "yearFrom": "From year",
+      "yearTo": "To year",
+      "yearsHint": "Leave both empty for every year. For a single year, enter it in both.",
+      "language": "Language",
+      "theme": "Theme",
+      "themeHint": "Optional, for example a drivetrain or a market. Your tenant decides the themes."
+    },
+    "errors": {
+      "assetRequired": "Choose the asset to map.",
+      "modelRequired": "Enter the model.",
+      "codeInvalid": "Use lower-case letters, digits, dots, dashes and underscores only (up to 100 characters).",
+      "languageRequired": "Choose the language.",
+      "yearInvalid": "Enter a four-digit year between 1900 and 2100.",
+      "yearsBoth": "Enter both years, or leave both empty.",
+      "yearsOrder": "The first year cannot be later than the last.",
+      "nameRequired": "Give the rule a name.",
+      "nameLong": "The name can have up to 200 characters.",
+      "yearRequired": "Enter the model year.",
+      "priorityInvalid": "Enter a whole number, for example 0 or 10."
+    },
+    "documents": {
+      "title": "Documents",
+      "description": "Owner manuals and other documents that an app can find from a VIN, each an existing asset mapped to a model, variant, years and language.",
+      "map": "Map a document",
+      "table": "Knowledge documents",
+      "loading": "Loading the documents",
+      "loadFailed": "The documents could not be loaded",
+      "loadFailedHint": "Check your connection and try again.",
+      "noMatch": "No document matches these filters.",
+      "count_one": "{{count}} document shown.",
+      "count_other": "{{count}} documents shown.",
+      "edit": "Edit the mapping of {{title}}",
+      "unmap": "Remove the mapping of {{title}}",
+      "empty": {
+        "title": "No knowledge documents yet",
+        "manage": "Map an existing manual, document or HTML5 asset to a model, variant, years and language so apps can find it from a VIN.",
+        "read": "No document has been mapped yet. An administrator or librarian can map manuals and other documents."
+      }
+    },
+    "filters": {
+      "label": "Filter documents",
+      "search": "Search",
+      "searchPlaceholder": "Title or text",
+      "type": "Document type",
+      "anyType": "Any type",
+      "model": "Model",
+      "variant": "Variant",
+      "year": "Model year",
+      "language": "Language",
+      "anyLanguage": "Any language"
+    },
+    "map": {
+      "addTitle": "Map a document",
+      "editTitle": "Edit the mapping",
+      "add": "Map document",
+      "save": "Save changes",
+      "created": "{{title}} is now a knowledge document",
+      "saved": "Saved the mapping of {{title}}",
+      "alreadyMapped": "This asset is already mapped as a knowledge document. Edit its mapping instead.",
+      "forbidden": "You need permission to edit this asset to map it.",
+      "saveFailed": "The mapping could not be saved. {{reason}}"
+    },
+    "picker": {
+      "label": "Asset",
+      "search": "Find an asset",
+      "hint": "Manuals, documents and HTML5 bundles only.",
+      "placeholder": "Search by title",
+      "loading": "Searching assets",
+      "failed": "The assets could not be searched. Try again.",
+      "none": "No manual, document or HTML5 asset found.",
+      "count_one": "{{count}} asset found.",
+      "count_other": "{{count}} assets found.",
+      "change": "Change"
+    },
+    "unmap": {
+      "title": "Remove this mapping?",
+      "body": "{{title}} will no longer be found as a knowledge document.",
+      "note": "The file is not deleted: the asset, its versions and its rights stay exactly as they are.",
+      "confirm": "Remove the mapping",
+      "done": "Removed the mapping of {{title}}",
+      "failed": "The mapping could not be removed. {{reason}}"
+    },
+    "rules": {
+      "title": "VIN rules",
+      "description": "Patterns that turn a VIN into a model, variant, model year and theme. Among the rules that match, the highest priority wins, then the most specific pattern.",
+      "forbidden": {
+        "title": "You do not have access to VIN rules",
+        "description": "Only people who can edit assets or manage knowledge can see the rules."
+      },
+      "loading": "Loading the VIN rules",
+      "loadFailed": "The VIN rules could not be loaded",
+      "loadFailedHint": "Check your connection and try again.",
+      "empty": {
+        "title": "No VIN rules yet",
+        "manage": "Add a rule, or import many from a CSV file, so a VIN can be turned into a model and year.",
+        "read": "No rule has been defined yet. An administrator or librarian can add them."
+      },
+      "table": "VIN rules",
+      "search": "Find a rule",
+      "searchPlaceholder": "Name, pattern, model, variant or theme",
+      "noMatch": "No rule matches \"{{q}}\".",
+      "name": "Name",
+      "nameHint": "Unique in your tenant. Importing a rule with the same name updates it.",
+      "pattern": "Pattern",
+      "priority": "Priority",
+      "priorityHint": "A whole number. Higher wins.",
+      "enabledCol": "Enabled",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enableRule": "Enable the rule {{name}}",
+      "enableThis": "Enable this rule",
+      "nowEnabled": "Enabled {{name}}",
+      "nowDisabled": "Disabled {{name}}",
+      "fromVin": "From VIN",
+      "yearSource": "Model year",
+      "yearMode": {
+        "vin": "Read it from the tenth character of the VIN",
+        "fixed": "Use a fixed year"
+      },
+      "modelYear": "Model year",
+      "add": "Add a rule",
+      "addTitle": "Add a VIN rule",
+      "editTitle": "Edit the VIN rule",
+      "save": "Save changes",
+      "edit": "Edit the rule {{name}}",
+      "delete": "Delete the rule {{name}}",
+      "created": "Added the rule {{name}}",
+      "saved": "Saved the rule {{name}}",
+      "duplicate": "A rule named \"{{name}}\" already exists.",
+      "saveFailed": "The rule could not be saved. {{reason}}",
+      "limitReached": "A tenant can hold up to {{max}} VIN rules, and that limit is reached. Delete rules you no longer need.",
+      "limitNote": "Up to {{max}} rules are allowed.",
+      "count_one": "{{count}} of {{total}} rule shown.",
+      "count_other": "{{count}} of {{total}} rules shown.",
+      "showMore_one": "Show {{count}} more",
+      "showMore_other": "Show {{count}} more",
+      "deleteTitle": "Delete this rule?",
+      "deleteBody": "The rule {{name}} will be deleted.",
+      "deleteNote": "VINs it matched will resolve through other rules, or not at all. Documents are not affected.",
+      "deleteConfirm": "Delete the rule",
+      "deleted": "Deleted the rule {{name}}",
+      "deleteFailed": "The rule could not be deleted. {{reason}}"
+    },
+    "pattern": {
+      "error": {
+        "empty": "Enter a pattern.",
+        "tooLong": "A pattern can fix at most {{max}} characters, as a VIN has {{max}}.",
+        "badChar": "\"{{char}}\" is not allowed. Use letters, digits, ?, [ ] and a final *.",
+        "unclosedSet": "A [ has no closing ].",
+        "emptySet": "A set such as [ABC] cannot be empty.",
+        "badSetChar": "\"{{char}}\" is not allowed inside [ ]. Use letters and digits, or a range such as A-C.",
+        "badRange": "The range \"{{char}}\" is not valid. Write it from lower to higher, such as A-C.",
+        "starNotLast": "A * can only be the last character."
+      },
+      "matchesOpen_one": "Matches VINs whose first character fits this pattern, whatever follows.",
+      "matchesOpen_other": "Matches VINs whose first {{count}} characters fit this pattern, whatever follows.",
+      "matchesExact_one": "Matches a VIN of exactly 1 character.",
+      "matchesExact_other": "Matches a VIN of exactly {{count}} characters.",
+      "neverMatches_one": "This pattern fixes 1 character and has no final *, so it cannot match a 17-character VIN. Add * at the end.",
+      "neverMatches_other": "This pattern fixes {{count}} characters and has no final *, so it cannot match a 17-character VIN. Add * at the end."
+    },
+    "help": {
+      "summary": "How patterns work",
+      "intro": "A pattern is compared with the VIN from its first character. Case does not matter.",
+      "literal": "A letter or digit matches itself, so this matches VINs that begin with those characters:",
+      "any": "A question mark matches any one character:",
+      "set": "Square brackets match one character from a list:",
+      "range": "Or one character from a range:",
+      "rest": "A final star matches whatever follows:",
+      "length": "Without a final star the pattern must be exactly as long as the VIN (17 characters).",
+      "full": "is a full-length pattern: it matches one VIN only.",
+      "specific": "When several rules match, the highest priority wins; then the rule with the most fixed characters; then the oldest."
+    },
+    "vin": {
+      "label": "VIN",
+      "hint": "17 letters and digits, without I, O or Q. Spaces are removed and letters are made upper-case.",
+      "problem": {
+        "empty": "Enter a VIN.",
+        "chars": "A VIN has letters and digits only.",
+        "forbidden": "A VIN never contains the letters I, O or Q.",
+        "length": "A VIN has {{max}} characters; this has {{count}}."
+      }
+    },
+    "test": {
+      "title": "Test a VIN",
+      "hint": "See which rule would be chosen for a VIN, and why each rule matched or not. Nothing is saved.",
+      "run": "Test",
+      "failed": "The VIN could not be tested. {{reason}}",
+      "invalid": "{{vin}} is not a valid VIN.",
+      "chosen": "The rule \"{{name}}\" would be used.",
+      "noRule": "No rule matches this VIN.",
+      "candidates": "Rules compared for this VIN",
+      "noCandidates": "There are no enabled rules to compare.",
+      "specificity": "Fixed characters",
+      "matched": "Matched",
+      "reason": "Why",
+      "yes": "Yes",
+      "no": "No",
+      "winner": "Chosen"
+    },
+    "import": {
+      "open": "Import from CSV",
+      "title": "Import VIN rules",
+      "intro": "Rules are matched to existing ones by name: a name that exists is updated, a new name is added. Check the file first; nothing is saved until you choose Import.",
+      "columns": "Columns, in this order, with a header line",
+      "required": "Required",
+      "col": {
+        "name": "A unique name for the rule.",
+        "pattern": "The VIN pattern, for example ACMLS1*.",
+        "model": "The model code.",
+        "variant": "The variant code. Leave empty for all variants.",
+        "year": "A four-digit model year, or \"vin\" or empty to read it from the VIN.",
+        "theme": "An optional theme code.",
+        "priority": "A whole number. Higher wins.",
+        "enabled": "true or false."
+      },
+      "sample": "Download a sample CSV",
+      "file": "CSV file",
+      "loaded": "Loaded {{name}}.",
+      "fileFailed": "The file could not be read.",
+      "paste": "Or paste the CSV text",
+      "partial": "Import the valid lines even if some lines have errors",
+      "partialHint": "Without this, nothing is imported while any line has an error.",
+      "check": "Check the file",
+      "previewTitle": "What the import would do",
+      "countsLabel": "Import result",
+      "created_one": "{{count}} rule to create",
+      "created_other": "{{count}} rules to create",
+      "updated_one": "{{count}} rule to update",
+      "updated_other": "{{count}} rules to update",
+      "skipped_one": "{{count}} line skipped",
+      "skipped_other": "{{count}} lines skipped",
+      "errors_one": "{{count}} line has an error",
+      "errors_other": "{{count}} lines have errors",
+      "line": "Line {{line}}:",
+      "moreErrors_one": "And {{count}} more error.",
+      "moreErrors_other": "And {{count}} more errors.",
+      "blocked": "Fix the lines above and check again, or choose to import the valid lines only.",
+      "nothing": "There is nothing to import in this file.",
+      "submit_one": "Import {{count}} rule",
+      "submit_other": "Import {{count}} rules",
+      "failed": "The import failed. {{reason}}",
+      "finished": "The import finished.",
+      "done": "Done"
+    },
+    "resolver": {
+      "title": "VIN resolver",
+      "description": "Enter a VIN to see what an app would be shown for it: the rule that matched, the vehicle and the document with its chapters.",
+      "language": "Language",
+      "defaultLanguage": "Your default language",
+      "run": "Resolve",
+      "loading": "Looking up the VIN",
+      "malformed": {
+        "title": "{{vin}} is not a valid VIN",
+        "hint": "A VIN has 17 letters and digits, without I, O or Q."
+      },
+      "unknownVin": {
+        "title": "No rule matches {{vin}}",
+        "hint": "The VIN is well formed, but no enabled VIN rule covers it. Add or adjust a rule, then try again."
+      },
+      "noDocument": {
+        "title": "No document found for {{vin}}",
+        "hint": "A rule matches this VIN, but no document of this type is mapped for the vehicle, or you are not allowed to see it."
+      },
+      "forbidden": {
+        "title": "You are not allowed to look up VINs",
+        "hint": "Ask an administrator for read access to assets."
+      },
+      "failed": {
+        "title": "The VIN could not be looked up",
+        "hint": "Something went wrong. Try again in a moment."
+      }
+    },
+    "result": {
+      "vehicle": "Vehicle",
+      "modelYear": "Model year",
+      "rule": "Matched by the rule \"{{name}}\" (priority {{priority}}).",
+      "document": "Document",
+      "version": "Version",
+      "versionNo": "Version {{n}}",
+      "chapters_one": "{{count}} chapter",
+      "chapters_other": "{{count}} chapters",
+      "chaptersLabel": "Chapters",
+      "noChapters": "This document has no chapters.",
+      "otherLanguages": "Also available in"
+    },
+    "chapters": {
+      "page": "p. {{page}}",
+      "pages": "pp. {{from}}-{{to}}",
+      "editTitle": "Edit the chapters",
+      "editHint": "Chapters you enter here are kept when the file is indexed again, unless you choose to replace them. Level 1 is a main chapter; a higher level sits inside the one before it.",
+      "editEmpty": "There are no chapters yet.",
+      "add": "Add a chapter",
+      "rowTitle": "Chapter {{n}} title",
+      "rowLevel": "Chapter {{n}} level",
+      "rowFrom": "Chapter {{n}} first page",
+      "rowTo": "Chapter {{n}} last page",
+      "moveUp": "Move chapter {{n}} up",
+      "moveDown": "Move chapter {{n}} down",
+      "remove": "Remove chapter {{n}}",
+      "rowCount": "{{count}} of {{limit}} chapters.",
+      "fixRows_one": "Fix {{count}} chapter before saving.",
+      "fixRows_other": "Fix {{count}} chapters before saving.",
+      "save": "Save chapters",
+      "saved": "Saved the chapters",
+      "saveFailed": "The chapters could not be saved. {{reason}}",
+      "errors": {
+        "titleRequired": "Enter a title.",
+        "titleLong": "A title can have up to {{max}} characters.",
+        "levelInvalid": "Choose a level from 1 to 6.",
+        "pageInvalid": "Enter a page number from 1.",
+        "pageFromRequired": "Enter the first page too.",
+        "pageOrder": "The last page cannot be before the first.",
+        "tooMany": "A document can have up to {{limit}} chapters."
+      }
+    },
+    "card": {
+      "title": "Knowledge",
+      "loading": "Loading the knowledge mapping",
+      "error": "The knowledge mapping could not be loaded.",
+      "notMapped": "Not a knowledge document",
+      "notMappedBody": "Map this file to a model, variant, years and language so apps can find it from a VIN.",
+      "add": "Add to knowledge",
+      "chaptersSource": "Chapters from",
+      "chapters_one": "{{count}} chapter",
+      "chapters_other": "{{count}} chapters",
+      "noChapters": "No chapters were found in this file. You can enter them by hand.",
+      "actions": "Knowledge actions",
+      "edit": "Edit the mapping",
+      "editChapters": "Edit chapters",
+      "reindex": "Re-index chapters",
+      "unmap": "Remove from knowledge",
+      "reindexStarted": "Re-indexing the chapters. They update in a moment.",
+      "reindexFailed": "The chapters could not be re-indexed. {{reason}}",
+      "replaceTitle": "Replace the chapters you entered?",
+      "replaceBody": "These chapters were entered by hand. Re-indexing reads the file again and replaces them with what it finds.",
+      "replaceConfirm": "Replace the chapters"
+    }
+  }
+}

@@ -2079,6 +2079,183 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
+            modelBuilder.Entity("Dam.Domain.Knowledge.KnowledgeDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<string>("Chapters")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("chapters");
+
+                    b.Property<DateTimeOffset?>("ChaptersIndexedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("chapters_indexed_at");
+
+                    b.Property<Guid?>("ChaptersIndexedVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("chapters_indexed_version_id");
+
+                    b.Property<string>("ChaptersSource")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("chapters_source");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("DocType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("doc_type");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("language");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model");
+
+                    b.Property<int?>("ModelYearFrom")
+                        .HasColumnType("integer")
+                        .HasColumnName("model_year_from");
+
+                    b.Property<int?>("ModelYearTo")
+                        .HasColumnType("integer")
+                        .HasColumnName("model_year_to");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Theme")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("theme");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Variant")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("variant");
+
+                    b.HasKey("Id")
+                        .HasName("pk_knowledge_documents");
+
+                    b.HasIndex("AssetId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_knowledge_documents_asset");
+
+                    b.HasIndex("TenantId", "DocType", "Model")
+                        .HasDatabaseName("ix_knowledge_documents_tenant_id_doc_type_model");
+
+                    b.ToTable("knowledge_documents", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_knowledge_documents_chapters_source", "chapters_source IN ('none','pdf','html','manual')");
+
+                            t.HasCheckConstraint("ck_knowledge_documents_doc_type", "doc_type IN ('owner_manual','faq','service','training','product_info')");
+
+                            t.HasCheckConstraint("ck_knowledge_documents_years", "(model_year_from IS NULL AND model_year_to IS NULL) OR (model_year_from IS NOT NULL AND model_year_to IS NOT NULL AND model_year_from <= model_year_to)");
+                        });
+                });
+
+            modelBuilder.Entity("Dam.Domain.Knowledge.VinRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enabled");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model");
+
+                    b.Property<int?>("ModelYear")
+                        .HasColumnType("integer")
+                        .HasColumnName("model_year");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Pattern")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("pattern");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer")
+                        .HasColumnName("priority");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Theme")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("theme");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Variant")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("variant");
+
+                    b.Property<bool>("YearFromVin")
+                        .HasColumnType("boolean")
+                        .HasColumnName("year_from_vin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_vin_rules");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_vin_rules_tenant_id");
+
+                    b.ToTable("vin_rules", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_vin_rules_year", "model_year IS NULL OR (model_year BETWEEN 1980 AND 2100)");
+                        });
+                });
+
             modelBuilder.Entity("Dam.Domain.Licensing.Rights", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3312,6 +3489,16 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_comment_mentions_comments_comment_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Knowledge.KnowledgeDocument", b =>
+                {
+                    b.HasOne("Dam.Domain.Assets.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_knowledge_documents_assets_asset_id");
                 });
 
             modelBuilder.Entity("Dam.Domain.Licensing.RightsAlert", b =>

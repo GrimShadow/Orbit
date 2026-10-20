@@ -8,6 +8,7 @@ using Dam.Domain.Comments;
 using Dam.Domain.Common;
 using Dam.Domain.Content;
 using Dam.Domain.Identity;
+using Dam.Domain.Knowledge;
 using Dam.Domain.Licensing;
 using Dam.Domain.Notifications;
 using Dam.Domain.Webhooks;
@@ -71,6 +72,8 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<AiRun> AiRuns => Set<AiRun>();
     public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
     public DbSet<TranslationJob> TranslationJobs => Set<TranslationJob>();
+    public DbSet<KnowledgeDocument> KnowledgeDocuments => Set<KnowledgeDocument>();
+    public DbSet<VinRule> VinRules => Set<VinRule>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -116,6 +119,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureComments(b);
         ConfigureRights(b);
         ConfigureAi(b);
+        ConfigureKnowledge(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -746,6 +750,43 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.AssetId, x.Id });
             e.HasIndex(x => new { x.TenantId, x.Status });
+        });
+    }
+
+    private static void ConfigureKnowledge(ModelBuilder b)
+    {
+        b.Entity<KnowledgeDocument>(e =>
+        {
+            e.ToTable("knowledge_documents", t =>
+            {
+                t.HasCheckConstraint("ck_knowledge_documents_doc_type", "doc_type IN ('owner_manual','faq','service','training','product_info')");
+                t.HasCheckConstraint("ck_knowledge_documents_chapters_source", "chapters_source IN ('none','pdf','html','manual')");
+                t.HasCheckConstraint("ck_knowledge_documents_years", "(model_year_from IS NULL AND model_year_to IS NULL) OR (model_year_from IS NOT NULL AND model_year_to IS NOT NULL AND model_year_from <= model_year_to)");
+            });
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.DocType).HasMaxLength(16);
+            e.Property(x => x.Model).HasMaxLength(100);
+            e.Property(x => x.Variant).HasMaxLength(100);
+            e.Property(x => x.Language).HasMaxLength(12);
+            e.Property(x => x.Theme).HasMaxLength(100);
+            e.Property(x => x.Chapters).AsJson();
+            e.Property(x => x.ChaptersSource).HasMaxLength(8);
+            e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.AssetId).IsUnique().HasDatabaseName("ux_knowledge_documents_asset");
+            e.HasIndex(x => new { x.TenantId, x.DocType, x.Model });
+        });
+        b.Entity<VinRule>(e =>
+        {
+            e.ToTable("vin_rules", t => t.HasCheckConstraint("ck_vin_rules_year", "model_year IS NULL OR (model_year BETWEEN 1980 AND 2100)"));
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Pattern).HasMaxLength(100);
+            e.Property(x => x.Model).HasMaxLength(100);
+            e.Property(x => x.Variant).HasMaxLength(100);
+            e.Property(x => x.Theme).HasMaxLength(100);
+            e.HasIndex(x => x.TenantId);
         });
     }
 

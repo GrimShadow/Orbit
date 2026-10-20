@@ -258,4 +258,11 @@ public static class SecuritySql
         CREATE POLICY system_read_usage_event_keys ON usage_event_keys FOR SELECT TO dam_system USING (true);
         CREATE POLICY system_prune_usage_event_keys ON usage_event_keys FOR DELETE TO dam_system USING (true);
         """;
+
+    /// <summary>Knowledge documents and VIN rules (ADR-0039) are edited and deleted freely (a document's rows also go with its asset through the foreign key, which
+    /// needs no grant). Rule names are unique per tenant, ignoring case.</summary>
+    public const string KnowledgeGrants = """
+        GRANT SELECT, INSERT, UPDATE, DELETE ON knowledge_documents, vin_rules TO dam_app;
+        CREATE UNIQUE INDEX ux_vin_rules_tenant_lower_name ON vin_rules (tenant_id, lower(name));
+        """;
 }

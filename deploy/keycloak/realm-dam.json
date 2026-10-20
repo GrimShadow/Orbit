@@ -29,6 +29,9 @@
       },
       {
         "name": "ApiClient"
+      },
+      {
+        "name": "Ask Assist"
       }
     ]
   },
@@ -323,6 +326,25 @@
       ],
       "realmRoles": [
         "Viewer"
+      ],
+      "groups": []
+    },
+    {
+      "username": "askassist@dam.local",
+      "email": "askassist@dam.local",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Asha",
+      "lastName": "Assist",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dam",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Ask Assist"
       ],
       "groups": []
     },

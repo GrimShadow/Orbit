@@ -35,6 +35,8 @@ export interface Call {
   pathname: string;
   search: URLSearchParams;
   json: () => Promise<unknown>;
+  /** The raw request body, for routes that take text (a CSV). */
+  text: () => Promise<string>;
 }
 
 /** Answers `handler` first; falls back to the endpoints every page asks for (me, task summary, thumbnails) and 404s the rest. */
@@ -53,6 +55,7 @@ export function mockApi(
         pathname: url.pathname,
         search: url.searchParams,
         json: () => input.clone().json(),
+        text: () => input.clone().text(),
       };
       calls.push(call);
       const custom = handler(call);

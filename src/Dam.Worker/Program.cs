@@ -3,6 +3,7 @@ using Dam.Infrastructure;
 using Dam.Infrastructure.Ai;
 using Dam.Infrastructure.Consumers;
 using Dam.Infrastructure.Delivery;
+using Dam.Infrastructure.Knowledge;
 using Dam.Infrastructure.Messaging;
 using Dam.Infrastructure.Notifications;
 using Dam.Infrastructure.Ingest;
@@ -30,6 +31,8 @@ builder.Services.AddEventConsumer<PromoteUploadConsumer>();
 builder.Services.AddEventConsumer<PerceptualHashConsumer>();
 builder.Services.AddEventConsumer<RenditionConsumer>();
 builder.Services.AddEventConsumer<IndexConsumer>();
+// Chapters (a PDF's bookmarks, an HTML file's headings) of knowledge documents; heavy parsing runs outside any long transaction (ADR-0038, ADR-0039).
+builder.Services.AddDamKnowledgeWorker();
 // AI enrichment (tags, OCR, transcripts, vectors) runs on its own queue, so a slow or absent AI service never holds up ingest (ADR-0035); also the index rebuild consumer.
 builder.Services.AddDamAiWorker(cfg);
 // Webhook fan-out and notifications (email, in-app, chat) both listen to the same public domain events, each on its own queue.

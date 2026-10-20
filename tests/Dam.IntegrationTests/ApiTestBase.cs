@@ -57,6 +57,16 @@ public abstract class ApiTestBase(PostgresFixture pg) : IAsyncLifetime
         return (res.StatusCode, text.Length > 0 ? JsonDocument.Parse(text).RootElement.Clone() : default);
     }
 
+    /// <summary>A call whose body is plain text (a CSV file), sent as <paramref name="contentType"/>.</summary>
+    protected async Task<(HttpStatusCode Status, JsonElement Body)> CallText(HttpMethod method, string path, string token, string body, string contentType = "text/csv")
+    {
+        using var req = new HttpRequestMessage(method, path) { Headers = { Authorization = new AuthenticationHeaderValue("Bearer", token) } };
+        req.Content = new StringContent(body, System.Text.Encoding.UTF8, contentType);
+        using var res = await _http.SendAsync(req);
+        var text = await res.Content.ReadAsStringAsync();
+        return (res.StatusCode, text.Length > 0 ? JsonDocument.Parse(text).RootElement.Clone() : default);
+    }
+
     protected static string Admin(Guid tenant, Guid? subject = null) =>
         ApiTestHost.TokenFor(tenant, subject ?? Guid.NewGuid(), roles: ["Admin"], name: "Admin");
 

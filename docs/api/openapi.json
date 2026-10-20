@@ -6472,6 +6472,607 @@
           }
         }
       }
+    },
+    "/api/v1/knowledge/resolve": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "The document that describes a vehicle: validates the VIN (422 when it is not 17 letters and digits without I, O or Q), chooses the VIN rule (highest priority, then most specific; 404 when none matches), then the best document of the rule\u0027s model for type (default owner_manual) among those the caller may read, exactly as for assets (RBAC, ABAC, status). Published documents come before ones in review (the Ask Assist role sees both); then an exact variant over an empty one, a narrower model-year range over a wider one, the most recently updated. The language is lang, else the tenant\u0027s default, else en, else any; otherLanguages lists the rest. 404 with code knowledge.no_document (and the matched vehicle) when there is no readable document, 404 with code knowledge.no_rule when no rule matches, 422 with code knowledge.invalid_vin for a malformed VIN. Never reveals documents the caller cannot read. Needs assets.read",
+        "operationId": "ResolveKnowledge",
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/documents": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Knowledge documents whose assets the caller can read, newest first, paged by id (limit 50, at most 200). Filters: assetId (the mapping of one asset), type, model and variant codes, lang, year (documents for that model year or for no year in particular), q (title, model or variant contains the text). Needs assets.read",
+        "operationId": "ListKnowledgeDocuments",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variant",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assetId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOfKnowledgeDocumentDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Maps a manual, document or html5 asset as a knowledge document (one per asset; 409 if it already has one). docType is owner_manual, faq, service, training or product_info; model, variant and theme are lower-case codes; modelYearFrom and modelYearTo come together; language defaults to the tenant\u0027s default language. The worker then reads the chapters. Needs knowledge.manage and assets.update on the asset",
+        "operationId": "CreateKnowledgeDocument",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateKnowledgeDocumentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeDocumentDetailDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/documents/{id}": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "One knowledge document with its chapters. 404 when it does not exist or its asset cannot be read. Needs assets.read on the asset",
+        "operationId": "GetKnowledgeDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeDocumentDetailDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Replaces the document\u0027s mapping (the asset cannot change). Needs knowledge.manage and assets.update on the asset",
+        "operationId": "UpdateKnowledgeDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateKnowledgeDocumentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeDocumentDetailDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Removes the mapping; the asset and its versions are untouched. Needs knowledge.manage and assets.update on the asset",
+        "operationId": "DeleteKnowledgeDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/documents/{id}/chapters": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "The document\u0027s table of contents: source (none, pdf, html or manual), when it was indexed, and the chapters. Needs assets.read on the asset",
+        "operationId": "GetKnowledgeChapters",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChaptersDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Enters or corrects the chapters by hand (source manual; at most 500; titles up to 300 characters). An empty list clears them and hands the document back to automatic indexing. A later re-index leaves manual chapters alone unless forced. Needs knowledge.manage",
+        "operationId": "SetKnowledgeChapters",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChaptersInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChaptersDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/documents/{id}/reindex": {
+      "post": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Asks the worker to read the chapters again from the asset\u0027s current version (202). Manual chapters are kept unless force=true. Needs knowledge.manage",
+        "operationId": "ReindexKnowledgeDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeDocumentDetailDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/vin-rules": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "VIN rules by name, paged by the lower-cased name (limit 100, at most 500; nextCursor is the last name, null at the end). q keeps rules whose name, pattern or model contains the text; model keeps one model. Needs knowledge.manage or assets.update",
+        "operationId": "ListVinRules",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOfVinRuleDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Adds a rule: a pattern (letters, digits, ? for any character, [ABC] or [A-C] sets, a final * for anything after; without it all 17 characters), the model (and optionally variant, fixed model year or the year read from the VIN\u0027s tenth character, theme), a priority (higher wins) and an enabled flag. The name is unique in the tenant, ignoring case; at most 5,000 rules (422). Needs knowledge.manage",
+        "operationId": "CreateVinRule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VinRuleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VinRuleDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/vin-rules/{id}": {
+      "put": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Replaces a rule. Needs knowledge.manage",
+        "operationId": "UpdateVinRule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VinRuleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VinRuleDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Removes a rule. Needs knowledge.manage",
+        "operationId": "DeleteVinRule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/vin-rules/test": {
+      "post": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Weighs every rule against a VIN without changing anything: the chosen rule and vehicle, and for each rule whether it matched and why (or the first character that disagrees). A malformed VIN answers 200 with valid=false and a reason. Needs knowledge.manage",
+        "operationId": "TestVinRules",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VinTestInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VinTestDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/vin-rules/import": {
+      "post": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Creates or updates rules from CSV (columns name,pattern,model,variant,year,theme,priority,enabled; a first row starting with \u0027name\u0027 is a header and may reorder or omit optional columns; year is \u0027vin\u0027, empty or a number; enabled defaults to true), matched by name, in one transaction. Send the CSV as the request body (text/csv, or JSON {\u0022csv\u0022: \u0022...\u0022}), at most 2 MB. With any invalid line nothing is changed unless partial=true; dryRun=true changes nothing and reports what would happen. The answer lists created, updated, skipped (identical to the stored rule) and per-line errors (200 even with line errors; 422 when the file as a whole is unusable). Needs knowledge.manage",
+        "operationId": "ImportVinRules",
+        "parameters": [
+          {
+            "name": "dryRun",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "partial",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "text/csv": {
+              "schema": {
+                "type": "string"
+              }
+            },
+            "text/plain": {
+              "schema": {
+                "type": "string"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VinImportResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -8302,6 +8903,78 @@
           }
         }
       },
+      "ChapterDto": {
+        "required": [
+          "title",
+          "anchor",
+          "level",
+          "pageFrom",
+          "pageTo"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "anchor": {
+            "type": "string",
+            "nullable": true
+          },
+          "level": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageFrom": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pageTo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "ChaptersDto": {
+        "required": [
+          "source",
+          "indexedAt",
+          "chapters"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "indexedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "chapters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChapterDto"
+            }
+          }
+        }
+      },
+      "ChaptersInput": {
+        "required": [
+          "chapters"
+        ],
+        "type": "object",
+        "properties": {
+          "chapters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChapterDto"
+            },
+            "nullable": true
+          }
+        }
+      },
       "CollectionDto": {
         "required": [
           "id",
@@ -8660,6 +9333,56 @@
           },
           "inheritedMetadata": {
             "$ref": "#/components/schemas/NullableOfJsonElement"
+          }
+        }
+      },
+      "CreateKnowledgeDocumentInput": {
+        "required": [
+          "assetId",
+          "docType",
+          "model",
+          "variant",
+          "modelYearFrom",
+          "modelYearTo",
+          "language",
+          "theme"
+        ],
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "docType": {
+            "type": "string",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "variant": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelYearFrom": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "modelYearTo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "theme": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -9335,6 +10058,201 @@
         }
       },
       "JsonElement": {},
+      "KnowledgeDocumentDetailDto": {
+        "required": [
+          "id",
+          "assetId",
+          "title",
+          "assetType",
+          "assetStatus",
+          "docType",
+          "model",
+          "variant",
+          "modelYearFrom",
+          "modelYearTo",
+          "language",
+          "theme",
+          "chapterCount",
+          "chaptersSource",
+          "chaptersIndexedAt",
+          "currentVersionId",
+          "createdAt",
+          "updatedAt",
+          "chapters"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "assetType": {
+            "type": "string"
+          },
+          "assetStatus": {
+            "type": "string"
+          },
+          "docType": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelYearFrom": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "modelYearTo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "language": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string",
+            "nullable": true
+          },
+          "chapterCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "chaptersSource": {
+            "type": "string"
+          },
+          "chaptersIndexedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "currentVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "chapters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChapterDto"
+            }
+          }
+        }
+      },
+      "KnowledgeDocumentDto": {
+        "required": [
+          "id",
+          "assetId",
+          "title",
+          "assetType",
+          "assetStatus",
+          "docType",
+          "model",
+          "variant",
+          "modelYearFrom",
+          "modelYearTo",
+          "language",
+          "theme",
+          "chapterCount",
+          "chaptersSource",
+          "chaptersIndexedAt",
+          "currentVersionId",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "assetType": {
+            "type": "string"
+          },
+          "assetStatus": {
+            "type": "string"
+          },
+          "docType": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelYearFrom": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "modelYearTo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "language": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string",
+            "nullable": true
+          },
+          "chapterCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "chaptersSource": {
+            "type": "string"
+          },
+          "chaptersIndexedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "currentVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "KpiDto": {
         "required": [
           "period",
@@ -9737,6 +10655,27 @@
       "NullableOfJsonElement": {
         "nullable": true
       },
+      "OtherLanguageDto": {
+        "required": [
+          "language",
+          "documentId",
+          "assetId"
+        ],
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "PageOfActivityItemDto": {
         "required": [
           "items",
@@ -9851,6 +10790,25 @@
           }
         }
       },
+      "PageOfKnowledgeDocumentDto": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeDocumentDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "PageOfNotificationDto": {
         "required": [
           "items",
@@ -9881,6 +10839,25 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/UserDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PageOfVinRuleDto": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VinRuleDto"
             }
           },
           "nextCursor": {
@@ -10446,6 +11423,149 @@
           },
           "enabled": {
             "type": "boolean"
+          }
+        }
+      },
+      "ResolvedDocumentDto": {
+        "required": [
+          "id",
+          "assetId",
+          "title",
+          "assetType",
+          "assetStatus",
+          "docType",
+          "model",
+          "variant",
+          "modelYearFrom",
+          "modelYearTo",
+          "language",
+          "theme",
+          "chapterCount",
+          "chaptersSource",
+          "chaptersIndexedAt",
+          "currentVersionId",
+          "createdAt",
+          "updatedAt",
+          "chapters",
+          "versionId",
+          "versionNumber"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "assetType": {
+            "type": "string"
+          },
+          "assetStatus": {
+            "type": "string"
+          },
+          "docType": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelYearFrom": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "modelYearTo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "language": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string",
+            "nullable": true
+          },
+          "chapterCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "chaptersSource": {
+            "type": "string"
+          },
+          "chaptersIndexedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "currentVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "chapters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChapterDto"
+            }
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "versionNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        }
+      },
+      "ResolveDto": {
+        "required": [
+          "vin",
+          "rule",
+          "vehicle",
+          "document",
+          "otherLanguages"
+        ],
+        "type": "object",
+        "properties": {
+          "vin": {
+            "type": "string"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/VinRuleRefDto"
+          },
+          "vehicle": {
+            "$ref": "#/components/schemas/VehicleDto"
+          },
+          "document": {
+            "$ref": "#/components/schemas/ResolvedDocumentDto"
+          },
+          "otherLanguages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OtherLanguageDto"
+            }
           }
         }
       },
@@ -12337,6 +13457,50 @@
           }
         }
       },
+      "UpdateKnowledgeDocumentInput": {
+        "required": [
+          "docType",
+          "model",
+          "variant",
+          "modelYearFrom",
+          "modelYearTo",
+          "language",
+          "theme"
+        ],
+        "type": "object",
+        "properties": {
+          "docType": {
+            "type": "string",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "variant": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelYearFrom": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "modelYearTo": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "theme": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "UpdateNotificationPreferencesInput": {
         "required": [
           "preferences"
@@ -12907,6 +14071,61 @@
           }
         }
       },
+      "VehicleDto": {
+        "required": [
+          "model",
+          "variant",
+          "modelYear",
+          "theme"
+        ],
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelYear": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "theme": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "VehicleDto2": {
+        "required": [
+          "model",
+          "variant",
+          "modelYear",
+          "theme"
+        ],
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelYear": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "theme": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "nullable": true
+      },
       "VersionDiffDto": {
         "required": [
           "versionNo",
@@ -12928,6 +14147,291 @@
             "additionalProperties": {
               "$ref": "#/components/schemas/FieldDiffDto"
             }
+          }
+        }
+      },
+      "VinCandidateDto": {
+        "required": [
+          "ruleId",
+          "name",
+          "priority",
+          "specificity",
+          "matched",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "specificity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "matched": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "VinChosenDto": {
+        "required": [
+          "ruleId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "nullable": true
+      },
+      "VinImportErrorDto": {
+        "required": [
+          "line",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "line": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "VinImportResultDto": {
+        "required": [
+          "created",
+          "updated",
+          "skipped",
+          "errors",
+          "dryRun"
+        ],
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updated": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VinImportErrorDto"
+            }
+          },
+          "dryRun": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VinRuleDto": {
+        "required": [
+          "id",
+          "name",
+          "pattern",
+          "model",
+          "variant",
+          "modelYear",
+          "yearFromVin",
+          "theme",
+          "priority",
+          "enabled",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelYear": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "yearFromVin": {
+            "type": "boolean"
+          },
+          "theme": {
+            "type": "string",
+            "nullable": true
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "VinRuleInput": {
+        "required": [
+          "name",
+          "pattern",
+          "model",
+          "variant",
+          "modelYear",
+          "yearFromVin",
+          "theme",
+          "priority",
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "pattern": {
+            "type": "string",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "variant": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelYear": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "yearFromVin": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "theme": {
+            "type": "string",
+            "nullable": true
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "enabled": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
+      "VinRuleRefDto": {
+        "required": [
+          "id",
+          "name",
+          "priority"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "VinTestDto": {
+        "required": [
+          "vin",
+          "valid",
+          "chosen",
+          "vehicle",
+          "candidates"
+        ],
+        "type": "object",
+        "properties": {
+          "vin": {
+            "type": "string"
+          },
+          "valid": {
+            "type": "boolean"
+          },
+          "chosen": {
+            "$ref": "#/components/schemas/VinChosenDto"
+          },
+          "vehicle": {
+            "$ref": "#/components/schemas/VehicleDto2"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VinCandidateDto"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "VinTestInput": {
+        "required": [
+          "vin"
+        ],
+        "type": "object",
+        "properties": {
+          "vin": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -13794,6 +15298,9 @@
     },
     {
       "name": "Glossary"
+    },
+    {
+      "name": "Knowledge"
     }
   ]
 }

@@ -264,6 +264,26 @@ describe('AssetDetailPage', () => {
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
   });
 
+  it('opens a published PDF at the page named by ?page= (a chapter link), and ignores a page it does not have', async () => {
+    const renditions = () =>
+      json([
+        { profile: 'preview', pageNo: null, mime: 'image/webp', status: 'ready' },
+        ...[1, 2, 3].map((n) => ({ profile: 'pdf_pages', pageNo: n, mime: 'image/webp', status: 'ready' })),
+      ]);
+    mockApi(standardHandlers({ '/api/v1/assets/a1/renditions': renditions }, 'published', { type: 'document', title: 'Guide' }));
+    renderAt('/library/assets/a1?page=3');
+    expect(await screen.findByRole('img', { name: 'Guide, page 3' })).toHaveAttribute(
+      'src',
+      'https://cdn.test/a1-pdf_pages-3.jpg',
+    );
+    expect(screen.getByText('Page 3 of 3')).toBeInTheDocument();
+    cleanup();
+
+    mockApi(standardHandlers({ '/api/v1/assets/a1/renditions': renditions }, 'published', { type: 'document', title: 'Guide' }));
+    renderAt('/library/assets/a1?page=99');
+    expect(await screen.findByRole('img', { name: 'Guide, page 1' })).toBeInTheDocument();
+  });
+
   it('shows only the watermarked first page of a draft PDF, with a note, and never asks for page rasters or the original', async () => {
     mockApi(
       standardHandlers(
