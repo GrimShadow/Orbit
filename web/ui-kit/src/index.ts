@@ -12,6 +12,7 @@ export * from './components/Tabs';
 export * from './components/SegmentedControl';
 export * from './components/Tree';
 export * from './components/FacetList';
+export * from './components/ImageWithFallback';
 export * from './components/ThumbnailGrid';
 export * from './components/CardMenu';
 export * from './components/Menu';

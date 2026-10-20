@@ -1,0 +1,122 @@
+{
+  "nav": {
+    "tasks": "कार्य"
+  },
+  "tasks": {
+    "title": "कार्य",
+    "description": "वे एसेट जो आपके निर्णय की प्रतीक्षा में हैं, और आपके लिए गए निर्णय।",
+    "viewLabel": "दिखाएँ",
+    "pending": "लंबित",
+    "decided": "निर्णय हो चुके",
+    "scopeLabel": "किसके कार्य",
+    "mine": "मेरे",
+    "everyone": "सभी",
+    "summaryWaiting_one": "{{count}} कार्य आपकी प्रतीक्षा में",
+    "summaryWaiting_other": "{{count}} कार्य आपकी प्रतीक्षा में",
+    "summaryOverdue": "{{count}} देर से",
+    "listPending": "लंबित कार्य",
+    "listDecided": "निर्णय हो चुके कार्य",
+    "loading": "कार्य लोड हो रहे हैं",
+    "stepLine": "{{workflow}} · {{step}}",
+    "assignedTo": "{{who}} को सौंपा गया",
+    "due": {
+      "in": "{{duration}} में नियत",
+      "overdue": "{{duration}} की देरी",
+      "none": "कोई नियत समय नहीं"
+    },
+    "escalated": "आगे बढ़ाया गया",
+    "escalatedHint": "इस कार्य का नियत समय निकल गया और इसे एस्केलेशन समूह को भी सौंपा गया।",
+    "approve": "स्वीकृत करें",
+    "reject": "अस्वीकार करें",
+    "approveWithComment": "टिप्पणी के साथ स्वीकृत करें",
+    "decisionFor": "{{title}} पर निर्णय",
+    "decision": {
+      "approve": "स्वीकृत",
+      "reject": "अस्वीकृत",
+      "cancelled": "रद्द"
+    },
+    "by": "{{name}} द्वारा",
+    "dialog": {
+      "approveTitle": "“{{title}}” स्वीकृत करें",
+      "rejectTitle": "“{{title}}” अस्वीकार करें",
+      "approveIntro": "स्वीकृत करने पर यह अगले चरण पर जाता है, या अंतिम चरण होने पर अनुमोदन पूरा हो जाता है।",
+      "rejectIntro": "अस्वीकार करने पर अनुमोदन रुक जाता है। आपका कारण एसेट के साथ सहेजा जाता है ताकि रचनाकार को पता चले कि क्या बदलना है।",
+      "commentOptional": "टिप्पणी (वैकल्पिक)",
+      "commentRequired": "अस्वीकार करने का कारण",
+      "commentRequiredError": "बताएँ कि आप इस एसेट को क्यों अस्वीकार कर रहे हैं।",
+      "counter": "{{count}} / {{max}}",
+      "cancel": "रद्द करें",
+      "confirmApprove": "स्वीकृत करें",
+      "confirmReject": "एसेट अस्वीकार करें"
+    },
+    "toast": {
+      "approved": "“{{title}}” स्वीकृत किया गया",
+      "rejected": "“{{title}}” अस्वीकार किया गया",
+      "failed": "आपका निर्णय दर्ज नहीं हो सका"
+    },
+    "empty": {
+      "pendingTitle": "सब निपट चुका है",
+      "pendingBody": "आपके निर्णय के लिए कुछ भी प्रतीक्षा में नहीं है। समीक्षा के लिए एसेट भेजे जाते ही नए कार्य यहाँ दिखेंगे।",
+      "decidedTitle": "अभी कोई निर्णय नहीं",
+      "decidedBody": "आपके द्वारा स्वीकृत या अस्वीकृत कार्य यहाँ सूचीबद्ध होते हैं।",
+      "everyonePendingTitle": "कोई खुला कार्य नहीं",
+      "everyonePendingBody": "किसी के पास निर्णय के लिए कुछ भी प्रतीक्षा में नहीं है।",
+      "everyoneDecidedTitle": "अभी कोई निर्णय नहीं",
+      "everyoneDecidedBody": "कार्यक्षेत्र में किसी के भी लिए गए निर्णय यहाँ सूचीबद्ध होते हैं।"
+    },
+    "error": "कार्य लोड नहीं हो सके।",
+    "retry": "फिर कोशिश करें",
+    "loadMore": "और लोड करें",
+    "badge": {
+      "pending_one": "{{count}} लंबित",
+      "pending_other": "{{count}} लंबित",
+      "overdue": "{{count}} देर से"
+    }
+  },
+  "assetWorkflow": {
+    "title": "अनुमोदन",
+    "stepsLabel": "अनुमोदन के चरण",
+    "workflow": "वर्कफ़्लो: {{name}}",
+    "started": "{{when}} जमा किया गया",
+    "startedBy": "{{name}} ने {{when}} जमा किया",
+    "state": {
+      "done": "पूर्ण",
+      "active": "जारी है",
+      "waiting": "प्रतीक्षा में",
+      "skipped": "छोड़ा गया"
+    },
+    "mode": {
+      "any": "कोई भी एक अनुमोदक",
+      "all": "सभी को स्वीकृत करना होगा"
+    },
+    "sla_one": "निर्णय के लिए {{count}} घंटा",
+    "sla_other": "निर्णय के लिए {{count}} घंटे",
+    "roles": "{{roles}}",
+    "namedPeople_one": "{{count}} नामित समीक्षक",
+    "namedPeople_other": "{{count}} नामित समीक्षक",
+    "taskCancelled": "रद्द",
+    "yourTurn": "यहाँ आपके निर्णय की ज़रूरत है।",
+    "awaiting": "अनुमोदन की प्रतीक्षा: {{step}}",
+    "awaitingGeneric": "अनुमोदन की प्रतीक्षा",
+    "outcome": {
+      "approved": "स्वीकृत",
+      "rejected": "अस्वीकृत",
+      "cancelled": "वापस लिया गया",
+      "approvedWhen": "{{when}} स्वीकृत",
+      "rejectedWhen": "{{when}} अस्वीकृत",
+      "cancelledWhen": "{{when}} वापस लिया गया"
+    }
+  },
+  "home": {
+    "stats": {
+      "tasks": "खुले कार्य",
+      "tasksHintNone": "आपकी प्रतीक्षा में कुछ नहीं",
+      "tasksOverdue": "{{count}} देर से",
+      "tasksNoneOverdue": "कोई देरी नहीं",
+      "tasksSla": "{{percent}}% समय पर",
+      "tasksSlaTitle": "पिछले 30 दिनों में {{percent}}% कार्यों पर उनके SLA के भीतर निर्णय हुआ",
+      "tasksFailed": "लोड नहीं हो सका",
+      "totalPublished": "{{count}} प्रकाशित"
+    }
+  }
+}

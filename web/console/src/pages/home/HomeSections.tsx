@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { relativeTime } from '../../lib/relativeTime';
 import type { AssetDto } from '../../features/asset/assetApi';
-import { Button, EmptyState, FileTypeIcon, Skeleton } from '@dam/ui-kit';
+import { Button, EmptyState, FileTypeIcon, ImageWithFallback, Skeleton } from '@dam/ui-kit';
 
 type Thumbs = Record<string, string | null> | undefined;
 
@@ -39,12 +39,17 @@ export function SectionNote({ onRetry }: { onRetry: () => void }) {
 }
 
 function AssetImage({ type, url }: { type: string; url?: string | null }) {
-  return url ? (
-    <img className="dam-home__img" src={url} alt="" loading="lazy" />
-  ) : (
-    <span className="dam-home__img dam-home__img--empty" aria-hidden="true">
-      <FileTypeIcon type={type} size={28} />
-    </span>
+  return (
+    <ImageWithFallback
+      className="dam-home__img"
+      src={url}
+      loading="lazy"
+      fallback={
+        <span className="dam-home__img dam-home__img--empty" aria-hidden="true">
+          <FileTypeIcon type={type} size={28} />
+        </span>
+      }
+    />
   );
 }
 

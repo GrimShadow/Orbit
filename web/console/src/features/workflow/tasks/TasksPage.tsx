@@ -7,6 +7,7 @@ import {
   Button,
   EmptyState,
   FileTypeIcon,
+  ImageWithFallback,
   LoadingRegion,
   PageHeader,
   SegmentedControl,
@@ -15,6 +16,7 @@ import {
 } from '../../../ui';
 import { useMe } from '../../../api/me';
 import { relativeTime } from '../../../lib/relativeTime';
+import { hasThumbnail } from '../../../lib/thumbnails';
 import { useThumbnailLinks } from '../../asset/assetApi';
 import { useReviewSummary } from '../../translation/translationApi';
 import { useDocumentTitle } from '../../library/useDocumentTitle';
@@ -45,13 +47,16 @@ function TaskRow({
 
   return (
     <li className="dam-taskrow">
-      {thumb ? (
-        <img className="dam-taskrow__thumb" src={thumb} alt="" loading="lazy" />
-      ) : (
-        <span className="dam-taskrow__thumb dam-taskrow__thumb--empty" aria-hidden="true">
-          <FileTypeIcon type={task.assetType} size={22} />
-        </span>
-      )}
+      <ImageWithFallback
+        className="dam-taskrow__thumb"
+        src={thumb}
+        loading="lazy"
+        fallback={
+          <span className="dam-taskrow__thumb dam-taskrow__thumb--empty" aria-hidden="true">
+            <FileTypeIcon type={task.assetType} size={22} />
+          </span>
+        }
+      />
       <div className="dam-taskrow__main">
         <Link to={`/library/assets/${task.assetId}`} className="dam-taskrow__title">
           {task.assetTitle}
@@ -146,7 +151,7 @@ function ApprovalTasks() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `loaded` is rebuilt from query.data each render
     [query.data, view, now],
   );
-  const thumbs = useThumbnailLinks(items.map((x) => x.assetId));
+  const thumbs = useThumbnailLinks(items.filter((x) => hasThumbnail(x.assetType)).map((x) => x.assetId));
 
   const s = summary.data;
   const summaryText =

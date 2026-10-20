@@ -29,22 +29,30 @@ public sealed class RenditionService(DamDbContext db, IObjectStore store, IOutbo
     public static bool CanRender(AssetVersion v) => KindOf(v) is not null;
 
     /// <summary>Every profile eagerly generated for a new version (spec Step 1.4 "asset.version.added"). Never throws for a source it
-    /// cannot decode or convert: that is left for the delivery origin to try again on demand and report if it still fails.</summary>
+    /// cannot decode or convert: that is left for the delivery origin to try again on demand and report if it still fails.
+    /// Idempotent: a profile already stored and ready is not made again, so a job that runs twice (the worker retried it, or it was redelivered after a crash)
+    /// repeats nothing that finished. Each rendition is saved, and its readiness announced, by itself (ADR-0038).</summary>
     public async Task GenerateEagerAsync(AssetVersion version, CancellationToken ct)
     {
         switch (KindOf(version))
         {
             case SourceKind.Image:
+                var images = await NotReadyAsync(version, RenditionProfiles.Images, ct);
+                if (images.Count == 0) break;
                 var image = await ReadSourceAsync(version, ct);
-                foreach (var profile in RenditionProfiles.Images) await StillAsync(version, profile, 0, image, ct);
+                foreach (var profile in images) await StillAsync(version, profile, 0, image, ct);
                 break;
 
             case SourceKind.Video:
+                var stills = await NotReadyAsync(version, RenditionProfiles.VideoStills, ct);
+                var transcodes = new List<VideoProfile>();
+                foreach (var profile in RenditionProfiles.Videos) if (!await IsReadyAsync(version, profile.Name, 0, ct)) transcodes.Add(profile);
+                if (stills.Count == 0 && transcodes.Count == 0) break;
                 var source = await ReadSourceAsync(version, ct);
                 var frame = await video.ExtractFrameAsync(source, ct);
-                foreach (var still in RenditionProfiles.VideoStills) await StillAsync(version, still, 0, frame, ct);
+                foreach (var still in stills) await StillAsync(version, still, 0, frame, ct);
                 var (frameWidth, frameHeight) = FrameSize(frame);
-                foreach (var profile in RenditionProfiles.Videos) await TranscodeAsync(version, profile, source, frameWidth, frameHeight, ct);
+                foreach (var profile in transcodes) await TranscodeAsync(version, profile, source, frameWidth, frameHeight, ct);
                 break;
 
             case SourceKind.Pdf:
@@ -57,15 +65,37 @@ public sealed class RenditionService(DamDbContext db, IObjectStore store, IOutbo
         }
     }
 
+    private async Task<List<RenditionProfile>> NotReadyAsync(AssetVersion version, IEnumerable<RenditionProfile> profiles, CancellationToken ct)
+    {
+        var missing = new List<RenditionProfile>();
+        foreach (var profile in profiles) if (!await IsReadyAsync(version, profile.Name, 0, ct)) missing.Add(profile);
+        return missing;
+    }
+
+    /// <summary>The rendition is recorded as ready and its object is in the store.</summary>
+    private async Task<bool> IsReadyAsync(AssetVersion version, string profile, int pageNo, CancellationToken ct)
+    {
+        var row = await db.Renditions.AsNoTracking().Where(r => r.VersionId == version.Id && r.Profile == profile && r.PageNo == pageNo && r.Status == RenditionStatus.Ready)
+            .Select(r => new { r.Bucket, r.StorageKey }).FirstOrDefaultAsync(ct);
+        return row is not null && await store.HeadAsync(row.Bucket, row.StorageKey, ct) is not null;
+    }
+
     /// <summary>Everything a PDF's bytes produce: page-1 stills and every page up to the configured limit. Office documents reach
     /// here already converted, so a PDF and a converted Office document are indistinguishable from this point on.</summary>
     private async Task GeneratePdfDerivedAsync(AssetVersion version, byte[] pdfBytes, CancellationToken ct)
     {
-        var page1 = await pdf.RasterizePageAsync(pdfBytes, 1, ct);
-        foreach (var still in RenditionProfiles.PdfStills) await StillAsync(version, still, 0, page1, ct);
-        await StillAsync(version, RenditionProfiles.PdfPage, 1, page1, ct);
+        var stills = await NotReadyAsync(version, RenditionProfiles.PdfStills, ct);
+        var firstPage = !await IsReadyAsync(version, RenditionProfiles.PdfPagesProfile, 1, ct);
+        if (stills.Count > 0 || firstPage)
+        {
+            var page1 = await pdf.RasterizePageAsync(pdfBytes, 1, ct);
+            foreach (var still in stills) await StillAsync(version, still, 0, page1, ct);
+            if (firstPage) await StillAsync(version, RenditionProfiles.PdfPage, 1, page1, ct);
+        }
         var pages = Math.Min(await pdf.PageCountAsync(pdfBytes, ct), settings.MaxPdfPages);
-        for (var n = 2; n <= pages; n++) await StillAsync(version, RenditionProfiles.PdfPage, n, await pdf.RasterizePageAsync(pdfBytes, n, ct), ct);
+        for (var n = 2; n <= pages; n++)
+            if (!await IsReadyAsync(version, RenditionProfiles.PdfPagesProfile, n, ct))
+                await StillAsync(version, RenditionProfiles.PdfPage, n, await pdf.RasterizePageAsync(pdfBytes, n, ct), ct);
     }
 
     /// <summary>The bytes to rasterise as a PDF: the version itself (PDF) or its LibreOffice-converted form (Office).</summary>

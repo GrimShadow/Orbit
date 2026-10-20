@@ -23,6 +23,7 @@ import { BulkEditBar } from './BulkEditBar';
 import { FilterChips, type FilterChip } from './FilterChips';
 import { FolderPanel } from './FolderPanel';
 import { LibraryList } from './LibraryList';
+import { thumbnailIds } from '../../lib/thumbnails';
 import { toAssetThumb } from './assetThumb';
 import { useAssetsInfinite, useThumbnailMap, type AssetDto } from './assets';
 import { folderBreadcrumb, useFolders } from './folders';
@@ -99,7 +100,7 @@ export function LibraryPage() {
   const rootCount = rootQuery.data
     ? `${rootQuery.data.pages.reduce((n, p) => n + p.items.length, 0)}${rootQuery.hasNextPage ? '+' : ''}`
     : undefined;
-  const thumbnails = useThumbnailMap(assets.map((a) => a.id));
+  const thumbnails = useThumbnailMap(thumbnailIds(assets));
 
   const itemActions = useItemActions({
     onOpenFolder: (id) => update({ folder: id }),

@@ -1162,6 +1162,11 @@ th[aria-sort='descending'] .dam-sort__icon {
   background: var(--dam-surface-2);
   transition: transform var(--dam-duration-slow) var(--dam-ease-spring);
 }
+.dam-thumb__img--empty {
+  display: grid;
+  place-items: center;
+  color: var(--dam-muted);
+}
 .dam-thumb:hover .dam-thumb__img {
   transform: scale(1.02);
 }

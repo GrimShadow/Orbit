@@ -22,7 +22,10 @@ public sealed class AiSearchTests(PostgresFixture pg, SearchFixture os) : AssetT
 
     protected override IReadOnlyDictionary<string, string?>? ApiEnvironment => new Dictionary<string, string?>
     {
-        ["DAM_AI_PROVIDER"] = "self-hosted", ["DAM_AI_SIDECAR_URL"] = _sidecar.Url, ["DAM_AI_RETRY_BASE_MS"] = "1", ["DAM_AI_FAILURE_THRESHOLD"] = "1000",
+        ["DAM_AI_PROVIDER"] = "self-hosted",
+        ["DAM_AI_SIDECAR_URL"] = _sidecar.Url,
+        ["DAM_AI_RETRY_BASE_MS"] = "1",
+        ["DAM_AI_FAILURE_THRESHOLD"] = "1000",
     };
 
     public override async Task InitializeAsync()
@@ -120,6 +123,38 @@ public sealed class AiSearchTests(PostgresFixture pg, SearchFixture os) : AssetT
 
         Assert.Equal([mountain], Ids(await Search(admin, new { query = "snowy alpine peak", semantic = true })));
         Assert.Empty(Ids(await Search(admin, new { query = "something nobody has a picture of", semantic = true })));
+    }
+
+    [Fact]
+    public async Task A_saved_semantic_search_replays_as_a_hybrid_search_and_a_legacy_one_stays_a_text_search()
+    {
+        var (t, admin, folder) = await TenantWithPacks();
+        await EnableAi(admin);
+        var redSuv = await Asset(admin, "IMG_0142", Img("red", "suv", "beach"), folder: folder);
+        var office = await Asset(admin, "IMG_0143", Img("office"), folder: folder);
+        await Index(t, redSuv, office);
+
+        async Task<Guid> Save(string name, object query) => Id((await Call(HttpMethod.Post, "/api/v1/collections", admin, new { name, type = "smart", query })).Body, "id");
+        async Task<JsonElement> Run(Guid id)
+        {
+            var r = await Call(HttpMethod.Get, $"/api/v1/collections/{id}/assets", admin);
+            Assert.Equal(HttpStatusCode.OK, r.Status);
+            return r.Body;
+        }
+
+        var meaning = await Run(await Save("By meaning", new { query = "red SUV on beach", semantic = true }));
+        Assert.True(meaning.GetProperty("semantic").GetBoolean());
+        Assert.Equal([redSuv], Ids(meaning));
+
+        var words = await Run(await Save("By words", new { query = "red SUV on beach" }));
+        Assert.False(words.GetProperty("semantic").GetBoolean());
+        Assert.Empty(Ids(words));
+
+        var legacyId = await Save("Legacy", new { query = "red SUV on beach", semantic = true });
+        Sql($"UPDATE collections SET query = '{{\"Text\": \"red SUV on beach\", \"Highlight\": false}}'::jsonb WHERE id = '{legacyId}'");   // saved before the flag existed
+        var legacy = await Run(legacyId);
+        Assert.False(legacy.GetProperty("semantic").GetBoolean());
+        Assert.Empty(Ids(legacy));
     }
 
     [Fact]
@@ -234,7 +269,9 @@ public sealed class AiSearchTests(PostgresFixture pg, SearchFixture os) : AssetT
         await using var openAi = await FakeOpenAi.StartAsync();
         var env = new Dictionary<string, string?>
         {
-            ["DAM_AI_PROVIDER"] = "openai-compatible", ["DAM_AI_BASE_URL"] = openAi.Url + "/v1", ["DAM_AI_API_KEY"] = openAi.ExpectedKey,
+            ["DAM_AI_PROVIDER"] = "openai-compatible",
+            ["DAM_AI_BASE_URL"] = openAi.Url + "/v1",
+            ["DAM_AI_API_KEY"] = openAi.ExpectedKey,
         };
         using var api = new ApiTestHost(Pg).Factory(openSearchUrl: os.Url, extraEnvironment: env);
         var (t, admin, folder) = await TenantWithPacks();

@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import { relativeTime } from '../../lib/relativeTime';
+import { hasThumbnail } from '../../lib/thumbnails';
 import { FileTypeIcon, type Thumb } from '../../ui';
 import { statusTone } from './statusTone';
 
@@ -14,7 +15,7 @@ interface ThumbSource {
 }
 
 /** `imageUrl` is a signed thumbnail link from `useThumbnailLinks` (batched per page, not fetched here) - omitted or
- * `null` falls back to `ThumbnailGrid`'s own file-type-icon rendering, the same as an asset with no thumbnail. */
+ * `null` falls back to the large file-type icon `ThumbnailGrid` draws for a card without an image (also used for types with no thumbnail rendition, such as audio, and when the image fails to load). */
 export function toAssetThumb(t: TFunction, locale: string, asset: ThumbSource, imageUrl?: string | null): Thumb {
   return {
     id: asset.id,
@@ -24,6 +25,7 @@ export function toAssetThumb(t: TFunction, locale: string, asset: ThumbSource, i
     meta: t('library.updatedRelative', { time: relativeTime(asset.updatedAt, locale) }),
     badge: t(`library.status.${asset.status}`),
     badgeTone: statusTone(asset.status),
-    imageUrl: imageUrl ?? undefined,
+    imageUrl: hasThumbnail(asset.type) ? (imageUrl ?? undefined) : undefined,
+    placeholder: <FileTypeIcon type={asset.type} size={40} weight="light" aria-hidden="true" />,
   };
 }

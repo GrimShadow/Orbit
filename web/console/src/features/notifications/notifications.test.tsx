@@ -557,3 +557,21 @@ describe('notification preferences', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 });
+
+describe('Hindi', () => {
+  it('renders the bell, the inbox and the preferences in Hindi', async () => {
+    setLanguage('hi');
+    serve({ items: [note(), READ] });
+    renderAt('/notifications');
+    expect(await screen.findByRole('heading', { level: 1, name: 'सूचनाएँ' })).toBeInTheDocument();
+    expect(await bell('सूचनाएँ, 1 अपठित')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'सभी पढ़ा हुआ चिह्नित करें' })).toBeInTheDocument();
+    cleanup();
+
+    serve({ prefs: { ...PREFS, emailAvailable: false } });
+    renderAt('/notifications?tab=preferences');
+    expect(await screen.findByText('आपको सूचना कैसे मिलती है')).toBeInTheDocument();
+    expect(screen.getByText(/ईमेल डिलीवरी अभी सेट नहीं है/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'प्राथमिकताएँ सहेजें' })).toBeInTheDocument();
+  });
+});

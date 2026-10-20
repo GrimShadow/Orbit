@@ -31,6 +31,16 @@ public abstract class EventConsumer
     public abstract Task HandleAsync(EventEnvelope message, CancellationToken ct);
 
     /// <summary>
+    /// True (the default): the host runs <see cref="HandleAsync"/> inside the transaction that records the message, so all its effects commit exactly once.
+    /// That transaction also holds the tenant's audit-chain lock from the first audited row the handler saves until it commits, which blocks every audited
+    /// write for the tenant (ADR-0038). A consumer whose work is long (a transcode, a document conversion) must return false: the host then opens no
+    /// transaction around the handler, which does its heavy work first and lets each write commit by itself, and records the message in a short transaction
+    /// afterwards. Such a handler MUST be idempotent (a redelivery after a failure runs it again from the top) and must not leave a half-done state that
+    /// anything would trust.
+    /// </summary>
+    public virtual bool RunsInHostTransaction => true;
+
+    /// <summary>
     /// Called after <see cref="HandleAsync"/>'s transaction has committed, on the same instance (so it can use what HandleAsync recorded),
     /// for work that must only start once the effects are visible to others (for example an immediate webhook attempt). Best effort: an
     /// exception is logged and does not retry the message, since its effects are already committed.

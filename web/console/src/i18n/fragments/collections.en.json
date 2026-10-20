@@ -21,6 +21,8 @@
     "renameCollection": "Rename collection",
     "renamed": "Collection renamed",
     "moreActions": "More actions",
+    "smartSearch": "Smart search",
+    "openInSearch": "Open in Search",
     "smartDescription": "A smart collection runs its saved search each time you open it.",
     "contentsEmptyStatic.title": "This collection is empty",
     "contentsEmptyStatic.description": "Select assets in the library and choose Save as collection to make one with them.",

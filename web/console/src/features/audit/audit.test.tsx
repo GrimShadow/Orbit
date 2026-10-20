@@ -536,3 +536,19 @@ describe('audit page - accessibility', () => {
     expect(await axe(dialog)).toHaveNoViolations();
   });
 });
+
+describe('audit page - Hindi', () => {
+  it('renders the log, the filters and the integrity check in Hindi', async () => {
+    setLanguage('hi');
+    mockApi((c) => (c.pathname === '/api/v1/audit/verify' ? json(OK) : defaults(c)));
+    renderAt();
+    expect(await screen.findByRole('heading', { level: 1, name: 'ऑडिट लॉग' })).toBeInTheDocument();
+    const table = await screen.findByRole('table', { name: 'ऑडिट लॉग की प्रविष्टियाँ, नई सबसे ऊपर' });
+    expect(within(table).getAllByRole('row')).toHaveLength(4);
+    expect(await screen.findByText('3 प्रविष्टियाँ दिख रही हैं')).toBeInTheDocument();
+    expect(screen.getByText('चेन की अखंडता')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'अखंडता जाँचें' }));
+    expect(await screen.findByText('चेन अखंड है')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'निर्यात करें' })).toBeEnabled();
+  });
+});

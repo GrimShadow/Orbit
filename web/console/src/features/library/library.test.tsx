@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App, queryClient } from '../../App';
@@ -100,11 +100,15 @@ function renderAt(route: string) {
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
+/** The asset ids of each `links/batch` request the last `mockApi` saw. */
+let batchIds: string[][] = [];
+
 function mockApi(
   assetsPage: { items: unknown[]; nextCursor: string | null } = { items: ASSETS, nextCursor: null },
   thumbnailLinks: Record<string, string | null> = {},
 ) {
   const calls: Request[] = [];
+  batchIds = [];
   vi.stubGlobal(
     'fetch',
     vi.fn(async (request: Request) => {
@@ -114,6 +118,7 @@ function mockApi(
       if (url.pathname === '/api/v1/assets') return json(assetsPage);
       if (url.pathname === '/api/v1/assets/links/batch') {
         const { assetIds } = (await request.json()) as { assetIds: string[] };
+        batchIds.push(assetIds);
         return json(Object.fromEntries(assetIds.map((id) => [id, thumbnailLinks[id] ?? null])));
       }
       throw new Error(`unexpected request: ${url.pathname}`);
@@ -274,6 +279,38 @@ describe('LibraryPage', () => {
       return el;
     });
     expect(img).toHaveAttribute('src', 'https://cdn.test/a1-thumb.webp');
+  });
+
+  it('does not ask for a thumbnail of an audio asset and draws its file-type icon instead of an image', async () => {
+    mockApi({
+      items: [asset({ id: 'img1', title: 'Hero shot' }), asset({ id: 'aud1', type: 'audio', title: 'Radio spot' })],
+      nextCursor: null,
+    });
+    const { container } = renderAt('/library');
+    await screen.findByText('Radio spot');
+    await waitFor(() => expect(batchIds.length).toBeGreaterThan(0));
+    expect(batchIds.flat()).toEqual(['img1']);
+
+    const card = screen.getByText('Radio spot').closest('button')!;
+    expect(card.querySelector('img')).toBeNull();
+    const placeholder = card.querySelector('.dam-thumb__img--empty');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder!.querySelector('svg')).not.toBeNull();
+    expect(container.querySelectorAll('img.dam-thumb__img')).toHaveLength(0); // the image asset has no link in this test
+  });
+
+  it('never leaves a broken image: a thumbnail that fails to load becomes the file-type icon', async () => {
+    mockApi(undefined, { a1: 'https://cdn.test/missing-thumb.webp' });
+    const { container } = renderAt('/library');
+    await screen.findByText('Hero shot');
+    const img = await waitFor(() => {
+      const el = container.querySelector('img.dam-thumb__img');
+      if (!el) throw new Error('thumbnail image not rendered yet');
+      return el;
+    });
+    fireEvent.error(img);
+    await waitFor(() => expect(container.querySelector('img.dam-thumb__img')).toBeNull());
+    expect(container.querySelector('.dam-thumb__img--empty svg')).not.toBeNull();
   });
 
   it('shows the thumbnail in the list view without asking for the links a second time', async () => {

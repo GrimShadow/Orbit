@@ -953,3 +953,18 @@ describe('model helpers', () => {
     });
   });
 });
+
+describe('Hindi', () => {
+  it('renders the settings page, the status card and the provider card in Hindi', async () => {
+    setLanguage('hi');
+    install(world());
+    renderAt();
+    expect(await screen.findByRole('switch', { name: 'इस संगठन में AI का उपयोग करें' })).toBeInTheDocument();
+    const card = await screen.findByRole('region', { name: 'स्थिति' });
+    expect(await within(card).findByText('स्वस्थ')).toBeInTheDocument();
+    expect(within(card).getByText('टैग सुझाना').closest('li')).toHaveTextContent('उपलब्ध');
+    expect(within(card).getByText('2 ms')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'परीक्षण चलाएँ' })).toBeInTheDocument();
+    expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
+  });
+});

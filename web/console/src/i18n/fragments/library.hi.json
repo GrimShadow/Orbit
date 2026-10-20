@@ -31,5 +31,8 @@
     "bulk.tagsChosen": "लागू किए जाने वाले टैग",
     "bulk.removeTagChip": "टैग {{tag}} हटाएँ",
     "bulk.tagsPlaceholder": "टैग लिखें और Enter दबाएँ"
+  },
+  "item": {
+    "uploadHere": "फ़ाइलें यहाँ अपलोड करें"
   }
 }

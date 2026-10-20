@@ -180,3 +180,17 @@ describe('unused assets page', () => {
     expect(await screen.findByText("Usage analytics aren't available to your role")).toBeInTheDocument();
   });
 });
+
+describe('Hindi', () => {
+  it('renders the unused assets page, its filters and its table in Hindi', async () => {
+    setLanguage('hi');
+    mockApi((c) => (c.pathname === '/api/v1/analytics/unused-assets' ? page([unused('a1', 'published')]) : undefined));
+    renderAt('/insights/unused');
+    expect(await screen.findByText('Acme a1')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'अप्रयुक्त एसेट' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '6 महीने', pressed: true })).toBeInTheDocument();
+    expect(screen.getByText('कभी उपयोग नहीं हुआ')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'स्थिति' })).toBeInTheDocument();
+    expect(screen.queryByText('Never used')).not.toBeInTheDocument();
+  });
+});

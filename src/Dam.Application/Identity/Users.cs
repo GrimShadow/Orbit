@@ -35,6 +35,72 @@ public sealed class ListUsersHandler(IRepository<User> users, IQueryExecutor q, 
     }
 }
 
+/// <summary>
+/// The tenant's people for pickers (report recipients, workflow assignees): active users only, names and email only. Open to anyone who holds a
+/// permission that needs to choose people, so a Librarian can do it without being able to manage users. Tenant isolation is the database's (RLS).
+/// </summary>
+public sealed record ListUserDirectoryQuery(string? Q, int? Limit, string? Cursor) : IQuery<Page<DirectoryUserDto>>;
+
+public sealed class ListUserDirectoryHandler(IRepository<User> users, IQueryExecutor q, IAuthorizationService authz)
+    : IRequestHandler<ListUserDirectoryQuery, Page<DirectoryUserDto>>
+{
+    public const int DefaultLimit = 20, MaxLimit = 50, MaxQueryLength = 100;
+
+    /// <summary>Permissions that need to choose people. Holding any one (unscoped, through a role) opens the directory.</summary>
+    public static readonly IReadOnlyList<string> Needs =
+        [Permissions.UsersManage, Permissions.WorkflowManage, Permissions.AnalyticsManage, Permissions.AssetsUpdate, Permissions.CommentsWrite];
+
+    public async Task<Result<Page<DirectoryUserDto>>> Handle(ListUserDirectoryQuery r, CancellationToken ct)
+    {
+        var allowed = false;
+        foreach (var p in Needs)
+            if (await authz.CanAsync(p, null, ct)) { allowed = true; break; }
+        if (!allowed) return Error.Forbidden("Choosing people needs one of: " + string.Join(", ", Needs) + ".");
+
+        var limit = Math.Clamp(r.Limit ?? DefaultLimit, 1, MaxLimit);
+        var query = users.Query().Where(u => u.Status == UserStatus.Active);
+        var needle = (r.Q ?? "").Trim().ToLowerInvariant();
+        if (needle.Length > MaxQueryLength) needle = needle[..MaxQueryLength];
+        if (needle.Length > 0) query = query.Where(u => u.DisplayName.ToLower().Contains(needle) || u.Email.ToLower().Contains(needle));
+
+        if (r.Cursor is { Length: > 0 })
+        {
+            if (!DirectoryCursor.TryDecode(r.Cursor, out var name, out var id))
+                return Error.Validation(new Dictionary<string, string[]> { ["cursor"] = ["The cursor is not valid."] });
+            query = query.Where(u => u.DisplayName.ToLower().CompareTo(name) > 0 || (u.DisplayName.ToLower() == name && u.Id.CompareTo(id) > 0));
+        }
+
+        var rows = await q.ToListAsync(
+            query.OrderBy(u => u.DisplayName.ToLower()).ThenBy(u => u.Id).Take(limit + 1).Select(u => new { u.Id, u.DisplayName, u.Email, Key = u.DisplayName.ToLower() }), ct);
+        var more = rows.Count > limit;
+        if (more) rows.RemoveAt(limit);
+        var items = rows.Select(u => new DirectoryUserDto(u.Id, string.IsNullOrWhiteSpace(u.DisplayName) ? u.Email : u.DisplayName, u.Email)).ToList();
+        return new Page<DirectoryUserDto>(items, more ? DirectoryCursor.Encode(rows[^1].Key, rows[^1].Id) : null);
+    }
+}
+
+/// <summary>Opaque keyset cursor: the last row's sort key (the database's lower-cased display name) and id.</summary>
+internal static class DirectoryCursor
+{
+    public static string Encode(string sortKey, Guid id) =>
+        Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(id.ToString("N") + sortKey)).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+
+    public static bool TryDecode(string cursor, out string name, out Guid id)
+    {
+        name = ""; id = Guid.Empty;
+        try
+        {
+            var b64 = cursor.Replace('-', '+').Replace('_', '/');
+            b64 = b64.PadRight(b64.Length + (4 - b64.Length % 4) % 4, '=');
+            var text = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(b64));
+            if (text.Length < 32 || !Guid.TryParseExact(text[..32], "N", out id)) return false;
+            name = text[32..];
+            return true;
+        }
+        catch (FormatException) { return false; }
+    }
+}
+
 public sealed record GetUserQuery(Guid Id) : IQuery<UserDto>, IAuthorizedRequest
 {
     public string Permission => Permissions.UsersManage;

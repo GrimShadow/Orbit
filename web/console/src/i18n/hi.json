@@ -10,7 +10,12 @@
     "search": "खोज",
     "collections": "संग्रह",
     "upload": "अपलोड",
-    "account": "मेरा खाता"
+    "account": "मेरा खाता",
+    "workflows": "वर्कफ़्लो",
+    "webhooks": "वेबहुक",
+    "audit": "ऑडिट लॉग",
+    "notifications": "सूचनाएँ",
+    "rights": "अधिकार"
   },
   "shell": {
     "tenant": "टेनेंट",

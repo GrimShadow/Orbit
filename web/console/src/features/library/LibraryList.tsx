@@ -2,7 +2,7 @@
 import { Badge } from '@dam/ui-kit';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { CardMenu, FileTypeIcon, Table, type Column } from '../../ui';
+import { CardMenu, FileTypeIcon, ImageWithFallback, Table, type Column } from '../../ui';
 import type { useItemActions } from './itemActions';
 import type { AssetDto } from './assets';
 import { relativeTime } from '../../lib/relativeTime';
@@ -34,13 +34,16 @@ export function LibraryList({
       header: t('library.columnTitle'),
       render: (a) => (
         <div className="dam-assetcell">
-          {thumbnails[a.id] ? (
-            <img className="dam-table__thumb" src={thumbnails[a.id]!} alt="" loading="lazy" />
-          ) : (
-            <span className="dam-table__thumb dam-assetcell__fallback" aria-hidden="true">
-              <FileTypeIcon type={a.type} size={18} />
-            </span>
-          )}
+          <ImageWithFallback
+            className="dam-table__thumb"
+            src={thumbnails[a.id]}
+            loading="lazy"
+            fallback={
+              <span className="dam-table__thumb dam-assetcell__fallback" aria-hidden="true">
+                <FileTypeIcon type={a.type} size={18} />
+              </span>
+            }
+          />
           <Link to={`/library/assets/${a.id}`} className="dam-assetcell__title">
             {a.title}
           </Link>

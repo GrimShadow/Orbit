@@ -31,7 +31,7 @@ function StepCard({ step, number, def, selected, problems, onSelect, onKeyDown, 
   const { t } = useTranslation();
   const stepName = useStepName();
   const slaText = useSlaText();
-  const names = useUserNames();
+  const names = useUserNames([...step.assignees.users, ...(step.escalation?.to.users ?? [])]);
   const meta = `meta-${step.id}`;
   const who = (to: { roles: string[]; users: string[] }) => [...to.roles, ...to.users.map(names.nameOf)].join(', ');
   const rejectTarget = step.onReject === REJECT ? null : def.steps.find((s) => s.id === step.onReject);

@@ -24,6 +24,7 @@ import {
 import { useThumbnailMap } from '../library/assets';
 import { FilterChips, type FilterChip } from '../library/FilterChips';
 import { useItemActions } from '../library/itemActions';
+import { thumbnailIds } from '../../lib/thumbnails';
 import { toAssetThumb } from '../library/assetThumb';
 import { useDocumentTitle } from '../library/useDocumentTitle';
 import { useCreateSmartCollection } from '../collections/collectionsApi';
@@ -56,8 +57,9 @@ function toFacets(t: (key: string) => string, result: SearchResultDto | undefine
  * (`?q=&type=&status=&view=list&smart=0|1`) - the shell's global search box lands here with `?q=` - and the page runs
  * with nothing chosen as a browse-all over everything the caller can see. Smart search (ADR-0035) is offered only when
  * the organisation's AI can do it (`GET /ai/capabilities`); hits then say why they matched, and spoken matches link to
- * the moment in the recording. The current query can be saved as a named smart collection ("saved search", ADR-0018);
- * collections only store the text search, so a saved search is saved without `semantic`. */
+ * the moment in the recording. The current query can be saved as a named smart collection ("saved search", ADR-0018),
+ * as the whole request - the words, filters and whether Smart search was on - and a saved search opens here again with
+ * that choice restored (`savedSearchHref`). */
 export function SearchPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -157,7 +159,7 @@ export function SearchPage() {
   const pages = searchQuery.data?.pages;
   const hits = useMemo(() => pages?.flatMap((p) => p.hits) ?? [], [pages]);
   const total = pages?.[0]?.total ?? 0;
-  const thumbnails = useThumbnailMap(hits.map((h) => h.id));
+  const thumbnails = useThumbnailMap(thumbnailIds(hits));
   const itemActions = useItemActions();
   const hitById = (id: string) => hits.find((h) => h.id === id);
   const createSmart = useCreateSmartCollection();
@@ -393,7 +395,7 @@ export function SearchPage() {
         onClose={() => setSaveOpen(false)}
         onSave={(name) =>
           createSmart.mutate(
-            { name, query: { ...body, semantic: false, cursor: null } },
+            { name, query: { ...body, cursor: null } },
             {
               onSuccess: () => {
                 setSaveOpen(false);

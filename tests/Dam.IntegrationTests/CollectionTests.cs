@@ -48,6 +48,53 @@ public sealed class CollectionTests(PostgresFixture pg) : AssetTestBase(pg)
         Assert.Equal(HttpStatusCode.OK, updated.Status);
     }
 
+    private static bool Semantic(System.Text.Json.JsonElement collection) => collection.GetProperty("query").GetProperty("Semantic").GetBoolean();
+
+    [Fact]
+    public async Task A_saved_search_keeps_its_semantic_flag_through_create_read_and_update()
+    {
+        var (t, admin, _) = await TenantWithPacks();
+        var create = await Call(HttpMethod.Post, "/api/v1/collections", admin, new { name = "Meaning", type = "smart", query = new { query = "red suv on a beach", semantic = true, sort = "-title" } });
+        Assert.Equal(HttpStatusCode.Created, create.Status);
+        var id = Id(create.Body, "id");
+        Assert.True(Semantic(create.Body));
+        Assert.Equal("red suv on a beach", create.Body.GetProperty("query").GetProperty("Text").GetString());
+
+        var read = await Call(HttpMethod.Get, $"/api/v1/collections/{id}", admin);
+        Assert.True(Semantic(read.Body));
+        var list = await Call(HttpMethod.Get, "/api/v1/collections", admin);
+        Assert.True(Semantic(list.Body.EnumerateArray().Single(c => c.GetProperty("id").GetGuid() == id)));
+
+        // a run's own state is not part of the saved search
+        var stored = read.Body.GetProperty("query");
+        Assert.False(stored.TryGetProperty("Vectors", out _));
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, stored.GetProperty("Cursor").ValueKind);
+
+        var off = await Call(HttpMethod.Put, $"/api/v1/collections/{id}/query", admin, new { query = new { query = "red suv on a beach", semantic = false } });
+        Assert.Equal(HttpStatusCode.OK, off.Status);
+        Assert.False(Semantic(off.Body));
+        Assert.False(Semantic((await Call(HttpMethod.Get, $"/api/v1/collections/{id}", admin)).Body));
+
+        var on = await Call(HttpMethod.Put, $"/api/v1/collections/{id}/query", admin, new { query = new { query = "sedan", semantic = true } });
+        Assert.True(Semantic(on.Body));
+        Assert.Equal("sedan", on.Body.GetProperty("query").GetProperty("Text").GetString());
+    }
+
+    [Fact]
+    public async Task A_saved_search_without_the_flag_is_not_semantic()
+    {
+        var (t, admin, _) = await TenantWithPacks();
+        var plain = await Call(HttpMethod.Post, "/api/v1/collections", admin, new { name = "Words", type = "smart", query = new { query = "roadster" } });
+        Assert.False(Semantic(plain.Body));
+
+        // a row saved before the flag existed has no such key at all
+        var id = Id(plain.Body, "id");
+        Sql($"UPDATE collections SET query = '{{\"Text\": \"roadster\", \"Highlight\": false}}'::jsonb WHERE id = '{id}'");
+        var legacy = await Call(HttpMethod.Get, $"/api/v1/collections/{id}", admin);
+        Assert.Equal(HttpStatusCode.OK, legacy.Status);
+        Assert.False(legacy.Body.GetProperty("query").TryGetProperty("Semantic", out _));
+    }
+
     [Fact]
     public async Task Assets_can_only_be_added_to_or_removed_from_a_static_collection()
     {

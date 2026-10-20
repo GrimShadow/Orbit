@@ -1,8 +1,9 @@
 import { Translate } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Badge, Button, EmptyState, FileTypeIcon, LoadingRegion, Skeleton } from '../../../ui';
+import { Badge, Button, EmptyState, FileTypeIcon, ImageWithFallback, LoadingRegion, Skeleton } from '../../../ui';
 import { relativeTime } from '../../../lib/relativeTime';
+import { hasThumbnail } from '../../../lib/thumbnails';
 import { useThumbnailLinks } from '../../asset/assetApi';
 import { languageName } from '../../translation/languages';
 import { reviewHref } from '../../translation/reviewLink';
@@ -19,13 +20,16 @@ function Row({ item, thumb }: { item: AiReviewItem; thumb: string | null | undef
   const by = item.requestedBy && !UUID.test(item.requestedBy) ? item.requestedBy : null;
   return (
     <li className="dam-taskrow dam-taskrow--review">
-      {thumb ? (
-        <img className="dam-taskrow__thumb" src={thumb} alt="" loading="lazy" />
-      ) : (
-        <span className="dam-taskrow__thumb dam-taskrow__thumb--empty" aria-hidden="true">
-          <FileTypeIcon type={item.assetType} size={22} />
-        </span>
-      )}
+      <ImageWithFallback
+        className="dam-taskrow__thumb"
+        src={thumb}
+        loading="lazy"
+        fallback={
+          <span className="dam-taskrow__thumb dam-taskrow__thumb--empty" aria-hidden="true">
+            <FileTypeIcon type={item.assetType} size={22} />
+          </span>
+        }
+      />
       <div className="dam-taskrow__main">
         <Link to={href} className="dam-taskrow__title">
           {item.title}
@@ -76,7 +80,7 @@ export function TranslationsTab() {
   const { t } = useTranslation();
   const query = useAiReviews();
   const items = query.data?.pages.flatMap((p) => p.items) ?? [];
-  const thumbs = useThumbnailLinks(items.map((x) => x.assetId));
+  const thumbs = useThumbnailLinks(items.filter((x) => hasThumbnail(x.assetType)).map((x) => x.assetId));
 
   if (query.isPending)
     return (

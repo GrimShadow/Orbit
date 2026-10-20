@@ -531,3 +531,17 @@ describe('accessibility', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 });
+
+describe('Hindi', () => {
+  it('renders the thread, its actions and the composer in Hindi', async () => {
+    setLanguage('hi');
+    const { user } = setup([thread(ROOT, [REPLY])]);
+    const t = await screen.findByRole('article', { name: 'Priya Natarajan का थ्रेड' });
+    expect(within(t).getByRole('list', { name: 'जवाब' })).toBeInTheDocument();
+    expect(within(t).getByRole('button', { name: 'Priya Natarajan द्वारा शुरू किया गया थ्रेड हल करें' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'टिप्पणी जोड़ें' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'पोस्ट करें' })).toBeInTheDocument();
+    await user.click(within(t).getByRole('button', { name: /^Priya Natarajan को जवाब दें/ }));
+    expect(await screen.findByRole('textbox', { name: 'Priya Natarajan को जवाब दें' })).toBeInTheDocument();
+  });
+});

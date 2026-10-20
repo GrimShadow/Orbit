@@ -21,7 +21,7 @@ export function SchedulesSection() {
   const { push } = useToast();
   const query = useSchedules(true);
   const reports = useReportList();
-  const names = useUserNames();
+  const names = useUserNames((query.data ?? []).flatMap((s) => s.recipientUserIds));
   const save = useSaveSchedule();
   const remove = useDeleteSchedule();
   const sendNow = useSendScheduleNow();

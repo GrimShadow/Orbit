@@ -28,7 +28,8 @@ public sealed class SystemUser : ICurrentUser
 /// Runs one <typeparamref name="T"/> against its queue. Per delivery: open a DB transaction, insert
 /// (consumer, message_id) into processed_messages, run the handler, commit, ack. A duplicate delivery hits the
 /// primary key and is acked untouched. On failure the transaction rolls back and the message goes to the next
-/// retry tier, or to the DLQ once <see cref="MessagingOptions.MaxAttempts"/> is reached.
+/// retry tier, or to the DLQ once <see cref="MessagingOptions.MaxAttempts"/> is reached. A consumer that sets
+/// <see cref="EventConsumer.RunsInHostTransaction"/> to false (long, idempotent work; ADR-0038) is handled without that transaction instead.
 /// </summary>
 public sealed class ConsumerHost<T>(
     IServiceProvider services, RabbitConnection rabbit, MessagingOptions options, ILogger<ConsumerHost<T>> log)
@@ -102,25 +103,9 @@ public sealed class ConsumerHost<T>(
         var db = sp.GetRequiredService<DamDbContext>();
         try
         {
-            await uow.BeginAsync(default);
-            var inserted = await db.Database.ExecuteSqlInterpolatedAsync($"""
-                INSERT INTO processed_messages (consumer, message_id, tenant_id, processed_at)
-                VALUES ({_name}, {messageId}, {tenantId}, now()) ON CONFLICT DO NOTHING
-                """);
-            if (inserted == 0)
-            {
-                await uow.RollbackAsync(default);
-                log.LogInformation("{Consumer}: duplicate message {MessageId} skipped", _name, messageId);
-            }
-            else
-            {
-                var consumer = sp.GetRequiredService<T>();
-                await consumer.HandleAsync(envelope, default);
-                await PersistAggregateEventsAsync(sp);
-                await uow.CommitAsync(default);
-                try { await consumer.AfterCommitAsync(envelope, default); }
-                catch (Exception ex) { log.LogWarning(ex, "{Consumer}: post-commit work for {MessageId} failed", _name, messageId); }
-            }
+            var consumer = sp.GetRequiredService<T>();
+            if (consumer.RunsInHostTransaction) await HandleInTransactionAsync(sp, consumer, uow, db, envelope);
+            else await HandleWithShortTransactionsAsync(sp, consumer, uow, db, envelope);
             await ch.BasicAckAsync(ea.DeliveryTag, false);
         }
         catch (Exception ex)
@@ -130,6 +115,62 @@ public sealed class ConsumerHost<T>(
             if (attempt < options.MaxAttempts) await RetryAsync(ch, ea, attempt, body);
             else await ParkAsync(ch, ea, attempt, ex.Message, body, envelope);
         }
+    }
+
+    /// <summary>The default: one transaction holds the processed-message row, everything the handler wrote and the events it raised, so they commit together or not at all.</summary>
+    private async Task HandleInTransactionAsync(IServiceProvider sp, T consumer, IUnitOfWork uow, DamDbContext db, EventEnvelope envelope)
+    {
+        await uow.BeginAsync(default);
+        if (!await MarkProcessedAsync(db, envelope))
+        {
+            await uow.RollbackAsync(default);
+            log.LogInformation("{Consumer}: duplicate message {MessageId} skipped", _name, envelope.MessageId);
+            return;
+        }
+        await consumer.HandleAsync(envelope, default);
+        await PersistAggregateEventsAsync(sp);
+        await uow.CommitAsync(default);
+        await AfterCommitAsync(consumer, envelope);
+    }
+
+    /// <summary>
+    /// For a consumer whose work is long and idempotent (<see cref="EventConsumer.RunsInHostTransaction"/> false): the handler runs with no transaction open, so
+    /// nothing it writes (or the audit-chain lock that goes with it) is held while it works; each write it makes commits by itself. The processed-message row is
+    /// written, with the events its aggregates raised, in a short transaction once the handler has finished. A duplicate delivery that arrives after that is skipped
+    /// by the check up front; one that overlaps the first (a redelivery after a lost connection while the first is still running) runs the handler again, which is
+    /// safe because the handler is idempotent, and only the first to finish records the message.
+    /// </summary>
+    private async Task HandleWithShortTransactionsAsync(IServiceProvider sp, T consumer, IUnitOfWork uow, DamDbContext db, EventEnvelope envelope)
+    {
+        if (await db.Database.SqlQuery<int>($"SELECT 1 AS \"Value\" FROM processed_messages WHERE consumer = {_name} AND message_id = {envelope.MessageId}").AnyAsync())
+        {
+            log.LogInformation("{Consumer}: duplicate message {MessageId} skipped", _name, envelope.MessageId);
+            return;
+        }
+        await consumer.HandleAsync(envelope, default);
+
+        await uow.BeginAsync(default);
+        if (!await MarkProcessedAsync(db, envelope))
+        {
+            await uow.RollbackAsync(default);
+            log.LogInformation("{Consumer}: message {MessageId} was finished by another delivery first", _name, envelope.MessageId);
+            return;
+        }
+        await PersistAggregateEventsAsync(sp);
+        await uow.CommitAsync(default);
+        await AfterCommitAsync(consumer, envelope);
+    }
+
+    private async Task<bool> MarkProcessedAsync(DamDbContext db, EventEnvelope envelope) =>
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO processed_messages (consumer, message_id, tenant_id, processed_at)
+            VALUES ({_name}, {envelope.MessageId}, {envelope.TenantId}, now()) ON CONFLICT DO NOTHING
+            """) > 0;
+
+    private async Task AfterCommitAsync(T consumer, EventEnvelope envelope)
+    {
+        try { await consumer.AfterCommitAsync(envelope, default); }
+        catch (Exception ex) { log.LogWarning(ex, "{Consumer}: post-commit work for {MessageId} failed", _name, envelope.MessageId); }
     }
 
     /// <summary>Runs the consumer's parked hook in a fresh scope and transaction. A failure here is logged, never rethrown.</summary>
