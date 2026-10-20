@@ -10,24 +10,56 @@ env:
   TRIVY: aquasec/trivy@sha256:5c59e08f980b5d4d503329773480fcea2c9bdad7e381d846fbf9f2ecb8050f6b
 
 jobs:
-  dotnet:
+  # Build + unit tests, then the integration suite in parallel shards (all integration classes share one xUnit collection and so
+  # run serially; tools/ci/test-shard.py splits them from the real test list so a new class is never left out). The final `dotnet`
+  # job keeps the name the branch protection requires and only passes when every shard did.
+  dotnet-unit:
     runs-on: ubuntu-latest
-    # The integration suite (Testcontainers: Postgres, RabbitMQ, SeaweedFS, OpenSearch, ClamAV) now takes ~15 min on a
-    # hosted runner and the previous 15 min cap cancelled it; leave generous headroom.
-    timeout-minutes: 40
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with: { global-json-file: global.json }
+      - run: dotnet build Dam.sln -c Release
+      - run: dotnet test tests/Dam.UnitTests -c Release --no-build --logger "trx;LogFileName=results.trx" --logger GitHubActions
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: dotnet-unit-test-results, path: "**/TestResults/*.trx" }
+
+  dotnet-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: { shard: [1, 2, 3, 4] }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with: { global-json-file: global.json }
       # Video, PDF and Office rendition tests shell out to ffmpeg, Poppler and LibreOffice, same as the worker/delivery images at runtime.
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg poppler-utils libreoffice-writer libreoffice-impress libreoffice-calc
-      - run: dotnet build Dam.sln -c Release
-      # Integration tests use Testcontainers (Docker is preinstalled on ubuntu-latest).
-      # They also fail if docs/api/openapi.json drifts from the running API (the OpenAPI diff check).
-      - run: dotnet test Dam.sln -c Release --no-build --logger "trx;LogFileName=results.trx" --logger GitHubActions
+      - run: dotnet build tests/Dam.IntegrationTests -c Release
+      # Integration tests use Testcontainers (Docker is preinstalled on ubuntu-latest). They also fail if docs/api/openapi.json drifts
+      # from the running API (the OpenAPI diff check, which runs in whichever shard holds that class).
+      - name: Run this shard's test classes
+        run: |
+          dotnet test tests/Dam.IntegrationTests -c Release --no-build --list-tests > tests-list.txt
+          filter="$(python3 tools/ci/test-shard.py ${{ matrix.shard }} 4 < tests-list.txt)"
+          echo "shard ${{ matrix.shard }}/4 filter: $filter"
+          dotnet test tests/Dam.IntegrationTests -c Release --no-build --filter "$filter" --logger "trx;LogFileName=results-${{ matrix.shard }}.trx" --logger GitHubActions --blame-hang --blame-hang-timeout 12m
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with: { name: dotnet-test-results, path: "**/TestResults/*.trx" }
+        with: { name: "dotnet-integration-results-${{ matrix.shard }}", path: "**/TestResults/**" }
+
+  dotnet:
+    needs: [dotnet-unit, dotnet-integration]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          echo "unit: ${{ needs.dotnet-unit.result }}, integration: ${{ needs.dotnet-integration.result }}"
+          [ "${{ needs.dotnet-unit.result }}" = "success" ] && [ "${{ needs.dotnet-integration.result }}" = "success" ]
 
   web:
     runs-on: ubuntu-latest

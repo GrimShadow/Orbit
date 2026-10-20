@@ -223,7 +223,13 @@ public sealed class AiEnrichmentTests(PostgresFixture pg, RabbitFixture mq, Sear
     public async Task A_tenant_with_ai_off_gets_a_skipped_run_and_nothing_is_sent_anywhere()
     {
         var (t, admin, folder) = await TenantWithPacks();     // never enabled
+        // The database is shared across this class's tests: events an earlier test left unpublished belong to tenants that DID enable AI, and
+        // this test's worker would otherwise process them and call this test's fake sidecar. Drop that leftover work before the worker starts
+        // so the "nothing was sent anywhere" assertion below is about this tenant only.
+        Sql("UPDATE outbox SET published_at = now() WHERE published_at IS NULL");
         using var worker = Worker(); await worker.StartAsync();
+        _sidecar.Calls.Clear();
+        _openAi.Calls.Clear();
         var asset = await IngestedAsset(admin, folder, Picture(), "image", "photo.jpg", "image/jpeg");
 
         for (var i = 0; i < 200 && Count(t, "SELECT count(*) FROM ai_runs WHERE status = 'skipped'") == 0; i++) await Task.Delay(100);
