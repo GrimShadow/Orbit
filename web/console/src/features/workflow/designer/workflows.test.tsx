@@ -259,3 +259,25 @@ describe('folder defaults', () => {
     expect(await screen.findByText('Could not update the folder')).toBeInTheDocument();
   });
 });
+
+describe('Hindi', () => {
+  it('renders the workflows list and the designer in Hindi', async () => {
+    setLanguage('hi');
+    standardApi({ workflows: [workflow(), second()] });
+    renderAt('/admin/workflows');
+    expect(await screen.findByRole('heading', { level: 1, name: 'वर्कफ़्लो' })).toBeInTheDocument();
+    const card = (await screen.findByRole('heading', { name: 'Two-level approval' })).closest('article')!;
+    expect(within(card).getByRole('list', { name: 'Two-level approval का फ़्लो' })).toHaveTextContent('48 घं');
+    expect(within(card).getByRole('link', { name: 'Two-level approval संपादित करें' })).toHaveAttribute(
+      'href',
+      '/admin/workflows/w1',
+    );
+    expect(screen.getByText('अपने आप प्रकाशित होता है')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'नया वर्कफ़्लो' })).toHaveAttribute('href', '/admin/workflows/new');
+    cleanup();
+
+    renderAt('/admin/workflows/w1');
+    expect(await screen.findByRole('button', { name: 'वर्कफ़्लो सहेजें' })).toBeInTheDocument();
+    expect(await screen.findByText('जमा किया गया')).toBeInTheDocument();
+  });
+});

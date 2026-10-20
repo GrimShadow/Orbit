@@ -126,10 +126,13 @@ export function standardApi(
     if (c.method === 'GET' && c.pathname === '/api/v1/folders') return json(opts.folders ?? []);
     if (c.method === 'GET' && c.pathname === '/api/v1/roles')
       return opts.rolesStatus ? json({ title: 'Forbidden', status: opts.rolesStatus }, opts.rolesStatus) : json(roles);
-    if (c.method === 'GET' && c.pathname === '/api/v1/users') {
-      const q = c.search.get('filter[q]')?.toLowerCase();
+    // The user directory (GET /users needs users.manage, so the pickers never call it; a call to it here is a 404).
+    if (c.method === 'GET' && c.pathname === '/api/v1/users/directory') {
+      const q = c.search.get('q')?.toLowerCase();
       const all = (opts.users ?? [asha]) as (typeof asha)[];
-      const items = q ? all.filter((u) => u.displayName.toLowerCase().includes(q) || u.email.includes(q)) : all;
+      const items = (q ? all.filter((u) => u.displayName.toLowerCase().includes(q) || u.email.includes(q)) : all).map(
+        ({ id, displayName, email }) => ({ id, displayName, email }),
+      );
       return json({ items, nextCursor: null });
     }
     return undefined;

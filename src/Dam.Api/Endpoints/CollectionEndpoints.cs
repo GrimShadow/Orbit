@@ -62,5 +62,5 @@ public static class CollectionEndpoints
             .WithName("DeleteCollection");
     }
 
-    private static SearchQuery ToSearchQuery(SearchRequestBody r) => new(r.Query, r.Filters, r.Facets, r.Sort, r.Highlight, r.SimilarTo, null, null);
+    private static SearchQuery ToSearchQuery(SearchRequestBody r) => new(r.Query, r.Filters, r.Facets, r.Sort, r.Highlight, r.SimilarTo, null, null, r.Semantic);
 }

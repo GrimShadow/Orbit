@@ -262,12 +262,14 @@ export function install(w: World, permissions = READER, extra?: (c: Call) => Res
       const custom = extra?.(c);
       if (custom) return custom;
       const p = c.pathname;
-      if (p === '/api/v1/users') {
+      if (p === '/api/v1/users/directory') {
         w.calls.push(c);
-        const q = (c.search.get('filter[q]') ?? '').toLowerCase();
+        const q = (c.search.get('q') ?? '').toLowerCase();
         const all = w.users ?? USERS;
         return json({
-          items: all.filter((u) => !q || u.displayName.toLowerCase().includes(q) || u.email.includes(q)),
+          items: all
+            .filter((u) => !q || u.displayName.toLowerCase().includes(q) || u.email.includes(q))
+            .map(({ id, displayName, email }) => ({ id, displayName, email })),
           nextCursor: null,
         });
       }

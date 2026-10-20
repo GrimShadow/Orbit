@@ -235,6 +235,13 @@ public sealed class RenditionConsumer(DamDbContext db, IObjectStore store, IOutb
 {
     public override string Name => "renditions";
     public override IReadOnlyList<string> RoutingKeys => ["asset.version.added"];
+
+    /// <summary>
+    /// Transcoding, converting and rasterising can take minutes, and every rendition saved audits its readiness: inside the host's transaction the first of those would
+    /// hold the tenant's audit-chain lock until the whole job was done (ADR-0038). Each rendition is saved by itself instead, and the work is idempotent: a rendition that
+    /// is already stored and ready is not made again.
+    /// </summary>
+    public override bool RunsInHostTransaction => false;
     public override Task OnParkedAsync(EventEnvelope message, string error, CancellationToken ct) => Task.CompletedTask;
 
     public override async Task HandleAsync(EventEnvelope message, CancellationToken ct)

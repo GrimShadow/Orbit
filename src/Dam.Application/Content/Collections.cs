@@ -20,8 +20,15 @@ internal static class CollectionMapping
     /// both directions use <see cref="JsonSerializer"/>'s default (PascalCase) options, so what a smart collection saves
     /// is exactly what running it later deserialises - the client-facing camelCase JSON is only ever a request/response
     /// shape at the API boundary, never what is actually stored.</summary>
-    public static Dictionary<string, JsonElement> ToStored(SearchQuery query) =>
-        JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(JsonSerializer.SerializeToElement(query))!;
+    /// <remarks>Everything that describes the search is kept, <c>Semantic</c> included (a saved hybrid search replays as one). What belongs to one run is not: the
+    /// cursor and limit, and the query's embeddings (<c>Vectors</c>), which are computed again every time the collection is run. A row saved before
+    /// <c>Semantic</c> existed has no such key and reads back as an ordinary text search.</remarks>
+    public static Dictionary<string, JsonElement> ToStored(SearchQuery query)
+    {
+        var stored = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(JsonSerializer.SerializeToElement(query with { Cursor = null, Limit = null, Vectors = null }))!;
+        stored.Remove(nameof(SearchQuery.Vectors));
+        return stored;
+    }
 
     public static SearchQuery FromStored(IReadOnlyDictionary<string, JsonElement> stored) =>
         JsonSerializer.Deserialize<SearchQuery>(JsonSerializer.SerializeToElement(stored))!;
@@ -110,7 +117,8 @@ public sealed class ListCollectionsHandler(IRepository<Collection> collections, 
 /// search would (spec: "Smart = saved search").</summary>
 public sealed record GetCollectionContentsQuery(Guid Id, string? Cursor, int? Limit) : IQuery<SearchResultDto>;
 
-public sealed class GetCollectionContentsHandler(IRepository<Collection> collections, IQueryExecutor q, IAuthorizationService authz, ISearchQueryService search, ICurrentUser me)
+public sealed class GetCollectionContentsHandler(IRepository<Collection> collections, IQueryExecutor q, IAuthorizationService authz, ISearchQueryService search, ICurrentUser me,
+    ISemanticQueryEmbedder embedder)
     : IRequestHandler<GetCollectionContentsQuery, SearchResultDto>
 {
     public async Task<Result<SearchResultDto>> Handle(GetCollectionContentsQuery r, CancellationToken ct)
@@ -127,6 +135,8 @@ public sealed class GetCollectionContentsHandler(IRepository<Collection> collect
         var query = collection.Type == CollectionType.Static
             ? new SearchQuery(null, new Dictionary<string, string[]> { ["id"] = collection.AssetIds.Select(id => id.ToString()).ToArray() }, null, null, false, null, r.Cursor, r.Limit)
             : CollectionMapping.FromStored(collection.Query!) with { Cursor = r.Cursor, Limit = r.Limit };
+        // A saved hybrid search runs as one: its words are embedded now, exactly as POST /search does (and falls back, saying why, when the provider cannot).
+        query = query with { Vectors = await Search.SemanticVectors.ForAsync(embedder, query, ct) };
         return await search.SearchAsync(query, clauses, profile.UserId, ct);
     }
 }

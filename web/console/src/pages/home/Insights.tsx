@@ -18,6 +18,7 @@ import {
 import { isForbidden, useOverview, type AnalyticsOverview } from '../../features/analytics/analyticsApi';
 import { UnusedAssetsPanel } from '../../features/analytics/UnusedAssets';
 import { formatBytes } from '../../lib/format';
+import { thumbnailIds } from '../../lib/thumbnails';
 import { facetCount, useLibrarySnapshot } from './homeData';
 import { useThumbnailLinks } from '../../features/asset/assetApi';
 import { useTaskSummary, type TaskSummary } from '../../features/workflow/workflowApi';
@@ -334,7 +335,7 @@ function ReviewQueue({ locale }: { locale: string }) {
   const { t } = useTranslation();
   const query = useAssets({ status: 'in_review', limit: REVIEW_COUNT });
   const assets = query.data?.items.slice(0, REVIEW_COUNT) ?? [];
-  const thumbs = useThumbnailLinks(assets.map((a) => a.id));
+  const thumbs = useThumbnailLinks(thumbnailIds(assets));
   if (query.isPending) return <ListSkeleton />;
   if (query.error) return <SectionNote onRetry={() => void query.refetch()} />;
   if (assets.length === 0)

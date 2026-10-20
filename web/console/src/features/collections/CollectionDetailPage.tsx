@@ -24,8 +24,10 @@ import {
 } from '../../ui';
 import { relativeTime } from '../../lib/relativeTime';
 import { useThumbnailMap } from '../library/assets';
+import { thumbnailIds } from '../../lib/thumbnails';
 import { toAssetThumb } from '../library/assetThumb';
 import { useDocumentTitle } from '../library/useDocumentTitle';
+import { isSmartSavedSearch, savedSearchHref } from '../search/savedSearch';
 import { useItemActions } from '../library/itemActions';
 import {
   useCollection,
@@ -150,7 +152,7 @@ export function CollectionDetailPage() {
   const contentsQuery = useCollectionContentsInfinite(id!);
   const pages = contentsQuery.data?.pages;
   const hits = useMemo(() => pages?.flatMap((p) => p.hits) ?? [], [pages]);
-  const thumbnails = useThumbnailMap(hits.map((h) => h.id));
+  const thumbnails = useThumbnailMap(thumbnailIds(hits));
   const itemActions = useItemActions();
   const hitById = (assetId: string) => hits.find((h) => h.id === assetId);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -200,6 +202,7 @@ export function CollectionDetailPage() {
               <Badge tone={collection.visibility === 'tenant' ? 'brand' : 'neutral'}>
                 {t(`collections.visibility.${collection.visibility}`)}
               </Badge>
+              {smart && isSmartSavedSearch(collection.query) && <Badge tone="info">{t('collections.smartSearch')}</Badge>}
               {!smart && <span>{t('collections.assetCount', { count: collection.assetIds.length })}</span>}
               <span aria-hidden="true">·</span>
               <span>{t('collections.updatedRelative', { time: relativeTime(collection.updatedAt, i18n.language) })}</span>
@@ -207,6 +210,12 @@ export function CollectionDetailPage() {
             {smart && <p className="dam-hint">{t('collections.smartDescription')}</p>}
           </div>
           <div className="dam-collhead__actions">
+            {smart && (
+              <Link to={savedSearchHref(collection.query)} className="dam-btn dam-btn--secondary">
+                <MagnifyingGlass size={16} aria-hidden="true" />
+                {t('collections.openInSearch')}
+              </Link>
+            )}
             <SegmentedControl
               label={t('collections.visibility')}
               value={collection.visibility}

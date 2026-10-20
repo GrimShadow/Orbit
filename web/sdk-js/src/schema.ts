@@ -379,6 +379,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active people in the tenant (id, name, email) for pickers; needs a permission that chooses people */
+        get: operations["ListUserDirectory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{id}": {
         parameters: {
             query?: never;
@@ -2914,6 +2931,12 @@ export interface components {
                 [key: string]: string;
             };
         };
+        DirectoryUserDto: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
+            email: string;
+        };
         DuplicateKpiDto: {
             /** Format: int64 */
             uploads: number;
@@ -3172,6 +3195,10 @@ export interface components {
         };
         PageOfAuditEntryDto: {
             items: components["schemas"]["AuditEntryDto"][];
+            nextCursor: string | null;
+        };
+        PageOfDirectoryUserDto: {
+            items: components["schemas"]["DirectoryUserDto"][];
             nextCursor: string | null;
         };
         PageOfGlossaryTermDto: {
@@ -4925,6 +4952,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageOfUserDto"];
+                };
+            };
+        };
+    };
+    ListUserDirectory: {
+        parameters: {
+            query?: {
+                q?: string;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfDirectoryUserDto"];
                 };
             };
         };

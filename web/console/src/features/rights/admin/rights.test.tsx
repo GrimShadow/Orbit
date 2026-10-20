@@ -920,3 +920,21 @@ describe('accessibility', () => {
     expect(await axe(confirm)).toHaveNoViolations();
   });
 });
+
+describe('Hindi', () => {
+  it('renders the rights list and the form in Hindi', async () => {
+    setLanguage('hi');
+    install(world({ rights: [rights({ assetCount: 4, documentCount: 2, watermarkRequired: true })] }));
+    renderAt('/admin/rights');
+    expect(await screen.findByRole('heading', { level: 1, name: 'अधिकार' })).toBeInTheDocument();
+    const c = await card('Acme stock photography');
+    expect(within(c).getByText('4 एसेट')).toBeInTheDocument();
+    expect(within(c).getByText('2 दस्तावेज़')).toBeInTheDocument();
+    expect(within(c).getByText('वॉटरमार्क सहित')).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'नए अधिकार' }));
+    const form = await dialog('नए अधिकार');
+    expect(within(form).getByLabelText('लाइसेंस का प्रकार')).toBeInTheDocument();
+    expect(within(form).getByRole('button', { name: 'अधिकार बनाएँ' })).toBeInTheDocument();
+  });
+});

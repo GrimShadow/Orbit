@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { X } from '@dam/ui-kit';
-import { ApiError } from '@dam/sdk-js';
 import { PeopleCombobox } from '../workflow/designer/AssigneePicker';
 import { useUserNames, useUserDirectory } from '../workflow/designer/designerApi';
 import '../workflow/designer/designer.css';
@@ -17,9 +16,8 @@ export function RecipientPicker({
   error?: string;
 }) {
   const { t } = useTranslation();
-  const names = useUserNames();
+  const names = useUserNames(value);
   const directory = useUserDirectory();
-  const denied = directory.error instanceof ApiError && directory.error.status === 403;
   return (
     <fieldset className="dam-wfpicker dam-insrecip">
       <legend className="dam-label">{t('insights.schedules.recipients')}</legend>
@@ -33,9 +31,9 @@ export function RecipientPicker({
           onChange([...value, u.id]);
         }}
       />
-      {denied && (
+      {directory.isError && (
         <p className="dam-hint" role="status">
-          {t('insights.schedules.directoryDenied')}
+          {t('insights.schedules.directoryFailed')}
         </p>
       )}
       {value.length > 0 && (

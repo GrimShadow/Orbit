@@ -58,6 +58,10 @@ public static class IdentityEndpoints
                 [FromQuery(Name = "filter[status]")] string? status, [FromQuery(Name = "filter[q]")] string? q) =>
                 Run(d, new ListUsersQuery(cursor, limit, status, q), v => Task.FromResult(Results.Ok(v)), ct))
             .WithName("ListUsers").Produces<Page<UserDto>>();
+        users.MapGet("/directory", (IDispatcher d, CancellationToken ct, string? q, int? limit, string? cursor) =>
+                Run(d, new ListUserDirectoryQuery(q, limit, cursor), v => Task.FromResult(Results.Ok(v)), ct))
+            .WithName("ListUserDirectory").WithSummary("Active people in the tenant (id, name, email) for pickers; needs a permission that chooses people")
+            .Produces<Page<DirectoryUserDto>>();
         users.MapGet("/{id:guid}", (Guid id, IDispatcher d, CancellationToken ct) =>
                 Run(d, new GetUserQuery(id), v => Task.FromResult(Results.Ok(v)), ct))
             .WithName("GetUser").Produces<UserDto>();

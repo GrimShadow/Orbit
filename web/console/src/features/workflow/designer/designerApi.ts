@@ -1,12 +1,11 @@
 import { ApiError, unwrap, type components } from '@dam/sdk-js';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApiClient } from '../../../api/apiClient';
 import { useAuth } from '../../../auth/AuthProvider';
 import type { DefinitionIssue, WorkflowDefinition } from '../definition';
 import type { WorkflowDto } from '../workflowApi';
 
 export type RoleDto = components['schemas']['RoleDto'];
-export type UserDto = components['schemas']['UserDto'];
 
 export const isForbidden = (e: unknown) => e instanceof ApiError && e.status === 403;
 
@@ -23,33 +22,78 @@ export function useRoles() {
   });
 }
 
-const DIRECTORY_KEY = ['wf-users', 'directory'];
+/** A person as the user directory returns them: enough to show a name and to pick them, nothing else. */
+export interface DirectoryUser {
+  id: string;
+  displayName: string;
+  email: string;
+}
+interface DirectoryPage {
+  items: DirectoryUser[];
+  nextCursor?: string | null;
+}
 
-/** The first 200 active users, so assignee chips can show names. Anyone beyond that is found through search and
- * remembered here once picked. */
+/** `GET /api/v1/users/directory?q=&limit=&cursor=`: active people of the tenant, open to anyone who needs to pick people (unlike
+ * `GET /users`, which needs `users.manage`). */
+async function fetchDirectory(
+  api: ReturnType<typeof useApiClient>,
+  query: { q?: string; limit: number; cursor?: string },
+): Promise<DirectoryPage> {
+  return unwrap(await api.GET('/api/v1/users/directory', { params: { query } }));
+}
+
+const DIRECTORY_KEY = ['wf-users', 'directory'];
+const PAGE = 50; // the most the directory returns in one page
+const PAGES = 4; // so chips can name up to 200 people up front; anyone else is found through search
+
+/** The first people of the directory (up to 200, by name), so chips can show names. Anyone beyond that is found through search
+ * and remembered here once picked, or looked up by id. */
 export function useUserDirectory() {
   const api = useApiClient();
   const { status } = useAuth();
   return useQuery({
     queryKey: DIRECTORY_KEY,
-    queryFn: async () =>
-      unwrap(await api.GET('/api/v1/users', { params: { query: { limit: 200, 'filter[status]': 'active' } } })).items,
+    queryFn: async () => {
+      const all: DirectoryUser[] = [];
+      let cursor: string | undefined;
+      for (let i = 0; i < PAGES; i++) {
+        const page = await fetchDirectory(api, { limit: PAGE, cursor });
+        all.push(...page.items);
+        if (!page.nextCursor) break;
+        cursor = page.nextCursor;
+      }
+      return all;
+    },
     enabled: status === 'authenticated',
     staleTime: 60_000,
     retry: false,
   });
 }
 
-/** Name of a user id, or a short id when the directory does not know them. */
-export function useUserNames() {
+/** Names of user ids, or a short id when nobody can say who they are. The directory knows active people; an id it does not
+ * list (someone deactivated, or beyond the first 200) is looked up one by one, which only works for people allowed to read
+ * users, so for everyone else it stays a short id. Pass the ids on screen so those lookups can happen. */
+export function useUserNames(ids: string[] = []) {
   const directory = useUserDirectory();
+  const api = useApiClient();
   const qc = useQueryClient();
   const names = new Map((directory.data ?? []).map((u) => [u.id, u.displayName || u.email]));
+  const lookups = useQueries({
+    queries: [...new Set(ids)]
+      .filter((id) => directory.isSuccess && !names.has(id))
+      .map((id) => ({
+        queryKey: ['wf-users', 'by-id', id],
+        queryFn: async () => unwrap(await api.GET('/api/v1/users/{id}', { params: { path: { id } } })),
+        staleTime: 300_000,
+        retry: false,
+      })),
+  });
+  for (const l of lookups) if (l.data) names.set(l.data.id, l.data.displayName || l.data.email);
   return {
     nameOf: (id: string) => names.get(id) ?? `${id.slice(0, 8)}…`,
     known: (id: string) => names.has(id),
-    remember: (u: UserDto) =>
-      qc.setQueryData<UserDto[]>(DIRECTORY_KEY, (old) => (old?.some((x) => x.id === u.id) ? old : [...(old ?? []), u])),
+    remember: (u: DirectoryUser) =>
+      qc.setQueryData<DirectoryUser[]>(DIRECTORY_KEY, (old) => (old?.some((x) => x.id === u.id) ? old : [...(old ?? []), u])),
   };
 }
 
@@ -59,9 +103,7 @@ export function useUserSearch(q: string) {
   const term = q.trim();
   return useQuery({
     queryKey: ['wf-users', 'search', term],
-    queryFn: async () =>
-      unwrap(await api.GET('/api/v1/users', { params: { query: { limit: 8, 'filter[status]': 'active', 'filter[q]': term } } }))
-        .items,
+    queryFn: async () => (await fetchDirectory(api, { q: term, limit: 8 })).items,
     enabled: status === 'authenticated' && term.length > 0,
     staleTime: 30_000,
     retry: false,

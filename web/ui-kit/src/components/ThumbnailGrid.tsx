@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Badge, type BadgeTone } from './Badge';
 import { CardMenu, type CardAction } from './CardMenu';
+import { ImageWithFallback } from './ImageWithFallback';
 import { ContextMenu } from './Menu';
 import { Skeleton } from './Skeleton';
 
@@ -11,6 +12,9 @@ export interface Thumb {
   title: string;
   subtitle?: string;
   imageUrl?: string;
+  /** Drawn in the picture area when there is no `imageUrl`, or the image fails to load - typically a large file-type icon
+   * (see `FileTypeIcon`). Decorative. Omit for a plain empty area. */
+  placeholder?: ReactNode;
   badge?: string;
   /** Colour of the badge (see `Badge`); neutral when omitted. */
   badgeTone?: BadgeTone;
@@ -80,11 +84,16 @@ export function ThumbnailGrid({
             )}
             {cardActions && <CardMenu label={menuLabel(t.title)} actions={cardActions(t.id)} onOpen={() => onMenuOpen?.(t.id)} />}
             <button type="button" className="dam-thumb__open" onClick={() => onOpen?.(t.id)}>
-              {t.imageUrl ? (
-                <img className="dam-thumb__img" src={t.imageUrl} alt="" loading="lazy" />
-              ) : (
-                <div className="dam-thumb__img" aria-hidden="true" />
-              )}
+              <ImageWithFallback
+                className="dam-thumb__img"
+                src={t.imageUrl}
+                loading="lazy"
+                fallback={
+                  <div className="dam-thumb__img dam-thumb__img--empty" aria-hidden="true">
+                    {t.placeholder}
+                  </div>
+                }
+              />
               <div className="dam-thumb__meta">
                 <div className="dam-thumb__title">{t.title}</div>
                 {(t.icon || t.subtitle) && (

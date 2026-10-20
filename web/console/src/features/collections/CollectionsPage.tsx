@@ -19,6 +19,7 @@ import {
 import { relativeTime } from '../../lib/relativeTime';
 import { useThumbnailMap } from '../library/assets';
 import { useDocumentTitle } from '../library/useDocumentTitle';
+import { isSmartSavedSearch } from '../search/savedSearch';
 import { CollectionCover } from './CollectionCover';
 import { NameCollectionDialog } from './NameCollectionDialog';
 import { useCollections, useCreateStaticCollection, useDeleteCollection, type CollectionDto } from './collectionsApi';
@@ -132,6 +133,11 @@ export function CollectionsPage() {
                   <Badge tone={c.type === 'smart' ? 'info' : 'neutral'} size="sm">
                     {t(`collections.type.${c.type}`)}
                   </Badge>
+                  {c.type === 'smart' && isSmartSavedSearch(c.query) && (
+                    <Badge tone="info" size="sm">
+                      {t('collections.smartSearch')}
+                    </Badge>
+                  )}
                   <Badge tone={c.visibility === 'tenant' ? 'brand' : 'neutral'} size="sm">
                     {t(`collections.visibility.${c.visibility}`)}
                   </Badge>

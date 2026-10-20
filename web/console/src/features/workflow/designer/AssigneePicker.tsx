@@ -2,7 +2,7 @@ import { useEffect, useId, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, CheckboxGroup, Input, Skeleton, X } from '../../../ui';
 import type { Assignees } from '../definition';
-import { useRoles, useUserNames, useUserSearch, type UserDto } from './designerApi';
+import { useRoles, useUserNames, useUserSearch, type DirectoryUser } from './designerApi';
 
 function useDebounced<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
@@ -23,7 +23,7 @@ export function PeopleCombobox({
   hint,
 }: {
   chosen: string[];
-  onPick: (u: UserDto) => void;
+  onPick: (u: DirectoryUser) => void;
   label?: string;
   placeholder?: string;
   hint?: string;
@@ -39,7 +39,7 @@ export function PeopleCombobox({
   const showList = open && q.trim().length > 0 && results.length > 0;
   const optionId = (i: number) => `${id}-opt-${i}`;
 
-  const pick = (u: UserDto) => {
+  const pick = (u: DirectoryUser) => {
     onPick(u);
     setQ('');
     setOpen(false);
@@ -132,7 +132,7 @@ export function AssigneePicker({
 }) {
   const { t } = useTranslation();
   const roles = useRoles();
-  const names = useUserNames();
+  const names = useUserNames(value.users);
   const [typed, setTyped] = useState('');
 
   const known = new Set((roles.data ?? []).map((r) => r.name));

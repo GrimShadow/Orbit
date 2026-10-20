@@ -57,6 +57,21 @@ describe('designer: opening a workflow', () => {
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
   });
 
+  it('names assignees through the user directory, never the admin-only user list, and keeps a short id for someone unknown', async () => {
+    const stranger = '99999999-9999-4999-8999-999999999999';
+    const def = twoLevelApproval();
+    def.steps[0]!.assignees = { roles: [], users: [asha.id, stranger] };
+    standardApi({ workflows: [workflow({ definition: def })], users: [asha] }, (c) =>
+      /^\/api\/v1\/users\/(?!directory$)[^/]+$/.test(c.pathname) ? json({ title: 'Forbidden', status: 403 }, 403) : undefined,
+    );
+    renderAt('/admin/workflows/w1');
+    const review = await screen.findByRole('button', { name: 'Step 1: Review' });
+    await waitFor(() => expect(review).toHaveTextContent('Asha Rao'));
+    expect(review).toHaveTextContent('99999999…');
+    expect(callsTo('GET', '/api/v1/users')).toHaveLength(0);
+    expect(callsTo('GET', '/api/v1/users/directory').length).toBeGreaterThan(0);
+  });
+
   it('says so when the workflow does not exist', async () => {
     savingApi();
     renderAt('/admin/workflows/missing');

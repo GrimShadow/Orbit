@@ -1011,3 +1011,17 @@ describe('Accessibility', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 });
+
+describe('AI panel: Hindi', () => {
+  it('renders the panel, its tag suggestions and the privacy line in Hindi', async () => {
+    setLanguage('hi');
+    renderPanel(newWorld({ ai: TAGS_READY() }));
+    const card = await screen.findByRole('region', { name: 'AI अंतर्दृष्टि' });
+    expect(within(card).getByText('विश्लेषित')).toBeInTheDocument();
+    expect(within(card).getByText('सुझाए गए टैग')).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'टैग sunset जोड़ें' })).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'सुझाए गए सभी 3 टैग जोड़ें' })).toBeInTheDocument();
+    expect(within(card).getByText('आपके अपने सर्वर पर विश्लेषित')).toBeInTheDocument();
+    expect(within(card).queryByText('Suggested tags')).not.toBeInTheDocument();
+  });
+});

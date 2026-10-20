@@ -21,6 +21,8 @@
     "renameCollection": "संग्रह का नाम बदलें",
     "renamed": "संग्रह का नाम बदला गया",
     "moreActions": "और कार्रवाइयाँ",
+    "smartSearch": "स्मार्ट खोज",
+    "openInSearch": "खोज में खोलें",
     "smartDescription": "स्मार्ट संग्रह हर बार खुलने पर अपनी सहेजी हुई खोज चलाता है।",
     "contentsEmptyStatic.title": "यह संग्रह खाली है",
     "contentsEmptyStatic.description": "लाइब्रेरी में एसेट चुनें और संग्रह के रूप में सहेजें चुनकर उनसे एक संग्रह बनाएँ।",

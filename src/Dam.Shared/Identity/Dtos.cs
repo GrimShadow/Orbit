@@ -12,6 +12,9 @@ public sealed record UserDto(
     IReadOnlyDictionary<string, string[]> Attributes, IReadOnlyList<string> Roles, IReadOnlyList<string> Groups,
     DateTimeOffset CreatedAt, DateTimeOffset LastSeenAt);
 
+/// <summary>A person in the tenant as a picker shows them: a name and an address, nothing else.</summary>
+public sealed record DirectoryUserDto(Guid Id, string DisplayName, string Email);
+
 public sealed record GroupDto(Guid Id, string Name, string Source, IReadOnlyList<string> Roles, int MemberCount);
 
 public sealed record GroupDetailDto(GroupDto Group, IReadOnlyList<UserRef> Members);

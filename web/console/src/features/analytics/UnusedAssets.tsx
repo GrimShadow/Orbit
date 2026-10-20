@@ -2,9 +2,21 @@ import { Archive, CaretRight, CheckCircle, DownloadSimple } from '@phosphor-icon
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Badge, Button, EmptyState, FileTypeIcon, Modal, Skeleton, Table, useToast, type Column } from '@dam/ui-kit';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  FileTypeIcon,
+  ImageWithFallback,
+  Modal,
+  Skeleton,
+  Table,
+  useToast,
+  type Column,
+} from '@dam/ui-kit';
 import { useApiClient } from '../../api/apiClient';
 import { formatBytes } from '../../lib/format';
+import { thumbnailIds } from '../../lib/thumbnails';
 import { relativeTime } from '../../lib/relativeTime';
 import { useThumbnailLinks } from '../asset/assetApi';
 import { statusTone } from '../library/statusTone';
@@ -38,7 +50,7 @@ export function UnusedAssetsPanel({ compact = false, titleAs: Title = 'h2' }: { 
   const query = useUnusedAssets(filter, compact ? 6 : 50);
   const items = query.data?.pages.flatMap((p) => p.items) ?? [];
   const first = query.data?.pages[0];
-  const thumbs = useThumbnailLinks(items.map((a) => a.id));
+  const thumbs = useThumbnailLinks(thumbnailIds(items));
   const fmt = (n: number) => new Intl.NumberFormat(i18n.language).format(n);
   const total = first?.total ?? 0;
   const totalText = first && !first.totalIsExact ? `${fmt(total)}+` : fmt(total);
@@ -119,13 +131,16 @@ export function UnusedAssetsPanel({ compact = false, titleAs: Title = 'h2' }: { 
       header: t('analytics.unused.colAsset'),
       render: (a) => (
         <div className="dam-assetcell">
-          {thumbs.data?.[a.id] ? (
-            <img className="dam-table__thumb" src={thumbs.data[a.id]!} alt="" loading="lazy" />
-          ) : (
-            <span className="dam-table__thumb dam-assetcell__fallback" aria-hidden="true">
-              <FileTypeIcon type={a.type} size={18} />
-            </span>
-          )}
+          <ImageWithFallback
+            className="dam-table__thumb"
+            src={thumbs.data?.[a.id]}
+            loading="lazy"
+            fallback={
+              <span className="dam-table__thumb dam-assetcell__fallback" aria-hidden="true">
+                <FileTypeIcon type={a.type} size={18} />
+              </span>
+            }
+          />
           <span className="dam-unused__titlecell">
             <Link to={`/library/assets/${a.id}`} className="dam-assetcell__title">
               {a.title}

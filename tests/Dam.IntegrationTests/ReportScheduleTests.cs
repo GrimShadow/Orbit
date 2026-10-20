@@ -545,7 +545,7 @@ public sealed class ReportScheduleTests(PostgresFixture pg) : AnalyticsTestBase(
         using var scheduler = AnalyticsScheduler(new FakeClock(DateTimeOffset.UtcNow), email: mail);
         await RunJob(scheduler, ReportSchedulesJob.JobKey);
         Assert.Equal(3, mail.Sent.Count(m => people.Any(p => p.Email == m.ToAddress)));
-        Assert.All(people, p => Assert.Contains("4 KB", mail.To(p.Email).Single().Html, StringComparison.Ordinal));
+        Assert.All(people, p => Assert.Contains("4.0 KB", mail.To(p.Email).Single().Html, StringComparison.Ordinal));
     }
 
     [Fact]

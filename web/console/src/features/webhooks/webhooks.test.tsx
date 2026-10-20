@@ -955,3 +955,27 @@ describe('accessibility', () => {
     expect(await axe(await dialog('Edit chat channel'))).toHaveNoViolations();
   });
 });
+
+describe('Hindi', () => {
+  it('renders the list, the new-webhook form and the deliveries tab in Hindi', async () => {
+    setLanguage('hi');
+    install(world({ webhooks: [webhook()], deliveries: [delivery()] }));
+    renderAt('/admin/webhooks');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'वेबहुक' })).toBeInTheDocument();
+    const card = (await screen.findByRole('heading', { name: 'Acme publishing hook' })).closest('article')!;
+    expect(within(card).getByText('12 सफल')).toBeInTheDocument();
+    expect(within(card).getByText('3 विफल')).toBeInTheDocument();
+    expect(within(card).getByRole('switch', { name: 'Acme publishing hook: सक्रिय' })).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'नया वेबहुक' }));
+    const form = await dialog('नया वेबहुक');
+    expect(within(form).getByLabelText('एंडपॉइंट URL')).toBeInTheDocument();
+    expect(within(form).getByRole('button', { name: 'वेबहुक बनाएँ' })).toBeInTheDocument();
+    await userEvent.click(within(form).getByRole('button', { name: 'रद्द करें' }));
+    cleanup();
+
+    renderAt('/admin/webhooks?tab=deliveries');
+    expect(await screen.findByRole('table', { name: 'वेबहुक डिलीवरी, नई सबसे ऊपर' })).toBeInTheDocument();
+  });
+});

@@ -288,42 +288,62 @@ describe('views and paging', () => {
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
   });
 
-  it('saves a search without the semantic flag (collections store the text search)', async () => {
-    let saved: { query: { semantic: boolean } } | undefined;
-    mockApi(
-      (call) => {
-        if (call.pathname === '/api/v1/search') return json(smartResult([hit()]));
-        if (call.pathname === '/api/v1/collections' && call.method === 'POST') {
-          return (async () => {
-            saved = (await call.json()) as typeof saved;
-            return json(
-              {
-                id: 'c1',
-                name: 'x',
-                type: 'smart',
-                query: null,
-                assetIds: [],
-                visibility: 'private',
-                ownerId: 'u',
-                createdAt: '2026-01-01T00:00:00Z',
-                updatedAt: '2026-01-01T00:00:00Z',
-              },
-              201,
-            );
-          })();
-        }
-        return undefined;
-      },
-      {},
-      CAPS_SMART,
-    );
-    renderAt('/search?q=beach');
-    await screen.findByText('Hero shot');
-    await userEvent.click(screen.getByRole('button', { name: 'Save this search' }));
-    const dialog = await screen.findByRole('dialog');
-    await userEvent.type(within(dialog).getByLabelText('Name'), 'Beach');
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(saved?.query.semantic).toBe(false));
+  describe('saving a search', () => {
+    const saveFrom = async (route: string) => {
+      let saved: { query: Body & { filters: unknown; facets: unknown; similarTo: unknown } } | undefined;
+      mockApi(
+        (call) => {
+          if (call.pathname === '/api/v1/search') return json(smartResult([hit()]));
+          if (call.pathname === '/api/v1/collections' && call.method === 'POST') {
+            return (async () => {
+              saved = (await call.json()) as typeof saved;
+              return json(
+                {
+                  id: 'c1',
+                  name: 'x',
+                  type: 'smart',
+                  query: saved!.query,
+                  assetIds: [],
+                  visibility: 'private',
+                  ownerId: 'u',
+                  createdAt: '2026-01-01T00:00:00Z',
+                  updatedAt: '2026-01-01T00:00:00Z',
+                },
+                201,
+              );
+            })();
+          }
+          return undefined;
+        },
+        {},
+        CAPS_SMART,
+      );
+      renderAt(route);
+      await screen.findByText('Hero shot');
+      await userEvent.click(screen.getByRole('button', { name: 'Save this search' }));
+      const dialog = await screen.findByRole('dialog');
+      await userEvent.type(within(dialog).getByLabelText('Name'), 'Beach');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(saved).toBeDefined());
+      return saved!;
+    };
+
+    it('stores the whole request, with semantic on when Smart search was on', async () => {
+      const saved = await saveFrom('/search?q=beach&type=image&smart=1');
+      expect(saved.query).toMatchObject({
+        query: 'beach',
+        filters: { type: ['image'] },
+        semantic: true,
+        cursor: null,
+        similarTo: null,
+      });
+      expect(saved.query.facets).toEqual(['type', 'status']);
+    });
+
+    it('stores semantic off when Smart search was turned off', async () => {
+      const saved = await saveFrom('/search?q=beach&smart=0');
+      expect(saved.query).toMatchObject({ query: 'beach', semantic: false });
+    });
   });
 });
 

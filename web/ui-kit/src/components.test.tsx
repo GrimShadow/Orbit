@@ -16,6 +16,7 @@ import {
   Skeleton,
   Table,
   Tabs,
+  ImageWithFallback,
   ThumbnailGrid,
   ToastProvider,
   Tree,
@@ -306,6 +307,52 @@ describe('ThumbnailGrid', () => {
     expect(screen.getByText('Updated 6 days ago')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Select Roadster hero' })).toBeChecked();
     expect(screen.getByRole('listitem')).toHaveClass('dam-thumb--selected');
+  });
+
+  const gridOf = (items: Parameters<typeof ThumbnailGrid>[0]['items']) => render(<ThumbnailGrid label="Assets" items={items} />);
+  const PLACEHOLDER = <span data-testid="ph-icon" />;
+
+  it('shows the image when there is a link, and no placeholder', () => {
+    const { container } = gridOf([{ id: '1', title: 'Hero', imageUrl: 'https://cdn.test/a.webp', placeholder: PLACEHOLDER }]);
+    expect(container.querySelector('img.dam-thumb__img')).toHaveAttribute('src', 'https://cdn.test/a.webp');
+    expect(screen.queryByTestId('ph-icon')).not.toBeInTheDocument();
+  });
+
+  it('draws the placeholder, not a broken image, for an item with no image link', () => {
+    const { container } = gridOf([{ id: '1', title: 'Podcast intro', placeholder: PLACEHOLDER }]);
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByTestId('ph-icon').parentElement).toHaveClass('dam-thumb__img--empty');
+    expect(screen.getByTestId('ph-icon').parentElement).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('falls back to the placeholder when the image fails to load, and tries a new link afresh', () => {
+    const items = (imageUrl: string) => [{ id: '1', title: 'Hero', imageUrl, placeholder: PLACEHOLDER }];
+    const { container, rerender } = gridOf(items('https://cdn.test/missing.webp'));
+    fireEvent.error(container.querySelector('img')!);
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByTestId('ph-icon')).toBeInTheDocument();
+    rerender(<ThumbnailGrid label="Assets" items={items('https://cdn.test/renewed.webp')} />);
+    expect(container.querySelector('img')).toHaveAttribute('src', 'https://cdn.test/renewed.webp');
+    expect(screen.queryByTestId('ph-icon')).not.toBeInTheDocument();
+  });
+
+  it('has no axe violations with the placeholder', async () => {
+    const { container } = gridOf([{ id: '1', title: 'Podcast intro', subtitle: 'Audio', placeholder: PLACEHOLDER }]);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('ImageWithFallback', () => {
+  it('renders the fallback with no src and after an error, and a decorative image otherwise', () => {
+    const { container, rerender } = render(<ImageWithFallback src={undefined} fallback={<i data-testid="fb" />} />);
+    expect(screen.getByTestId('fb')).toBeInTheDocument();
+    rerender(<ImageWithFallback src="https://cdn.test/x.png" className="pic" fallback={<i data-testid="fb" />} />);
+    const img = container.querySelector('img')!;
+    expect(img).toHaveAttribute('alt', '');
+    expect(img).toHaveClass('pic');
+    fireEvent.error(img);
+    expect(screen.getByTestId('fb')).toBeInTheDocument();
+    expect(container.querySelector('img')).toBeNull();
   });
 });
 

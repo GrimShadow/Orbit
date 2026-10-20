@@ -283,3 +283,25 @@ describe('Tasks inbox - decided and everyone', () => {
     expect(calls.filter(isTaskList).some((c) => c.search.get('assignee') === 'all')).toBe(true);
   });
 });
+
+describe('Tasks inbox - Hindi', () => {
+  it('renders the inbox, its tabs, the due badges and the decision dialog in Hindi', async () => {
+    setLanguage('hi');
+    mockApi((c) => (isTaskList(c) ? json(page([SOON, LATE])) : undefined), { summary: { pendingForMe: 2, overdueForMe: 1 } });
+    renderAt('/tasks');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'कार्य' })).toBeInTheDocument();
+    const list = await screen.findByRole('list', { name: 'लंबित कार्य' });
+    const rows = within(list).getAllByRole('listitem');
+    expect(within(rows[0]!).getByText('आगे बढ़ाया गया')).toBeInTheDocument();
+    expect(within(rows[0]!).getByRole('button', { name: 'स्वीकृत करें' })).toBeInTheDocument();
+    expect(within(rows[0]!).getByRole('button', { name: 'अस्वीकार करें' })).toBeInTheDocument();
+    expect(await screen.findByText('2 कार्य आपकी प्रतीक्षा में · 1 देर से')).toBeInTheDocument();
+    expect(screen.queryByText('Escalated')).not.toBeInTheDocument();
+
+    await userEvent.click(within(rows[1]!).getByRole('button', { name: 'अस्वीकार करें' }));
+    const dialog = await screen.findByRole('dialog', { name: '“Acme banner” अस्वीकार करें' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'एसेट अस्वीकार करें' }));
+    expect(await within(dialog).findByText('बताएँ कि आप इस एसेट को क्यों अस्वीकार कर रहे हैं।')).toBeInTheDocument();
+  });
+});

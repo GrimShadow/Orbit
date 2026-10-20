@@ -4,7 +4,7 @@ import { axe } from 'vitest-axe';
 import { queryClient } from '../../App';
 import { setLanguage } from '../../i18n';
 import { renderAt } from '../workflow/workflowTestKit';
-import { MANAGER, callsTo, install, json, newWorld, schedule, type World } from './insightsTestKit';
+import { MANAGER, USERS, callsTo, install, json, newWorld, schedule, user, type World } from './insightsTestKit';
 import type { ReportScheduleInput } from './insightsTypes';
 
 beforeEach(() => {
@@ -278,13 +278,61 @@ describe('Schedule form', () => {
     expect(screen.getByRole('dialog', { name: 'Edit scheduled report' })).toBeInTheDocument();
   });
 
-  it('says so when the role cannot list people', async () => {
+  it('names and finds people through the directory for a role that cannot list users', async () => {
     const w = newWorld({ schedules: [schedule()] });
-    install(w, MANAGER, (c) => (c.pathname === '/api/v1/users' ? json({ title: 'Forbidden', status: 403 }, 403) : undefined));
+    const listed: string[] = [];
+    install(w, MANAGER, (c) => {
+      if (c.pathname === '/api/v1/users' || /^\/api\/v1\/users\/(?!directory$)[^/]+$/.test(c.pathname)) {
+        listed.push(c.pathname);
+        return json({ title: 'Forbidden', status: 403 }, 403);
+      }
+      return undefined;
+    });
+    renderAt('/insights/reports');
+    const list = await screen.findByRole('list', { name: 'Report schedules' });
+    expect(await within(list).findByText('Asha Rao, Ben Okafor')).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit schedule for Most used assets' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit scheduled report' });
+    expect(within(dialog).getByRole('list', { name: 'Selected recipients' })).toHaveTextContent('Ben Okafor');
+    await userEvent.type(within(dialog).getByRole('combobox', { name: 'Add a recipient' }), 'chl');
+    await userEvent.click(await within(dialog).findByRole('option', { name: /Chloe Zhang/ }));
+    expect(within(dialog).getByRole('list', { name: 'Selected recipients' })).toHaveTextContent('Chloe Zhang');
+
+    const directory = callsTo(w, '/api/v1/users/directory');
+    expect(directory.length).toBeGreaterThan(0);
+    expect(directory.some((c) => c.search.get('q') === 'chl')).toBe(true);
+    expect(listed).toEqual([]);
+    expect(within(dialog).queryByText(/Couldn't load the list of people/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/users\.manage/)).not.toBeInTheDocument();
+  });
+
+  it('looks up a recipient the directory does not list (for example a deactivated one) by id, else keeps a short id', async () => {
+    const w = newWorld({ schedules: [schedule({ recipientUserIds: ['u1', 'u2', 'u9'] })], users: USERS.slice(0, 1) });
+    install(w, MANAGER, (c) =>
+      c.pathname === '/api/v1/users/u2'
+        ? json(user('u2', 'Ben Okafor'))
+        : /^\/api\/v1\/users\/(?!directory$)[^/]+$/.test(c.pathname)
+          ? json({ title: 'Not found', status: 404 }, 404)
+          : undefined,
+    );
+    renderAt('/insights/reports');
+    const list = await screen.findByRole('list', { name: 'Report schedules' });
+    expect(await within(list).findByText('Asha Rao, Ben Okafor, u9…')).toBeInTheDocument();
+  });
+
+  it('says quietly that names may show as codes when the people list cannot be loaded', async () => {
+    const w = newWorld({ schedules: [schedule()] });
+    install(w, MANAGER, (c) =>
+      c.pathname === '/api/v1/users/directory' ? json({ title: 'Forbidden', status: 403 }, 403) : undefined,
+    );
     renderAt('/insights/reports');
     await userEvent.click(await screen.findByRole('button', { name: 'Edit schedule for Most used assets' }));
     const dialog = await screen.findByRole('dialog', { name: 'Edit scheduled report' });
-    expect(await within(dialog).findByText(/Your role can't list people/)).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText("Couldn't load the list of people, so names may show as short codes."),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole('list', { name: 'Selected recipients' })).toHaveTextContent('u1…');
   });
 
   it('has no axe violations with the list and with the dialog open', async () => {

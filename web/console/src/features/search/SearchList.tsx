@@ -1,7 +1,7 @@
 import { Badge } from '@dam/ui-kit';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { CardMenu, FileTypeIcon, Table, type Column } from '../../ui';
+import { CardMenu, FileTypeIcon, ImageWithFallback, Table, type Column } from '../../ui';
 import type { useItemActions } from '../library/itemActions';
 import { statusTone } from '../library/statusTone';
 import { relativeTime } from '../../lib/relativeTime';
@@ -28,13 +28,16 @@ export function SearchList({
       header: t('library.columnTitle'),
       render: (h) => (
         <div className="dam-assetcell dam-assetcell--top">
-          {thumbnails[h.id] ? (
-            <img className="dam-table__thumb" src={thumbnails[h.id]!} alt="" loading="lazy" />
-          ) : (
-            <span className="dam-table__thumb dam-assetcell__fallback" aria-hidden="true">
-              <FileTypeIcon type={h.type} size={18} />
-            </span>
-          )}
+          <ImageWithFallback
+            className="dam-table__thumb"
+            src={thumbnails[h.id]}
+            loading="lazy"
+            fallback={
+              <span className="dam-table__thumb dam-assetcell__fallback" aria-hidden="true">
+                <FileTypeIcon type={h.type} size={18} />
+              </span>
+            }
+          />
           <div className="dam-searchlist__main">
             <Link to={`/library/assets/${h.id}`} className="dam-assetcell__title">
               {h.title}

@@ -467,6 +467,7 @@ public sealed class AnalyticsTests
         Assert.Contains("Showing the first 50 of 120 rows.", mail.Html, StringComparison.Ordinal);
         Assert.Contains("href=\"https://orbit.example/insights/reports/test?days=30\"", mail.Html, StringComparison.Ordinal);
         Assert.Contains("1.5 KB", mail.Html, StringComparison.Ordinal);
+        Assert.Contains("75.0 KB", mail.Text, StringComparison.Ordinal);   // 50 x 1.5 KB
         Assert.Contains("Open in Orbit: https://orbit.example/insights/reports/test?days=30", mail.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Asset 51", mail.Text, StringComparison.Ordinal);
     }
@@ -497,10 +498,95 @@ public sealed class AnalyticsTests
     [Theory]
     [InlineData(0L, "0 B")]
     [InlineData(1023L, "1023 B")]
-    [InlineData(1024L, "1 KB")]
+    [InlineData(1024L, "1.0 KB")]
     [InlineData(1572864L, "1.5 MB")]
-    [InlineData(5L * 1024 * 1024 * 1024, "5 GB")]
+    [InlineData(107255865L, "102.3 MB")]
+    [InlineData(5L * 1024 * 1024 * 1024, "5.0 GB")]
     public void Sizes_are_shown_the_way_people_read_them(long bytes, string shown) => Assert.Equal(shown, ReportEmail.Bytes(bytes));
+
+    private static readonly ReportColumnDto[] KpiColumns =
+        [new("kpi", "KPI", "text"), new("metric", "Measure", "text"), new("value", "This period", "number"), new("unit", "Unit", "text"), new("previous", "Previous period", "number")];
+
+    private static Dictionary<string, object?> Kpi(string metric, object? value, string unit, object? previous) =>
+        R(("kpi", "K"), ("metric", metric), ("value", value), ("unit", unit), ("previous", previous));
+
+    private static ReportDto KpiReport() => Report(KpiColumns,
+        Kpi("Storage not used", 107255865L, "bytes", 1536L),
+        Kpi("Median time to publish", 5.5, "hours", 0.75),
+        Kpi("90th percentile time to publish", 72.0, "hours", 30.0),
+        Kpi("Duplicate rate", 12.34, "%", null),
+        Kpi("Uploads", 1234567L, "uploads", 980L),
+        Kpi("Average uses per used asset", 1.37, "uses", 2.0)) with
+    { Name = ReportCatalogue.Kpis };
+
+    [Fact]
+    public void The_kpi_email_formats_each_row_by_its_own_unit_in_the_table_and_the_text()
+    {
+        var mail = ReportEmail.Render(KpiReport(), "Acme", 30, null);
+        foreach (var part in new[] { mail.Html, mail.Text })
+        {
+            Assert.DoesNotContain("107255865", part, StringComparison.Ordinal);
+            Assert.DoesNotContain("1234567", part, StringComparison.Ordinal);   // counts get separators
+            Assert.Contains("102.3 MB", part, StringComparison.Ordinal);
+            Assert.Contains("1.5 KB", part, StringComparison.Ordinal);          // the previous period, too
+            Assert.Contains("5.5 h", part, StringComparison.Ordinal);
+            Assert.Contains("45 min", part, StringComparison.Ordinal);
+            Assert.Contains("3 d", part, StringComparison.Ordinal);             // 72 h
+            Assert.Contains("30 h", part, StringComparison.Ordinal);            // 30 h reads as hours, not days
+            Assert.Contains("12.3%", part, StringComparison.Ordinal);
+            Assert.Contains("1,234,567", part, StringComparison.Ordinal);
+            Assert.Contains("1.4", part, StringComparison.Ordinal);
+        }
+        Assert.Contains("Storage not used | 102.3 MB |  | 1.5 KB", mail.Text, StringComparison.Ordinal);   // the unit cell is blank when the figure says it
+        Assert.Contains("Uploads | 1,234,567 | uploads | 980", mail.Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(0.0, "1 min")]
+    [InlineData(0.75, "45 min")]
+    [InlineData(1.0, "1 h")]
+    [InlineData(5.5, "5.5 h")]
+    [InlineData(30.0, "30 h")]
+    [InlineData(47.9, "47.9 h")]
+    [InlineData(48.0, "2 d")]
+    [InlineData(72.0, "3 d")]
+    [InlineData(100.0, "4.2 d")]
+    public void Hours_read_as_minutes_hours_or_days_like_the_console(double hours, string shown)
+    {
+        var report = Report([new("h", "Time", "hours")], R(("h", hours)));
+        Assert.Contains($">{shown}<", ReportEmail.Render(report, "", 30, null).Html, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(0.943, "94.3%")]
+    [InlineData(0.5, "50%")]
+    [InlineData(1.0, "100%")]
+    [InlineData(0.9996, "99.9%")]
+    public void Percent_columns_hold_a_ratio_and_show_one_decimal_with_a_sign(double ratio, string shown)
+    {
+        var report = Report([new("p", "Rate", "percent")], R(("p", ratio)));
+        Assert.Contains($">{shown}<", ReportEmail.Render(report, "", 30, null).Html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Counts_and_sizes_in_typed_columns_are_formatted_and_a_missing_value_stays_blank()
+    {
+        var report = Report([new("c", "Uses", "count"), new("b", "Size", "bytes")], R(("c", 9876543L), ("b", 5L * 1024 * 1024 * 1024)), R(("c", null), ("b", null)));
+        var html = ReportEmail.Render(report, "", 30, null).Html;
+        Assert.Contains(">9,876,543<", html, StringComparison.Ordinal);
+        Assert.Contains(">5.0 GB<", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_csv_of_the_same_kpi_report_keeps_the_raw_numbers_for_machines()
+    {
+        var csv = Csv(KpiReport());
+        Assert.Contains("K,Storage not used,107255865,bytes,1536", csv, StringComparison.Ordinal);
+        Assert.Contains("K,Median time to publish,5.5,hours,0.75", csv, StringComparison.Ordinal);
+        Assert.Contains("K,Uploads,1234567,uploads,980", csv, StringComparison.Ordinal);
+        Assert.Contains("K,Duplicate rate,12.34,%,", csv, StringComparison.Ordinal);
+        Assert.DoesNotContain("MB", csv, StringComparison.Ordinal);
+    }
 
     // ---- usage rules the rollup relies on ---------------------------------------------------------------------
 

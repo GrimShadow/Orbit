@@ -160,7 +160,7 @@
       "recipientsRequired": "Add at least one recipient.",
       "selectedRecipients": "Selected recipients",
       "removeRecipient": "Remove {{name}}",
-      "directoryDenied": "Your role can't list people, so names may show as short codes and search may be unavailable.",
+      "directoryFailed": "Couldn't load the list of people, so names may show as short codes.",
       "enabled": "Enabled",
       "enabledHint": "A paused schedule keeps its settings but sends nothing.",
       "on": "On",

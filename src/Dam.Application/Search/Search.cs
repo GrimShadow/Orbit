@@ -33,11 +33,17 @@ public sealed class SearchAssetsHandler(IAuthorizationService authz, ISearchQuer
         if (clauses.Count == 0) return new SearchResultDto([], 0, [], null);
 
         // A semantic search needs the query as vectors (ADR-0035). If the provider cannot supply them the search still runs, as an ordinary one, and says why.
-        SemanticQueryVectors? vectors = null;
-        if (r.Semantic && r.SimilarTo is null && !string.IsNullOrWhiteSpace(r.Text)) vectors = await embedder.EmbedAsync(r.Text.Trim(), ct);
-        var query = new SearchQuery(r.Text, r.Filters, r.Facets, r.Sort, r.Highlight, r.SimilarTo, r.Cursor, r.Limit, r.Semantic, vectors);
+        var query = new SearchQuery(r.Text, r.Filters, r.Facets, r.Sort, r.Highlight, r.SimilarTo, r.Cursor, r.Limit, r.Semantic);
+        query = query with { Vectors = await SemanticVectors.ForAsync(embedder, query, ct) };
         return await search.SearchAsync(query, clauses, profile.UserId, ct);
     }
+}
+
+/// <summary>Embeds a semantic query's words for a hybrid search; shared by a direct search and by running a saved (smart collection) search.</summary>
+internal static class SemanticVectors
+{
+    public static async Task<SemanticQueryVectors?> ForAsync(ISemanticQueryEmbedder embedder, SearchQuery query, CancellationToken ct) =>
+        query.Semantic && query.SimilarTo is null && !string.IsNullOrWhiteSpace(query.Text) ? await embedder.EmbedAsync(query.Text.Trim(), ct) : null;
 }
 
 public sealed record SuggestQuery(string Prefix, int? Limit) : IQuery<IReadOnlyList<SuggestionDto>>;

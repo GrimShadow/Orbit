@@ -111,7 +111,7 @@ public static class ReportEmail
         var text = new StringBuilder();
         text.Append(title).Append(" - ").Append(Period(report, days)).Append("\n\n");
         text.Append(string.Join(" | ", report.Columns.Select(c => c.Label))).Append('\n');
-        foreach (var row in shown) text.Append(string.Join(" | ", report.Columns.Select(c => Display(c, row.GetValueOrDefault(c.Key))))).Append('\n');
+        foreach (var row in shown) text.Append(string.Join(" | ", report.Columns.Select(c => Display(c, row.GetValueOrDefault(c.Key), report, row)))).Append('\n');
         text.Append('\n').Append(summary).Append('\n');
         if (linkUrl is not null) text.Append("\nOpen in Orbit: ").Append(linkUrl).Append('\n');
 
@@ -134,7 +134,7 @@ public static class ReportEmail
             {
                 html.Append("<tr>");
                 foreach (var c in report.Columns)
-                    html.Append("<td align=\"").Append(IsNumeric(c) ? "right" : "left").Append("\" style=\"padding:6px 8px;border-bottom:1px solid #eceeed;\">").Append(H(Display(c, row.GetValueOrDefault(c.Key)))).Append("</td>");
+                    html.Append("<td align=\"").Append(IsNumeric(c) ? "right" : "left").Append("\" style=\"padding:6px 8px;border-bottom:1px solid #eceeed;\">").Append(H(Display(c, row.GetValueOrDefault(c.Key), report, row))).Append("</td>");
                 html.Append("</tr>");
             }
             html.Append("</tbody></table>");
@@ -154,30 +154,83 @@ public static class ReportEmail
 
     private static bool IsNumeric(ReportColumnDto c) => c.Type is ReportColumnTypes.Count or ReportColumnTypes.Number or ReportColumnTypes.Percent or ReportColumnTypes.Bytes or ReportColumnTypes.Hours;
 
-    /// <summary>A cell as a person reads it: 1.5 MB, 83.3%, 12.5, a date.</summary>
-    internal static string Display(ReportColumnDto column, object? value)
+    /// <summary>
+    /// A cell as a person reads it (never the CSV's raw figures): 102.3 MB, 83.3%, 5.5 h, 12,345, a date. The KPI report mixes units in one column, so its
+    /// "value" and "previous" cells are formatted by the row's own unit; the unit cell is blank when the figure already carries it.
+    /// </summary>
+    internal static string Display(ReportColumnDto column, object? value, ReportDto? report = null, IReadOnlyDictionary<string, object?>? row = null)
     {
         if (value is null) return "";
+        var unit = row is not null && report is not null && report.Columns.Any(c => c.Key == UnitKey) ? Convert.ToString(row.GetValueOrDefault(UnitKey), CultureInfo.InvariantCulture) : null;
+        if (column.Key == UnitKey && column.Type == ReportColumnTypes.Text && value is string u && ReportFigures.UnitIsInFigure(u)) return "";
+        if (unit is not null && column.Type == ReportColumnTypes.Number && column.Key != UnitKey && ReportFigures.ByUnit(unit, value) is { } byUnit) return byUnit;
         return column.Type switch
         {
-            ReportColumnTypes.Percent => (Convert.ToDouble(value, CultureInfo.InvariantCulture) * 100).ToString("0.#", CultureInfo.InvariantCulture) + "%",
-            ReportColumnTypes.Number or ReportColumnTypes.Hours => Convert.ToDouble(value, CultureInfo.InvariantCulture).ToString("0.##", CultureInfo.InvariantCulture),
+            ReportColumnTypes.Percent => ReportFigures.Ratio(Convert.ToDouble(value, CultureInfo.InvariantCulture)),
+            ReportColumnTypes.Number => ReportFigures.Decimal(Convert.ToDouble(value, CultureInfo.InvariantCulture), "#,##0.##"),
+            ReportColumnTypes.Hours => ReportFigures.Hours(Convert.ToDouble(value, CultureInfo.InvariantCulture)),
             ReportColumnTypes.Count => Convert.ToInt64(value, CultureInfo.InvariantCulture).ToString("N0", CultureInfo.InvariantCulture),
-            ReportColumnTypes.Bytes => Bytes(Convert.ToInt64(value, CultureInfo.InvariantCulture)),
+            ReportColumnTypes.Bytes => ReportFigures.Bytes(Convert.ToInt64(value, CultureInfo.InvariantCulture)),
             _ => Convert.ToString(value, CultureInfo.InvariantCulture) ?? "",
         };
     }
 
-    public static string Bytes(long bytes)
-    {
-        string[] units = ["B", "KB", "MB", "GB", "TB"];
-        double v = bytes;
-        var i = 0;
-        while (v >= 1024 && i < units.Length - 1) { v /= 1024; i++; }
-        return i == 0 ? $"{bytes.ToString(CultureInfo.InvariantCulture)} B" : $"{v.ToString("0.#", CultureInfo.InvariantCulture)} {units[i]}";
-    }
+    private const string UnitKey = "unit";
+
+    public static string Bytes(long bytes) => ReportFigures.Bytes(bytes);
 
     private static string Clean(string s) => string.Join(' ', s.Split(['\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
     private static string H(string s) => WebUtility.HtmlEncode(s);
+}
+
+/// <summary>
+/// Figures for people (the email), in the wording of the console's report tables: sizes with one decimal from KB up, hours as minutes, hours or days,
+/// counts with thousands separators. Culture-free (invariant), because the email has no locale. The CSV does NOT use these: machines get raw numbers.
+/// </summary>
+internal static class ReportFigures
+{
+    public static string Bytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes.ToString(CultureInfo.InvariantCulture)} B";
+        string[] units = ["KB", "MB", "GB", "TB"];
+        var v = bytes / 1024.0;
+        var i = 0;
+        while (v >= 1024 && i < units.Length - 1) { v /= 1024; i++; }
+        return $"{v.ToString("0.0", CultureInfo.InvariantCulture)} {units[i]}";
+    }
+
+    /// <summary>Decimal hours as minutes, hours or days: 0.75 is "45 min", 5.5 is "5.5 h", 72 is "3 d".</summary>
+    public static string Hours(double hours)
+    {
+        if (hours < 1) return $"{Math.Max(1, Math.Round(hours * 60, MidpointRounding.AwayFromZero)).ToString("0", CultureInfo.InvariantCulture)} min";
+        if (hours < 48) return $"{hours.ToString("#,##0.#", CultureInfo.InvariantCulture)} h";
+        return $"{(hours / 24).ToString("#,##0.#", CultureInfo.InvariantCulture)} d";
+    }
+
+    /// <summary>A fraction (0.943) as "94.3%". A near miss never reads as perfect: 0.9996 is "99.9%".</summary>
+    public static string Ratio(double ratio)
+    {
+        var v = ratio;
+        if (v < 1 && Math.Round(v * 1000, MidpointRounding.AwayFromZero) / 1000 >= 1) v = 0.999;
+        return (Math.Max(0, v) * 100).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+    }
+
+    public static string Decimal(double d, string format) => d.ToString(format, CultureInfo.InvariantCulture);
+
+    /// <summary>Units whose figure is formatted so that it already says what it is (so the unit cell would repeat it).</summary>
+    public static bool UnitIsInFigure(string unit) => unit is "bytes" or "hours" or "%";
+
+    /// <summary>The KPI report's "value"/"previous" cells, by the row's unit; null when the unit is not one this knows (the plain number is used).</summary>
+    public static string? ByUnit(string unit, object value)
+    {
+        var d = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+        return unit switch
+        {
+            "bytes" => Bytes((long)Math.Round(d, MidpointRounding.AwayFromZero)),
+            "hours" => Hours(d),
+            "%" => d.ToString("#,##0.#", CultureInfo.InvariantCulture) + "%",   // already percentage points
+            _ => d == Math.Floor(d) ? d.ToString("N0", CultureInfo.InvariantCulture) : d.ToString("#,##0.0", CultureInfo.InvariantCulture),
+        };
+    }
 }
