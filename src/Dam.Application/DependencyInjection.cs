@@ -38,6 +38,8 @@ public static class DependencyInjection
         services.AddScoped<Ai.TranslationAcceptor>();
         services.AddDamAnalytics();
         services.AddScoped<Ai.AiReviewReader>();
+        services.AddScoped<Integrations.ConnectorRegistry>();
+        services.AddScoped<IConnector>(_ => new Integrations.PlannedConnector(Integrations.ShippedConnectors.Canva));   // listed, not usable yet; the HTTP connectors are added by AddDamIntegrations
         services.AddValidatorsFromAssembly(asm, includeInternalTypes: true);
 
         foreach (var t in asm.GetTypes().Where(t => t is { IsAbstract: false, IsInterface: false }))

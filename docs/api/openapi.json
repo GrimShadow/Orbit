@@ -6472,6 +6472,256 @@
           }
         }
       }
+    },
+    "/api/v1/integrations/connectors": {
+      "get": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "The systems Orbit can connect to, with the fields each needs. Status is available, preview or planned (planned ones cannot be connected yet). Needs integrations.manage",
+        "operationId": "ListConnectors",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConnectorDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/connections": {
+      "get": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "The tenant\u0027s connections with their status. Secrets are shown only as set/not set and a hint. Needs integrations.manage",
+        "operationId": "ListConnections",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConnectionDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Creates a connection. Secrets go in \u0027secrets\u0027 and are stored encrypted. 422 names the fields as config.\u003Cfield\u003E or secrets.\u003Cfield\u003E; 409 when the name is taken; planned connectors are refused",
+        "operationId": "CreateConnection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/connections/{id}": {
+      "get": {
+        "tags": [
+          "Integrations"
+        ],
+        "operationId": "GetConnection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Replaces a connection\u0027s name, enabled flag and settings. A secret you send replaces the stored one, one you leave out is kept, and \u0027clearSecrets\u0027 removes the named ones",
+        "operationId": "UpdateConnection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Deletes a connection, its stored secrets and its activity log",
+        "operationId": "DeleteConnection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/connections/{id}/test": {
+      "post": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "Signs in to the other system and, when the connection has a test path, requests it once. Returns the steps and updates the connection\u0027s status. At most once every 5 seconds per connection (429 otherwise)",
+        "operationId": "TestConnection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/connections/{id}/activity": {
+      "get": {
+        "tags": [
+          "Integrations"
+        ],
+        "summary": "The calls made for a connection, newest first (host and path only, never a query string, body or header). The latest 500 are kept",
+        "operationId": "ListConnectionActivity",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOfActivityDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6536,6 +6786,55 @@
             "items": {
               "type": "string"
             }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ActivityDto": {
+        "required": [
+          "id",
+          "kind",
+          "method",
+          "target",
+          "statusCode",
+          "ok",
+          "durationMs",
+          "error",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
           },
           "createdAt": {
             "type": "string",
@@ -8529,6 +8828,260 @@
           }
         }
       },
+      "ConnectionDto": {
+        "required": [
+          "id",
+          "connector",
+          "name",
+          "enabled",
+          "config",
+          "secrets",
+          "status",
+          "statusDetail",
+          "lastTestedAt",
+          "lastOkAt",
+          "tokenExpiresAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "connector": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "secrets": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SecretStateDto"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "statusDetail": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastTestedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastOkAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "tokenExpiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ConnectionInput": {
+        "required": [
+          "connector",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": {},
+            "default": null,
+            "nullable": true
+          },
+          "secrets": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": null,
+            "nullable": true
+          },
+          "clearSecrets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "ConnectorDto": {
+        "required": [
+          "key",
+          "name",
+          "description",
+          "category",
+          "status",
+          "authStrategies",
+          "defaultAuthStrategy",
+          "capabilities",
+          "fields"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "authStrategies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "defaultAuthStrategy": {
+            "type": "string",
+            "nullable": true
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectorFieldDto"
+            }
+          }
+        }
+      },
+      "ConnectorFieldDto": {
+        "required": [
+          "key",
+          "label",
+          "type",
+          "required",
+          "help",
+          "placeholder",
+          "group",
+          "options",
+          "default",
+          "showWhen"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "help": {
+            "type": "string",
+            "nullable": true
+          },
+          "placeholder": {
+            "type": "string",
+            "nullable": true
+          },
+          "group": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConnectorFieldOptionDto"
+            }
+          },
+          "default": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          },
+          "showWhen": {
+            "$ref": "#/components/schemas/ConnectorShowWhenDto"
+          }
+        }
+      },
+      "ConnectorFieldOptionDto": {
+        "required": [
+          "value",
+          "label"
+        ],
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "ConnectorShowWhenDto": {
+        "required": [
+          "field",
+          "equals"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "equals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "nullable": true
+      },
       "CreateAccessRuleRequest": {
         "required": [
           "principalType",
@@ -9736,6 +10289,25 @@
       },
       "NullableOfJsonElement": {
         "nullable": true
+      },
+      "PageOfActivityDto": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivityDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
       },
       "PageOfActivityItemDto": {
         "required": [
@@ -11435,6 +12007,22 @@
           }
         }
       },
+      "SecretStateDto": {
+        "required": [
+          "set",
+          "hint"
+        ],
+        "type": "object",
+        "properties": {
+          "set": {
+            "type": "boolean"
+          },
+          "hint": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "SendReportNowResultDto": {
         "required": [
           "sent",
@@ -11861,6 +12449,58 @@
           "children": {
             "type": "array",
             "items": {}
+          }
+        }
+      },
+      "TestResultDto": {
+        "required": [
+          "ok",
+          "durationMs",
+          "testedAt",
+          "steps"
+        ],
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "testedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestStepDto"
+            }
+          }
+        }
+      },
+      "TestStepDto": {
+        "required": [
+          "name",
+          "ok",
+          "detail",
+          "durationMs"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -13794,6 +14434,9 @@
     },
     {
       "name": "Glossary"
+    },
+    {
+      "name": "Integrations"
     }
   ]
 }

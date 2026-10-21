@@ -15,6 +15,7 @@
  "FolderTests": 14,
  "IdentityTests": 22,
  "IngestTests": 23,
+ "IntegrationsApiTests": 60,
  "KpiTests": 10,
  "LifecycleTests": 17,
  "MessagingTests": 74,

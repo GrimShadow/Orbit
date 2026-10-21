@@ -8,6 +8,7 @@ using Dam.Domain.Comments;
 using Dam.Domain.Common;
 using Dam.Domain.Content;
 using Dam.Domain.Identity;
+using Dam.Domain.Integrations;
 using Dam.Domain.Licensing;
 using Dam.Domain.Notifications;
 using Dam.Domain.Webhooks;
@@ -71,6 +72,8 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
     public DbSet<AiRun> AiRuns => Set<AiRun>();
     public DbSet<GlossaryTerm> GlossaryTerms => Set<GlossaryTerm>();
     public DbSet<TranslationJob> TranslationJobs => Set<TranslationJob>();
+    public DbSet<IntegrationConnection> IntegrationConnections => Set<IntegrationConnection>();
+    public DbSet<IntegrationCall> IntegrationCalls => Set<IntegrationCall>();
 
     // Referenced by the compiled query filter; EF re-evaluates it per context instance.
     private Guid CurrentTenantId => tenant.TenantId;
@@ -116,6 +119,7 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
         ConfigureComments(b);
         ConfigureRights(b);
         ConfigureAi(b);
+        ConfigureIntegrations(b);
 
         // Defence in depth: EF filter here, Postgres RLS underneath.
         foreach (var t in b.Model.GetEntityTypes().Where(t => typeof(ITenantScoped).IsAssignableFrom(t.ClrType)))
@@ -746,6 +750,37 @@ public sealed class DamDbContext(DbContextOptions<DamDbContext> options, ITenant
             e.HasOne<Asset>().WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.AssetId, x.Id });
             e.HasIndex(x => new { x.TenantId, x.Status });
+        });
+    }
+
+    private static void ConfigureIntegrations(ModelBuilder b)
+    {
+        b.Entity<IntegrationConnection>(e =>
+        {
+            e.ToTable("integration_connections", t => t.HasCheckConstraint("ck_integration_connections_status", "status IN ('new','ok','error')"));
+            e.HasKey(x => x.Id);
+            e.Ignore(x => x.DomainEvents);
+            e.Property(x => x.Connector).HasMaxLength(32);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Config).AsJson();
+            e.Property(x => x.Secrets).AsJson();
+            e.Property(x => x.Status).HasMaxLength(8);
+            e.Property(x => x.StatusDetail).HasMaxLength(500);
+            e.Property(x => x.TokenCipher).HasColumnType("text");
+            // Names are unique per tenant, ignoring case: the unique index on lower(name) is created in the migration (EF cannot express it).
+            e.HasIndex(x => x.TenantId);
+        });
+        b.Entity<IntegrationCall>(e =>
+        {
+            e.ToTable("integration_calls", t => t.HasCheckConstraint("ck_integration_calls_kind", "kind IN ('auth','test','action')"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Kind).HasMaxLength(8);
+            e.Property(x => x.Method).HasMaxLength(8);
+            e.Property(x => x.Target).HasMaxLength(500);
+            e.Property(x => x.Error).HasMaxLength(500);
+            e.HasOne<IntegrationConnection>().WithMany().HasForeignKey(x => x.ConnectionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.ConnectionId, x.Id });
+            e.HasIndex(x => x.TenantId);
         });
     }
 

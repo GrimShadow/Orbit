@@ -1,6 +1,6 @@
 namespace Dam.Domain.Common;
 
-public enum ErrorType { Validation, Unauthorized, Forbidden, NotFound, Conflict, Failure }
+public enum ErrorType { Validation, Unauthorized, Forbidden, NotFound, Conflict, Failure, TooManyRequests }
 
 /// <param name="Extensions">Extra members for the problem+json answer (a count, a list of reasons), with their own JSON types. Used by Conflict and Forbidden.</param>
 public sealed record Error(string Code, string Message, ErrorType Type = ErrorType.Failure,
@@ -12,6 +12,9 @@ public sealed record Error(string Code, string Message, ErrorType Type = ErrorTy
     public static Error Unauthorized(string message = "Authentication required.") => new("unauthorized", message, ErrorType.Unauthorized);
     public static Error NotFound(string message = "Not found.") => new("not_found", message, ErrorType.NotFound);
     public static Error Conflict(string message) => new("conflict", message, ErrorType.Conflict);
+    /// <summary>The caller must wait before asking again; <paramref name="retryAfterSeconds"/> says how long (answered as 429 with a Retry-After header).</summary>
+    public static Error TooManyRequests(string message, int retryAfterSeconds) =>
+        new("too_many_requests", message, ErrorType.TooManyRequests, Extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
 }
 
 public readonly struct Result<T>

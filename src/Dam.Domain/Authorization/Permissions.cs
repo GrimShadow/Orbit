@@ -59,6 +59,8 @@ public static class Permissions
     public const string AiManage = "ai.manage";
     /// <summary>The tenant's translation glossary: terms that are never translated, or always rendered one way (ADR-0036). Reading it needs only assets.read.</summary>
     public const string GlossaryManage = "glossary.manage";
+    /// <summary>Connections to other systems (PADS4, generic HTTP APIs, later Canva), their secrets, tests and activity log (ADR-0040).</summary>
+    public const string IntegrationsManage = "integrations.manage";
     public const string AuditRead = "audit.read";
     public const string MigrationManage = "migration.manage";
 
@@ -77,7 +79,7 @@ public static class Permissions
         RightsManage, KnowledgeManage, QrManage, ShareManage, PortalsManage,
         AnalyticsRead, AnalyticsManage, UsageWrite,
         TenantsManage, UsersManage, GroupsManage, RolesManage, AccessRulesManage, WebhooksManage, NotificationsManage, ApiClientsManage,
-        RetentionManage, AiManage, GlossaryManage, AuditRead, MigrationManage,
+        RetentionManage, AiManage, GlossaryManage, IntegrationsManage, AuditRead, MigrationManage,
         SystemPing,
     ];
 

@@ -258,4 +258,19 @@ public static class SecuritySql
         CREATE POLICY system_read_usage_event_keys ON usage_event_keys FOR SELECT TO dam_system USING (true);
         CREATE POLICY system_prune_usage_event_keys ON usage_event_keys FOR DELETE TO dam_system USING (true);
         """;
+
+    /// <summary>Connections are edited and deleted freely. Calls are history: written by connector runs, trimmed to the latest 500 per connection by the daily cleanup (through the tenant-scoped role),
+    /// and removed with their connection through the foreign key. Connection names are unique per tenant, ignoring case.</summary>
+    public const string IntegrationGrants = """
+        GRANT SELECT, INSERT, UPDATE, DELETE ON integration_connections TO dam_app;
+        GRANT SELECT, INSERT, DELETE ON integration_calls TO dam_app;
+        CREATE UNIQUE INDEX ux_integration_connections_tenant_lower_name ON integration_connections (tenant_id, lower(name));
+        """;
+
+    /// <summary>The cleanup job (ADR-0040) finds the connections whose activity log has outgrown its limit across every tenant through the system connection, read-only, like the other
+    /// cross-tenant jobs; the trimming itself is done through a tenant-scoped scope.</summary>
+    public const string IntegrationSystemGrants = """
+        GRANT SELECT ON integration_calls TO dam_system;
+        CREATE POLICY system_read_integration_calls ON integration_calls FOR SELECT TO dam_system USING (true);
+        """;
 }
