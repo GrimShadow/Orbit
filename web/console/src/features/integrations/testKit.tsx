@@ -101,6 +101,29 @@ export const HTTP_FIELDS: FieldDto[] = [
   { key: 'notes', label: 'Notes', type: 'textarea', required: false, group: 'advanced' },
 ];
 
+/** The fields of the shipped PADS4 connector, as the server lists them. */
+export const PADS4_FIELDS: FieldDto[] = [
+  {
+    key: 'baseUrl',
+    label: 'PADS4 server URL',
+    type: 'url',
+    required: true,
+    help: 'The address of your PADS4 server, for example https://pads4.example.test.',
+    placeholder: 'https://pads4.example.test',
+    group: 'connection',
+  },
+  {
+    key: 'domain',
+    label: 'Domain',
+    type: 'text',
+    required: true,
+    help: 'The PADS4 sign-in domain that the user name belongs to.',
+    group: 'connection',
+  },
+  { key: 'username', label: 'Username', type: 'text', required: true, group: 'connection' },
+  { key: 'password', label: 'Password', type: 'secret', required: true, group: 'connection' },
+];
+
 export const connector = (over: Partial<ConnectorDto> = {}): ConnectorDto => ({
   key: 'http',
   name: 'Generic HTTP API',
@@ -116,12 +139,17 @@ export const connector = (over: Partial<ConnectorDto> = {}): ConnectorDto => ({
 
 export const CONNECTORS: ConnectorDto[] = [
   connector(),
+  // Mirrors the server's PADS4 descriptor: four fields, no authentication strategy, no capabilities (it only stores the settings).
   connector({
     key: 'pads4',
     name: 'PADS4',
-    description: 'Send content to a PADS4 content library.',
+    description: 'Save the details of a PADS4 server. Orbit stores them but does not connect to PADS4 yet.',
     category: 'Digital signage',
     status: 'preview',
+    authStrategies: [],
+    defaultAuthStrategy: null,
+    capabilities: [],
+    fields: PADS4_FIELDS,
   }),
   connector({
     key: 'canva',
@@ -147,6 +175,24 @@ export const connection = (over: Partial<ConnectionDto> = {}): ConnectionDto => 
   lastTestedAt: ago(5 * MIN),
   lastOkAt: ago(5 * MIN),
   tokenExpiresAt: ahead(3 * 3_600_000 + 30_000),
+  createdAt: ago(86_400_000),
+  updatedAt: ago(86_400_000),
+  ...over,
+});
+
+/** A saved PADS4 connection: the server keeps status `new` and says it only saved the settings. */
+export const pads4Connection = (over: Partial<ConnectionDto> = {}): ConnectionDto => ({
+  id: 'p1',
+  connector: 'pads4',
+  name: 'PADS4',
+  enabled: true,
+  config: { baseUrl: 'http://192.168.1.20:8080', domain: 'acme', username: 'ann' },
+  secrets: { password: { set: true, hint: 'x9z1' } },
+  status: 'new',
+  statusDetail: 'Saved. Orbit does not connect to PADS4 yet.',
+  lastTestedAt: null,
+  lastOkAt: null,
+  tokenExpiresAt: null,
   createdAt: ago(86_400_000),
   updatedAt: ago(86_400_000),
   ...over,
@@ -233,7 +279,7 @@ export function install(w: World, extra: (c: Call) => Response | Promise<Respons
               connector: input.connector ?? 'http',
               secrets: {},
               status: 'new',
-              statusDetail: null,
+              statusDetail: input.connector === 'pads4' ? 'Saved. Orbit does not connect to PADS4 yet.' : null,
               lastTestedAt: null,
               tokenExpiresAt: null,
             }),

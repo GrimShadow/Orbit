@@ -136,16 +136,20 @@ public sealed class CreateConnectionHandler(
 
         var id = Uuid7.NewGuid();
         var stored = check.Secrets.ToDictionary(kv => kv.Key, kv => new StoredSecret(secrets.Protect(kv.Value, IntegrationSecretPurposes.Field(id, kv.Key)), SecretRules.Hint(kv.Value)));
-        var connection = IntegrationConnection.Create(id, tenant.TenantId, d.Key, name, input.Enabled, check.Config, stored, (await authz.GetProfileAsync(ct)).UserId, clock.UtcNow);
+        var connection = IntegrationConnection.Create(id, tenant.TenantId, d.Key, name, input.Enabled, check.Config, stored, (await authz.GetProfileAsync(ct)).UserId, clock.UtcNow, d.SavedOnlyDetail);
         connections.Add(connection);
         return id;
     }
 
-    /// <summary>Runs the outbound URL guard over the URL settings that are new or changed. Keys are <c>config.&lt;field&gt;</c>.</summary>
-    internal static async Task<Dictionary<string, string[]>> UrlProblemsAsync(
+    /// <summary>
+    /// Runs the outbound URL guard over the URL settings that are new or changed. Keys are <c>config.&lt;field&gt;</c>. A connector that makes no calls (it only stores its settings) is not
+    /// guarded at save: nothing is ever requested, and such a server is usually on a private network. The scheme and length rules still apply (see <see cref="ConnectionRules.CheckInput"/>).
+    /// </summary>
+    public static async Task<Dictionary<string, string[]>> UrlProblemsAsync(
         IOutboundUrlGuard guard, ConnectorDescriptor d, IReadOnlyDictionary<string, JsonElement> config, IReadOnlyDictionary<string, JsonElement>? existing, CancellationToken ct)
     {
         var problems = new Dictionary<string, string[]>();
+        if (!d.MakesCalls) return problems;
         foreach (var (key, url) in IntegrationMapping.GuardedUrls(d, config))
         {
             if (existing is not null && existing.TryGetValue(key, out var old) && old.ValueKind == JsonValueKind.String && old.GetString() == url) continue;
@@ -204,7 +208,7 @@ public sealed class UpdateConnectionHandler(
         foreach (var (key, value) in check.Secrets) stored[key] = new StoredSecret(secrets.Protect(value, IntegrationSecretPurposes.Field(connection.Id, key)), SecretRules.Hint(value));
         var changedSecrets = check.Secrets.Keys.Concat(check.Clear.Where(connection.Secrets.ContainsKey)).Order(StringComparer.Ordinal).ToList();
 
-        connection.Update(name, input.Enabled, check.Config, stored, changedSecrets, clock.UtcNow);
+        connection.Update(name, input.Enabled, check.Config, stored, changedSecrets, clock.UtcNow, d.SavedOnlyDetail);
         return connection.Id;
     }
 }
@@ -248,6 +252,8 @@ public sealed class TestConnectionHandler(
         var connection = await q.FirstOrDefaultAsync(connections.Query().Where(x => x.Id == r.Id), ct);
         if (connection is null) return Error.NotFound("Connection not found.");
         if (registry.Find(connection.Connector) is not { } connector) return Error.NotFound("This connector is no longer available.");
+        // A connector that only stores its settings has nothing to test: refuse before anything is claimed, called or recorded.
+        if (!connector.Descriptor.CanTest) return Error.Conflict("Testing is not available for this connector yet.");
 
         var now = clock.UtcNow;
         if (!await store.TryClaimTestAsync(connection.Id, now, ConnectionRules.TestInterval, ct))

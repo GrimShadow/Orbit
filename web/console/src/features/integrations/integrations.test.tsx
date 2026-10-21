@@ -8,6 +8,7 @@ import {
   call,
   connection,
   install,
+  pads4Connection,
   problem,
   renderAt,
   testResult,
@@ -31,9 +32,17 @@ const writes = (calls: Call[], method: string, pathname: string) =>
 const dialog = (name: string) => screen.findByRole('dialog', { name });
 const CONNECTIONS = '/api/v1/integrations/connections';
 
-/** The connection card with this name. */
+/** The connection card with this name (a connector in the catalog may carry the same name). */
 async function card(name: string) {
-  return (await screen.findByRole('heading', { name })).closest('article')!;
+  let found: HTMLElement | undefined;
+  await waitFor(() => {
+    found = screen
+      .getAllByRole('heading', { name })
+      .map((h) => h.closest('article')!)
+      .find((a) => a.closest('ul')?.classList.contains('dam-intgrid--wide'));
+    expect(found).toBeDefined();
+  });
+  return found!;
 }
 
 describe('connector catalog', () => {
@@ -52,9 +61,15 @@ describe('connector catalog', () => {
     expect(within(http).getByRole('button', { name: 'Connect Generic HTTP API' })).toBeEnabled();
 
     const pads4 = within(list).getByRole('heading', { name: 'PADS4' }).closest('article')!;
-    expect(within(pads4).getByText('Preview')).toBeInTheDocument();
-    expect(within(pads4).getByText('Works for connecting and testing; its actions are coming.')).toBeInTheDocument();
-    expect(within(pads4).getByRole('button', { name: 'Connect PADS4' })).toBeEnabled();
+    expect(within(pads4).getByText('Saved settings only')).toBeInTheDocument();
+    expect(within(pads4).queryByText('Preview')).not.toBeInTheDocument();
+    expect(within(pads4).getByText('Orbit saves these details but does not connect to PADS4 yet.')).toBeInTheDocument();
+    expect(within(pads4).queryByText(/Works for connecting and testing/)).not.toBeInTheDocument();
+    // The connector name is part of the button text; the other connectors keep "Connect".
+    expect(within(pads4).getByRole('button', { name: 'Add PADS4 connection' })).toBeEnabled();
+    expect(within(pads4).getByRole('button', { name: 'Add PADS4 connection' })).toHaveClass('dam-btn--primary');
+    expect(within(pads4).getByText('Add PADS4 connection')).toBeInTheDocument();
+    expect(within(http).getByText('Connect')).toBeInTheDocument();
   });
 
   it('lists a planned connector as coming later, with no Connect button', async () => {
@@ -64,7 +79,7 @@ describe('connector catalog', () => {
     expect(within(canva).getByText('Planned')).toBeInTheDocument();
     expect(within(canva).getByText('Coming later.')).toBeInTheDocument();
     expect(within(canva).queryByRole('button')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /^Connect / })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /^(Connect|Add) / })).toHaveLength(2);
   });
 
   it('shows a loading state, then an error with a retry', async () => {
@@ -111,6 +126,21 @@ describe('access', () => {
     // Webhooks appears once permissions have loaded; Integrations must not.
     await screen.findByRole('link', { name: 'Webhooks' });
     expect(screen.queryByRole('link', { name: 'Integrations' })).not.toBeInTheDocument();
+  });
+
+  it('lists Integrations in the primary navigation (icon, label and route) and under its Hindi name', async () => {
+    install(world());
+    renderAt('/');
+    const nav = await screen.findByRole('navigation', { name: 'Primary' });
+    const link = await within(nav).findByRole('link', { name: 'Integrations' });
+    expect(link).toHaveAttribute('href', '/integrations');
+    expect(link.querySelector('svg')).not.toBeNull();
+    cleanup();
+
+    setLanguage('hi');
+    install(world());
+    renderAt('/');
+    expect(await screen.findByRole('link', { name: 'इंटीग्रेशन' })).toHaveAttribute('href', '/integrations');
   });
 });
 
@@ -462,12 +492,236 @@ describe('connect dialog', () => {
     // The typed value appears nowhere as text.
     expect(within(form).queryByText('typed-key-0042')).not.toBeInTheDocument();
   });
+});
 
-  it('connects a preview connector and lists it under its own name', async () => {
-    install(world({ connections: [] }));
+describe('a connector that only stores its settings (PADS4)', () => {
+  const PADS4 = '/api/v1/integrations/connections/p1';
+
+  async function openAdd(w = world({ connections: [] })) {
+    const calls = install(w);
     renderAt('/integrations');
-    await userEvent.click(await screen.findByRole('button', { name: 'Connect PADS4' }));
-    expect(await dialog('Connect PADS4')).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Add PADS4 connection' }));
+    return { calls, w, form: await dialog('Add PADS4 connection') };
+  }
+
+  async function fill(form: HTMLElement, over: Record<string, string> = {}) {
+    const values = { 'PADS4 server URL': 'http://192.168.1.20:8080', Domain: 'acme', Username: 'ann', ...over };
+    for (const [label, value] of Object.entries(values)) {
+      const input = within(form).getByRole('textbox', { name: new RegExp(`^${label}`) });
+      await userEvent.clear(input);
+      if (value) await userEvent.type(input, value);
+    }
+    await userEvent.type(within(form).getByLabelText(/^Password/), 'pa55-secret-1234');
+  }
+
+  it('opens a dialog drawn from the descriptor: the name, then the four fields in one Connection group', async () => {
+    const { form } = await openAdd();
+    expect(within(form).getByRole('textbox', { name: 'Name' })).toHaveValue('PADS4');
+    const url = within(form).getByRole('textbox', { name: /^PADS4 server URL/ });
+    expect(url).toHaveAttribute('type', 'url');
+    expect(url).toBeRequired();
+    expect(url).toHaveAttribute('placeholder', 'https://pads4.example.test');
+    expect(url).toHaveAccessibleDescription(expect.stringContaining('https://pads4.example.test'));
+    for (const label of ['Domain', 'Username'])
+      expect(within(form).getByRole('textbox', { name: new RegExp(`^${label}`) })).toBeRequired();
+    expect(within(form).getByText('The PADS4 sign-in domain that the user name belongs to.')).toBeInTheDocument();
+    const password = within(form).getByLabelText(/^Password/);
+    expect(password).toHaveAttribute('type', 'password');
+    expect(password).toBeRequired();
+    expect(within(form).getByRole('button', { name: 'Show Password' })).toBeInTheDocument();
+    // Required markers, one group, nothing about authentication or testing.
+    expect(within(form).getByText('Domain', { selector: 'label' }).textContent).toContain('*');
+    expect(
+      within(form)
+        .getAllByRole('heading', { level: 3 })
+        .map((h) => h.textContent),
+    ).toEqual(['Connection']);
+    expect(within(form).queryByRole('combobox')).not.toBeInTheDocument();
+    expect(within(form).getByText('Orbit saves these details but does not connect to PADS4 yet.')).toBeInTheDocument();
+    expect(within(form).queryByRole('button', { name: /test/i })).not.toBeInTheDocument();
+    expect(within(form).getByRole('button', { name: 'Create connection' })).toHaveClass('dam-btn--primary');
+  });
+
+  it('shows what is typed in the password only while the toggle is on', async () => {
+    const { form } = await openAdd();
+    const password = within(form).getByLabelText(/^Password/);
+    await userEvent.type(password, 'pa55-secret-1234');
+    await userEvent.click(within(form).getByRole('button', { name: 'Show Password' }));
+    expect(password).toHaveAttribute('type', 'text');
+    await userEvent.click(within(form).getByRole('button', { name: 'Show Password' }));
+    expect(password).toHaveAttribute('type', 'password');
+  });
+
+  it('asks for the four required values before sending anything', async () => {
+    const { calls, form } = await openAdd();
+    await userEvent.click(within(form).getByRole('button', { name: 'Create connection' }));
+    const summary = await within(form).findByRole('group', { name: 'Problems with the form' });
+    expect(within(summary).getByText('4 problems to fix')).toBeInTheDocument();
+    for (const label of ['PADS4 server URL', 'Domain', 'Username', 'Password'])
+      expect(within(summary).getByText(`${label}: This is required.`)).toBeInTheDocument();
+    expect(writes(calls, 'POST', CONNECTIONS)).toHaveLength(0);
+
+    await fill(form, { 'PADS4 server URL': 'pads4.example.test' });
+    await userEvent.click(within(form).getByRole('button', { name: 'Create connection' }));
+    expect(
+      await within(form).findByText('PADS4 server URL: Enter a web address that starts with http:// or https://.'),
+    ).toBeInTheDocument();
+    expect(writes(calls, 'POST', CONNECTIONS)).toHaveLength(0);
+  });
+
+  it('saves the address, domain and user name as settings and the password as a secret, with a private address accepted', async () => {
+    const { calls, form } = await openAdd();
+    await fill(form);
+    await userEvent.click(within(form).getByRole('button', { name: 'Create connection' }));
+    await waitFor(() => expect(writes(calls, 'POST', CONNECTIONS)).toHaveLength(1));
+    expect(await writes(calls, 'POST', CONNECTIONS)[0]!.json()).toEqual({
+      connector: 'pads4',
+      name: 'PADS4',
+      enabled: true,
+      config: { baseUrl: 'http://192.168.1.20:8080', domain: 'acme', username: 'ann' },
+      secrets: { password: 'pa55-secret-1234' },
+      clearSecrets: [],
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add PADS4 connection' })).not.toBeInTheDocument());
+    const c = await card('PADS4');
+    expect(within(c).getByText('Saved')).toBeInTheDocument();
+    expect(c.innerHTML).not.toContain('pa55-secret-1234');
+    // Nothing was tested or asked of the other system.
+    expect(calls.some((x) => x.pathname.endsWith('/test'))).toBe(false);
+  });
+
+  it('puts a server 422 under the right field', async () => {
+    install(world({ connections: [] }), (c) =>
+      c.method === 'POST' && c.pathname === CONNECTIONS
+        ? validation({ 'config.baseUrl': ['Only http and https URLs are allowed.'] })
+        : undefined,
+    );
+    renderAt('/integrations');
+    await userEvent.click(await screen.findByRole('button', { name: 'Add PADS4 connection' }));
+    const form = await dialog('Add PADS4 connection');
+    await fill(form);
+    await userEvent.click(within(form).getByRole('button', { name: 'Create connection' }));
+    await within(form).findByRole('group', { name: 'Problems with the form' });
+    expect(within(form).getByRole('textbox', { name: /^PADS4 server URL/ })).toHaveAccessibleDescription(
+      expect.stringContaining('Only http and https URLs are allowed.'),
+    );
+  });
+
+  describe('in the list', () => {
+    const world1 = () => world({ connections: [pads4Connection()] });
+
+    it('shows a Saved badge and the note instead of the test facts, with no Test button', async () => {
+      const calls = install(world1());
+      renderAt('/integrations');
+      const c = await card('PADS4');
+      expect(within(c).getByText('Saved')).toBeInTheDocument();
+      expect(within(c).getByText('Orbit saves these details but does not connect to PADS4 yet.')).toBeInTheDocument();
+      expect(within(c).queryByText('Not tested')).not.toBeInTheDocument();
+      expect(within(c).queryByText('Not tested yet')).not.toBeInTheDocument();
+      expect(within(c).queryByText(/Last tested|token/i)).not.toBeInTheDocument();
+      expect(within(c).queryByText(/^Saved\. Orbit/)).not.toBeInTheDocument();
+      expect(within(c).queryByRole('button', { name: 'Test PADS4' })).not.toBeInTheDocument();
+      for (const name of ['Edit PADS4', 'Activity of PADS4', 'Delete PADS4'])
+        expect(within(c).getByRole('button', { name })).toBeEnabled();
+      expect(calls.some((x) => x.pathname.endsWith('/test'))).toBe(false);
+    });
+
+    it('keeps Test for a connector that has it, next to the saved one', async () => {
+      install(world({ connections: [pads4Connection(), connection()] }));
+      renderAt('/integrations');
+      expect(await screen.findByRole('button', { name: 'Test Acme CMS' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Test PADS4' })).not.toBeInTheDocument();
+    });
+
+    it('opens Activity, which is simply empty', async () => {
+      install(world1());
+      renderAt('/integrations');
+      await userEvent.click(await screen.findByRole('button', { name: 'Activity of PADS4' }));
+      const drawer = await dialog('Activity: PADS4');
+      expect(await within(drawer).findByText('No calls yet')).toBeInTheDocument();
+    });
+
+    it('edits with the write-only password: Set (…hint) with Replace only, and unchanged it is not sent', async () => {
+      const w = world1();
+      const calls = install(w);
+      renderAt('/integrations');
+      await userEvent.click(await screen.findByRole('button', { name: 'Edit PADS4' }));
+      const form = await dialog('Edit PADS4');
+      expect(within(form).getByRole('textbox', { name: /^PADS4 server URL/ })).toHaveValue('http://192.168.1.20:8080');
+      expect(within(form).getByRole('textbox', { name: /^Domain/ })).toHaveValue('acme');
+      expect(within(form).getByRole('textbox', { name: /^Username/ })).toHaveValue('ann');
+      expect(within(form).getByText('Set (…x9z1)')).toBeInTheDocument();
+      expect(form.querySelector('input[type="password"]')).toBeNull();
+      expect(within(form).getByRole('button', { name: 'Replace Password' })).toBeInTheDocument();
+      expect(within(form).queryByRole('button', { name: 'Remove Password' })).not.toBeInTheDocument();
+      expect(within(form).queryByRole('button', { name: /test/i })).not.toBeInTheDocument();
+
+      await userEvent.clear(within(form).getByRole('textbox', { name: /^Domain/ }));
+      await userEvent.type(within(form).getByRole('textbox', { name: /^Domain/ }), 'acme-eu');
+      await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(writes(calls, 'PUT', PADS4)).toHaveLength(1));
+      const body = (await writes(calls, 'PUT', PADS4)[0]!.json()) as Record<string, unknown>;
+      expect(body).toMatchObject({
+        name: 'PADS4',
+        enabled: true,
+        config: { baseUrl: 'http://192.168.1.20:8080', domain: 'acme-eu', username: 'ann' },
+        secrets: {},
+        clearSecrets: [],
+      });
+      expect(body.connector ?? null).toBeNull();
+      expect(calls.some((x) => x.pathname.endsWith('/test'))).toBe(false);
+    });
+
+    it('replaces the password only after Replace', async () => {
+      const calls = install(world1());
+      renderAt('/integrations');
+      await userEvent.click(await screen.findByRole('button', { name: 'Edit PADS4' }));
+      const form = await dialog('Edit PADS4');
+      await userEvent.click(within(form).getByRole('button', { name: 'Replace Password' }));
+      const input = within(form).getByLabelText(/^Password/);
+      expect(input).toHaveValue('');
+      await userEvent.type(input, 'new-pa55-7777');
+      await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(writes(calls, 'PUT', PADS4)).toHaveLength(1));
+      const body = (await writes(calls, 'PUT', PADS4)[0]!.json()) as { secrets: unknown };
+      expect(body.secrets).toEqual({ password: 'new-pa55-7777' });
+      await userEvent.click(await screen.findByRole('button', { name: 'Edit PADS4' }));
+      expect(await screen.findByText('Set (…7777)')).toBeInTheDocument();
+    });
+  });
+
+  it('is in Hindi', async () => {
+    setLanguage('hi');
+    install(world({ connections: [pads4Connection()] }));
+    renderAt('/integrations');
+    const pads4 = (await screen.findAllByRole('heading', { name: 'PADS4' }))[0]!.closest('article')!;
+    expect(within(pads4).getByText('केवल सहेजी गई सेटिंग')).toBeInTheDocument();
+    expect(within(pads4).getByText('Orbit ये विवरण सहेजता है, लेकिन अभी PADS4 से कनेक्ट नहीं करता।')).toBeInTheDocument();
+    await userEvent.click(within(pads4).getByRole('button', { name: 'PADS4 कनेक्शन जोड़ें' }));
+    const form = await dialog('PADS4 कनेक्शन जोड़ें');
+    expect(within(form).queryByRole('button', { name: /जाँच/ })).not.toBeInTheDocument();
+    await userEvent.click(within(form).getByRole('button', { name: 'कनेक्शन बनाएँ' }));
+    expect(await within(form).findByText('4 समस्याएँ ठीक करनी हैं')).toBeInTheDocument();
+    await userEvent.click(within(form).getByRole('button', { name: 'बंद करें' }));
+    const saved = await card('PADS4');
+    expect(within(saved).getByText('सहेजा गया')).toBeInTheDocument();
+  });
+
+  it('has no accessibility violations in the list, the add dialog and the edit dialog', async () => {
+    install(world({ connections: [pads4Connection()] }));
+    const { container } = renderAt('/integrations');
+    await card('PADS4');
+    expect(await axe(container)).toHaveNoViolations();
+    await userEvent.click(screen.getByRole('button', { name: 'Add PADS4 connection' }));
+    const form = await dialog('Add PADS4 connection');
+    expect(await axe(form)).toHaveNoViolations();
+    await userEvent.click(within(form).getByRole('button', { name: 'Create connection' }));
+    await within(form).findByRole('group', { name: 'Problems with the form' });
+    expect(await axe(form)).toHaveNoViolations();
+    await userEvent.click(within(form).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add PADS4 connection' })).not.toBeInTheDocument());
+    await userEvent.click(screen.getByRole('button', { name: 'Edit PADS4' }));
+    expect(await axe(await dialog('Edit PADS4'))).toHaveNoViolations();
   });
 });
 
@@ -488,7 +742,9 @@ describe('edit dialog and secrets', () => {
     expect(within(form).getByText('Set (…ab12)')).toBeInTheDocument();
     expect(form.querySelector('input[type="password"]')).toBeNull();
     expect(within(form).getByRole('button', { name: 'Replace API key' })).toBeInTheDocument();
-    expect(within(form).getByRole('button', { name: 'Remove API key' })).toBeInTheDocument();
+    // A required secret can only be replaced; an optional one can also be removed.
+    expect(within(form).queryByRole('button', { name: 'Remove API key' })).not.toBeInTheDocument();
+    expect(within(form).getByRole('button', { name: 'Remove Signing secret' })).toBeInTheDocument();
     expect(form.innerHTML).not.toContain('value="wxyz"');
   });
 
@@ -566,9 +822,10 @@ describe('edit dialog and secrets', () => {
     expect(within(again).getByText('Set (…wxyz)')).toBeInTheDocument();
   });
 
-  it('will not save with a required secret removed', async () => {
+  it('will not save a required secret left empty after Replace, and cannot remove it', async () => {
     const { calls, form } = await openEdit();
-    await userEvent.click(within(form).getByRole('button', { name: 'Remove API key' }));
+    expect(within(form).queryByRole('button', { name: 'Remove API key' })).not.toBeInTheDocument();
+    await userEvent.click(within(form).getByRole('button', { name: 'Replace API key' }));
     await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
     const summary = await within(form).findByRole('group', { name: 'Problems with the form' });
     expect(within(summary).getByText('API key: This is required.')).toBeInTheDocument();

@@ -140,9 +140,16 @@ public sealed class IntegrationsApiTests(PostgresFixture pg) : ApiTestBase(pg)
         Assert.Equal("Authorization", fields["tokenHeader"].GetProperty("default").GetString());
         Assert.Equal(["POST", "PUT"], fields["loginMethod"].GetProperty("options").EnumerateArray().Select(o => o.GetProperty("value").GetString()!).ToArray());
 
+        // PADS4 only stores four values for now: no strategy, no capability.
         var pads4 = list[1];
-        Assert.Equal("login_call", pads4.GetProperty("defaultAuthStrategy").GetString());
-        Assert.Equal(["login_call", "bearer", "api_key"], Strings(pads4.GetProperty("authStrategies")));
+        Assert.Equal(JsonValueKind.Null, pads4.GetProperty("defaultAuthStrategy").ValueKind);
+        Assert.Equal(0, pads4.GetProperty("authStrategies").GetArrayLength());
+        Assert.Equal(0, pads4.GetProperty("capabilities").GetArrayLength());
+        Assert.Equal(["test"], Strings(http.GetProperty("capabilities")));
+        Assert.Equal(["baseUrl:url:True", "domain:text:True", "username:text:True", "password:secret:True"],
+            pads4.GetProperty("fields").EnumerateArray().Select(f => $"{f.GetProperty("key").GetString()}:{f.GetProperty("type").GetString()}:{f.GetProperty("required").GetBoolean()}").ToArray());
+        Assert.All(pads4.GetProperty("fields").EnumerateArray(), f => Assert.Equal("connection", f.GetProperty("group").GetString()));
+        Assert.Equal("PADS4 server URL", pads4.GetProperty("fields")[0].GetProperty("label").GetString());
 
         var canva = list[2];
         Assert.Equal(0, canva.GetProperty("fields").GetArrayLength());
@@ -595,7 +602,6 @@ public sealed class IntegrationsApiTests(PostgresFixture pg) : ApiTestBase(pg)
 
     [Theory]
     [InlineData("http", "/login", false)]
-    [InlineData("pads4", "/login", false)]
     [InlineData("http", "/login-form", true)]
     public async Task A_login_call_signs_in_with_the_template_and_sends_the_token_in_the_header(string connector, string loginUrl, bool form)
     {
@@ -1129,6 +1135,195 @@ public sealed class IntegrationsApiTests(PostgresFixture pg) : ApiTestBase(pg)
         using var scheduler = NotifyHosts.Scheduler(Pg, clock, configure: s => Dam.Infrastructure.Scheduling.IntegrationSchedulingRegistration.AddDamIntegrationJobs(s));
         await using var scope = scheduler.Services.CreateAsyncScope();
         Assert.Contains(scope.ServiceProvider.GetServices<Dam.Application.Abstractions.IScheduledJob>(), j => j.Key == "integrations.cleanup");
+    }
+
+    // ---- PADS4: a connector that only stores its settings --------------------------------------------------------
+
+    private const string Pads4Password = "pads4-pa55word-0042";
+
+    private static Dictionary<string, object?> Pads4Connection(string baseUrl = "http://192.168.1.20:8080", string name = "PADS4", string password = Pads4Password) =>
+        Input("pads4", name, new() { ["baseUrl"] = baseUrl, ["domain"] = "acme", ["username"] = "ann" }, new() { ["password"] = password });
+
+    private static object Pads4Put(string baseUrl = "http://192.168.1.20:8080", string name = "PADS4", string domain = "acme", Dictionary<string, string>? secrets = null, string[]? clear = null)
+    {
+        var config = new Dictionary<string, object?> { ["baseUrl"] = baseUrl, ["domain"] = domain, ["username"] = "ann" };
+        return new { name, enabled = true, config, secrets = secrets ?? [], clearSecrets = clear ?? [] };
+    }
+
+    [Fact]
+    public async Task A_pads4_connection_is_saved_with_the_password_as_a_write_only_secret_and_nothing_is_called()
+    {
+        var t = await NewTenantAsync(); var admin = Admin(t);
+        await using var third = await FakeThirdParty.StartAsync();
+        var created = await Call(HttpMethod.Post, Connections, admin, Pads4Connection(third.BaseUrl));
+        Assert.Equal(HttpStatusCode.Created, created.Status);
+        var id = created.Body.GetProperty("id").GetGuid();
+        Assert.Equal(("pads4", "PADS4", true, "new", "Saved. Orbit does not connect to PADS4 yet."),
+            (created.Body.GetProperty("connector").GetString(), created.Body.GetProperty("name").GetString(), created.Body.GetProperty("enabled").GetBoolean(),
+             created.Body.GetProperty("status").GetString(), created.Body.GetProperty("statusDetail").GetString()));
+        var config = created.Body.GetProperty("config");
+        Assert.Equal((third.BaseUrl, "acme", "ann"), (config.GetProperty("baseUrl").GetString(), config.GetProperty("domain").GetString(), config.GetProperty("username").GetString()));
+        Assert.False(config.TryGetProperty("password", out _));
+        Assert.False(config.TryGetProperty("authStrategy", out _));
+        var secret = created.Body.GetProperty("secrets").GetProperty("password");
+        Assert.True(secret.GetProperty("set").GetBoolean());
+        Assert.Equal(Pads4Password[^4..], secret.GetProperty("hint").GetString());
+        Assert.Single(created.Body.GetProperty("secrets").EnumerateObject());
+
+        // Never returned, whatever way it is read.
+        foreach (var response in new[] { created.Body, (await Call(HttpMethod.Get, $"{Connections}/{id}", admin)).Body, (await Call(HttpMethod.Get, Connections, admin)).Body[0] })
+            AssertNone(response.ToString(), Pads4Password);
+        // At rest: ciphertext only; and in the audit trail, outbox and activity.
+        Assert.Contains("v1.", Scalar<string>($"SELECT secrets::text FROM integration_connections WHERE id = '{id}'"), StringComparison.Ordinal);
+        AssertNone(Scalar<string>($"SELECT secrets::text || config::text FROM integration_connections WHERE id = '{id}'"), Pads4Password);
+        AssertNone(Everything(t), Pads4Password);
+        Assert.Equal(1, Count(t, "SELECT count(*) FROM audit_log WHERE action = 'integration.connection.created'"));
+        Assert.Equal(0, Count(t, "SELECT count(*) FROM integration_calls"));
+        Assert.Empty(third.Hits);   // not even a look at the address
+        Assert.Empty(await Activity(admin, id));
+    }
+
+    [Fact]
+    public async Task A_pads4_connection_keeps_its_password_unless_it_is_replaced_and_keeps_its_saved_detail()
+    {
+        var t = await NewTenantAsync(); var admin = Admin(t);
+        await using var third = await FakeThirdParty.StartAsync();
+        var id = (await Create(admin, Pads4Connection(third.BaseUrl))).GetProperty("id").GetGuid();
+        var path = $"{Connections}/{id}";
+        const string saved = "Saved. Orbit does not connect to PADS4 yet.";
+        string Hint(JsonElement c) => c.GetProperty("secrets").GetProperty("password").GetProperty("hint").GetString()!;
+
+        // Left out and sent empty: kept.
+        var kept = await Call(HttpMethod.Put, path, admin, Pads4Put(third.BaseUrl, domain: "acme-eu"));
+        Assert.Equal(HttpStatusCode.OK, kept.Status);
+        Assert.Equal(("0042", "acme-eu", "new", saved), (Hint(kept.Body), kept.Body.GetProperty("config").GetProperty("domain").GetString(), kept.Body.GetProperty("status").GetString(), kept.Body.GetProperty("statusDetail").GetString()));
+        Assert.Equal("0042", Hint((await Call(HttpMethod.Put, path, admin, Pads4Put(third.BaseUrl, secrets: new() { ["password"] = "" }))).Body));
+        // Replaced.
+        var replaced = await Call(HttpMethod.Put, path, admin, Pads4Put(third.BaseUrl, name: "PADS4 prod", secrets: new() { ["password"] = "second-pads4-pa55-7777" }));
+        Assert.Equal(("7777", "PADS4 prod", saved), (Hint(replaced.Body), replaced.Body.GetProperty("name").GetString(), replaced.Body.GetProperty("statusDetail").GetString()));
+        // It is required, so it cannot be removed.
+        var cleared = await Call(HttpMethod.Put, path, admin, Pads4Put(third.BaseUrl, name: "PADS4 prod", clear: ["password"]));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, cleared.Status);
+        Assert.True(cleared.Body.GetProperty("errors").TryGetProperty("secrets.password", out _));
+        // Missing values are named.
+        var missing = await Call(HttpMethod.Put, path, admin, new { name = "PADS4 prod", enabled = true, config = new Dictionary<string, object?> { ["baseUrl"] = third.BaseUrl } });
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, missing.Status);
+        Assert.Equal(["config.domain", "config.username"], missing.Body.GetProperty("errors").EnumerateObject().Select(e => e.Name).Order(StringComparer.Ordinal).ToArray());
+
+        var changed = Scalar<string>("SELECT string_agg(after::text, ' ') FROM audit_log WHERE action = 'integration.connection.updated' AND entity_id = '" + id + "'");
+        Assert.Contains("secrets.password", changed, StringComparison.Ordinal);
+        Assert.Contains("config.domain", changed, StringComparison.Ordinal);
+        AssertNone(Everything(t), Pads4Password, "second-pads4-pa55-7777");
+        Assert.Equal(0, Count(t, "SELECT count(*) FROM integration_calls"));
+        Assert.Empty(third.Hits);
+    }
+
+    [Fact]
+    public async Task The_four_pads4_values_are_required_and_named_as_config_or_secrets()
+    {
+        var t = await NewTenantAsync(); var admin = Admin(t);
+        var errors = await Errors(admin, Input("pads4", "PADS4", []));
+        Assert.Equal(["config.baseUrl", "config.domain", "config.username", "secrets.password"], errors.EnumerateObject().Select(e => e.Name).Order(StringComparer.Ordinal).ToArray());
+
+        var bad = await Errors(admin, Input("pads4", "PADS4", new() { ["baseUrl"] = "ftp://pads4.example.test", ["domain"] = "acme", ["username"] = "ann", ["authStrategy"] = "login_call" },
+            new() { ["password"] = "pw-12345678" }));
+        Assert.True(bad.TryGetProperty("config.baseUrl", out _));
+        Assert.True(bad.TryGetProperty("config.authStrategy", out _));   // PADS4 has no authentication setting
+        Assert.Equal(0, Count(t, "SELECT count(*) FROM integration_connections"));
+    }
+
+    [Theory]
+    [InlineData("http://192.168.1.20:8080")]
+    [InlineData("http://pads4.internal.example.test")]
+    [InlineData("https://10.1.2.3/pads4")]
+    public async Task A_pads4_server_on_a_private_network_is_accepted_at_save_without_the_outbound_url_check(string baseUrl)
+    {
+        // A guard that refuses every address (as the real one does for a private or unresolvable host when private targets are off) and counts the questions put to it.
+        var guard = new RefusingGuard();
+        using var strict = Api.WithWebHostBuilder(b => b.ConfigureServices(s => s.AddSingleton<Dam.Application.Abstractions.IOutboundUrlGuard>(guard)));
+        using var client = strict.CreateClient();
+        var t = await NewTenantAsync(); var admin = Admin(t);
+        async Task<(HttpStatusCode Status, JsonElement Body)> Post(object body)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, Connections) { Headers = { Authorization = new AuthenticationHeaderValue("Bearer", admin) }, Content = JsonContent.Create(body) };
+            using var res = await client.SendAsync(req);
+            var text = await res.Content.ReadAsStringAsync();
+            return (res.StatusCode, JsonDocument.Parse(text).RootElement.Clone());
+        }
+
+        var created = await Post(Pads4Connection(baseUrl));
+        Assert.True(created.Status == HttpStatusCode.Created, $"{(int)created.Status}: {created.Body}");
+        Assert.Equal(baseUrl, created.Body.GetProperty("config").GetProperty("baseUrl").GetString());
+        Assert.Equal(0, guard.Asked);
+
+        // The same address on a connector that makes calls is still guarded.
+        var http = await Post(Input("http", "Guarded", new() { ["baseUrl"] = baseUrl, ["authStrategy"] = "none" }));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, http.Status);
+        Assert.True(http.Body.GetProperty("errors").TryGetProperty("config.baseUrl", out _));
+        Assert.Equal(1, guard.Asked);
+
+        // Updating a PADS4 address is not guarded either.
+        var id = created.Body.GetProperty("id").GetGuid();
+        using var put = new HttpRequestMessage(HttpMethod.Put, $"{Connections}/{id}") { Headers = { Authorization = new AuthenticationHeaderValue("Bearer", admin) }, Content = JsonContent.Create(Pads4Put("http://172.16.0.9:9090")) };
+        using var updated = await client.SendAsync(put);
+        Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+        Assert.Equal(1, guard.Asked);
+    }
+
+    private sealed class RefusingGuard : Dam.Application.Abstractions.IOutboundUrlGuard
+    {
+        private int _asked;
+        public int Asked => Volatile.Read(ref _asked);
+        public Task<string?> CheckAsync(string url, CancellationToken ct)
+        {
+            Interlocked.Increment(ref _asked);
+            return Task.FromResult<string?>("This URL cannot be used: it points to a private address.");
+        }
+    }
+
+    [Fact]
+    public async Task Testing_a_pads4_connection_is_refused_and_records_nothing()
+    {
+        var t = await NewTenantAsync(); var admin = Admin(t);
+        await using var third = await FakeThirdParty.StartAsync();
+        var id = (await Create(admin, Pads4Connection(third.BaseUrl))).GetProperty("id").GetGuid();
+
+        for (var i = 0; i < 2; i++)   // the second is the same answer, not a rate-limit one: nothing was claimed
+        {
+            var r = await Call(HttpMethod.Post, $"{Connections}/{id}/test", admin);
+            Assert.Equal(HttpStatusCode.Conflict, r.Status);
+            Assert.Equal("Testing is not available for this connector yet.", r.Body.GetProperty("title").GetString());
+        }
+        Assert.Equal(0, Count(t, "SELECT count(*) FROM audit_log WHERE action = 'integration.connection.tested'"));
+        Assert.Equal(0, Count(t, "SELECT count(*) FROM integration_calls"));
+        Assert.Equal(0, Count(t, $"SELECT count(*) FROM integration_connections WHERE id = '{id}' AND test_claimed_at IS NOT NULL"));
+        var after = (await Call(HttpMethod.Get, $"{Connections}/{id}", admin)).Body;
+        Assert.Equal(("new", "Saved. Orbit does not connect to PADS4 yet."), (after.GetProperty("status").GetString(), after.GetProperty("statusDetail").GetString()));
+        Assert.Equal(JsonValueKind.Null, after.GetProperty("lastTestedAt").ValueKind);
+        Assert.Empty(third.Hits);
+    }
+
+    [Fact]
+    public async Task Pads4_names_stay_unique_the_limit_stays_fifty_and_a_connection_can_be_deleted()
+    {
+        var t = await NewTenantAsync(); var admin = Admin(t);
+        var first = await Create(admin, Pads4Connection());
+        var duplicate = await Call(HttpMethod.Post, Connections, admin, Pads4Connection(name: "pads4"));
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.Status);
+        var second = await Create(admin, Pads4Connection(name: "PADS4 branch"));
+        Assert.Equal(HttpStatusCode.Conflict, (await Call(HttpMethod.Put, $"{Connections}/{second.GetProperty("id").GetGuid()}", admin, Pads4Put(name: "Pads4"))).Status);
+
+        Sql($$"""
+            INSERT INTO integration_connections (id, tenant_id, connector, name, enabled, config, secrets, status, created_at, updated_at)
+            SELECT gen_random_uuid(), '{{t}}', 'pads4', 'Filler ' || g, true, '{}', '{}', 'new', now(), now() FROM generate_series(1, 48) g
+            """);
+        var over = await Call(HttpMethod.Post, Connections, admin, Pads4Connection(name: "One too many"));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, over.Status);
+        Assert.Contains("50", over.Body.GetProperty("errors").GetProperty("name")[0].GetString(), StringComparison.Ordinal);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Call(HttpMethod.Delete, $"{Connections}/{first.GetProperty("id").GetGuid()}", admin)).Status);
+        Assert.Equal(1, Count(t, "SELECT count(*) FROM audit_log WHERE action = 'integration.connection.deleted'"));
+        AssertNone(Everything(t), Pads4Password);
     }
 
     private static class Sockets

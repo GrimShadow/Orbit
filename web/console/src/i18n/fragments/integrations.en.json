@@ -18,6 +18,8 @@
     "cancel": "Cancel",
     "connect": "Connect",
     "connectNamed": "Connect {{name}}",
+    "addNamed": "Add {{name}} connection",
+    "storedOnlyNote": "Orbit saves these details but does not connect to {{name}} yet.",
     "saved": "Saved “{{name}}”",
     "enabled": "Enabled",
     "enabledNamed": "{{name}}: enabled",
@@ -59,11 +61,13 @@
     "connectorStatus": {
       "available": "Available",
       "preview": "Preview",
+      "previewStored": "Saved settings only",
       "planned": "Planned"
     },
     "connectionStatus": {
       "ok": "Working",
       "error": "Needs attention",
+      "saved": "Saved",
       "new": "Not tested"
     },
     "category": {
@@ -87,6 +91,7 @@
     "form": {
       "intro": "Set up {{name}}. Fields marked * are required. Credentials are stored encrypted and never shown again.",
       "newTitle": "Connect {{name}}",
+      "newTitleStored": "Add {{name}} connection",
       "editTitle": "Edit {{name}}",
       "strategy": "Authentication method",
       "name": "Name",

@@ -18,6 +18,8 @@
     "cancel": "रद्द करें",
     "connect": "जोड़ें",
     "connectNamed": "{{name}} जोड़ें",
+    "addNamed": "{{name}} कनेक्शन जोड़ें",
+    "storedOnlyNote": "Orbit ये विवरण सहेजता है, लेकिन अभी {{name}} से कनेक्ट नहीं करता।",
     "saved": "“{{name}}” सहेजा गया",
     "enabled": "चालू",
     "enabledNamed": "{{name}}: चालू",
@@ -59,11 +61,13 @@
     "connectorStatus": {
       "available": "उपलब्ध",
       "preview": "प्रीव्यू",
+      "previewStored": "केवल सहेजी गई सेटिंग",
       "planned": "योजनाबद्ध"
     },
     "connectionStatus": {
       "ok": "चालू है",
       "error": "ध्यान चाहिए",
+      "saved": "सहेजा गया",
       "new": "जाँच नहीं हुई"
     },
     "category": {
@@ -87,6 +91,7 @@
     "form": {
       "intro": "{{name}} सेट अप करें। * वाले फ़ील्ड ज़रूरी हैं। क्रेडेंशियल एन्क्रिप्टेड रूप में सहेजे जाते हैं और दोबारा कभी नहीं दिखाए जाते।",
       "newTitle": "{{name}} जोड़ें",
+      "newTitleStored": "{{name}} कनेक्शन जोड़ें",
       "editTitle": "{{name}} संपादित करें",
       "strategy": "प्रमाणीकरण का तरीका",
       "name": "नाम",

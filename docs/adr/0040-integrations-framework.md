@@ -16,14 +16,16 @@ It is DAM-initiated and complements, not replaces, the plugin's pull model.
 1. **Connector** (code) is a kind of external system. It is registered in the application, has a descriptor (key, name, description, category, status,
    the authentication strategies it allows, its configuration fields, its capabilities) and an implementation of `IConnector` (`TestAsync`, and later
    the actions). Status is `available` (works now), `preview` (can be configured and tested, its actions are still to come) or `planned` (listed, cannot
-   be created). Shipped now: **Generic HTTP API** (`http`, available), **PADS4** (`pads4`, preview: the same authentication framework with a login call
-   as its default; the content-library actions come with its connector step) and **Canva** (`canva`, planned: it needs an OAuth authorisation-code
-   flow, which is a later authentication strategy).
+   be created). Shipped now: **Generic HTTP API** (`http`, available), **PADS4** (`pads4`, preview: for now a *stored-credentials* connector that keeps
+   a PADS4 server's address, sign-in domain, user name and password and makes no call; the real sign-in and the content-library actions come with its
+   connector step) and **Canva** (`canva`, planned: it needs an OAuth authorisation-code flow, which is a later authentication strategy). A connector's
+   `capabilities` say what it can do: `test` for Test connection, and later its actions. One with no capabilities only stores its settings.
 2. **Connection** (tenant data, `integration_connections`, RLS, at most 50 per tenant) is one configured use of a connector: `name` (unique per
    tenant), `enabled`, `config` (jsonb, non-secret values by field key), the encrypted secrets, and status (`new`, `ok`, `error`) with detail,
    `last_tested_at`, `last_ok_at`, `token_expires_at`. Config is validated against the connector's field descriptors: required fields, types, and URL
-   fields must be `http` or `https` and, when saved and on every call, pass the outbound URL guard (ADR-0031: public addresses only unless the
-   deployment allows private targets with `DAM_WEBHOOK_ALLOW_PRIVATE`, which an on-premise PADS4 will need).
+   fields must be `http` or `https` and, for a connector that makes calls, pass the outbound URL guard when saved and on every call (ADR-0031: public
+   addresses only unless the deployment allows private targets with `DAM_WEBHOOK_ALLOW_PRIVATE`, which an on-premise PADS4 will need). A connector that
+   makes no calls is not guarded at save (see the implementation notes).
 3. **Secrets** are encrypted with `ISecretProtector` (key `DAM_SECRETS_KEY`) per field. The API never returns a secret: a connection shows, per secret
    field, whether it is set and a four-character hint. On update a secret you send is replaced, one you leave out is kept, and `clearSecrets` removes
    named ones. Secrets, tokens and `Authorization` values never appear in logs, the activity log, audit events or error messages.
@@ -94,8 +96,8 @@ What the build settled, and where it refines the text above.
   URL, or a full address), `loginBodyType` (`json`, `form`, `none`), `loginBody`, `tokenPointer` (default `/access_token`), `expiryPointer`, `expirySeconds`,
   `tokenHeader` (default `Authorization`), `tokenPrefix` (default `Bearer `). The same key serves several strategies (`username` and `password` for basic
   authentication and for the `{{username}}`/`{{password}}` placeholders; `apiKey`, `clientId`, `clientSecret` likewise), and `showWhen` lists them all. A default
-  fills only a field that applies to the chosen strategy. OAuth 2 client credentials reads `/access_token` and `/expires_in`. PADS4 offers `login_call` (its
-  default), `bearer` and `api_key`; Generic HTTP offers all six, defaulting to `api_key`.
+  fills only a field that applies to the chosen strategy. OAuth 2 client credentials reads `/access_token` and `/expires_in`. Generic HTTP offers all six, defaulting
+  to `api_key`. (The first build also gave PADS4 a login-call/bearer/api-key form on these shared fields; PADS4 is now a stored-credentials connector, see below.)
 - **Login body templates.** Placeholders are `{{username}}`, `{{password}}`, `{{apiKey}}`, `{{clientId}}`, `{{clientSecret}}` (spaces inside the braces allowed, names
   case-sensitive). Substitution is one pass: a value that itself contains `{{...}}` is inserted as text. A JSON body needs each placeholder inside a string
   (otherwise 422) and the filled-in text must be valid JSON; values are JSON-escaped. A form body percent-encodes values. A placeholder whose value is not set
@@ -118,6 +120,28 @@ What the build settled, and where it refines the text above.
   finds connections with more than 500 calls through the read-only system connection and deletes the surplus through a tenant-scoped scope (RLS applies to the delete).
 - **Tables and roles.** `integration_connections` (the app role may select, insert, update, delete) and `integration_calls` (select, insert, delete; never update),
   both with forced row-level security; the system role may only select `integration_calls`. A unique index on `(tenant_id, lower(name))` is created in the migration.
+
+### PADS4 as a stored-credentials preview connector (the form-only step)
+
+- **What it is.** `pads4` has exactly four fields, all required and all in the `connection` group: `baseUrl` (url, "PADS4 server URL"), `domain` (text, the PADS4
+  sign-in domain), `username` (text) and `password` (secret). `baseUrl`, `domain` and `username` are `config`; the password is an encrypted, write-only secret like
+  any other (never returned, hint only, kept when left out of an update). It has no authentication strategy (`authStrategies` empty, `defaultAuthStrategy`
+  null, so no `authStrategy` setting and no login-call or token fields) and no capabilities, and its status stays `preview`. It is implemented by
+  `StoredCredentialsConnector`, which makes no outbound call. The Generic HTTP connector and the whole strategy machinery are unchanged (and are what the
+  framework tests now exercise).
+- **Why the URL guard is skipped at save for it.** The guard exists to stop Orbit from being made to request an internal address. A connector that never
+  requests anything cannot be abused that way, and a PADS4 server is usually on the customer's private network, so refusing a private address would only
+  block the one thing the form is for. The shape rules still apply (absolute `http`/`https`, no credentials in the URL, at most 2,000 characters; other text at
+  most 500). The test is "makes no calls" (`ConnectorDescriptor.MakesCalls`: no capabilities); when PADS4 gains `test` and its actions it is guarded at save and on
+  every call again, with no other change.
+- **Status.** A connection of such a connector is created and updated with status `new` and the detail "Saved. Orbit does not connect to PADS4 yet."
+  (English in the API; the console words it itself). `POST /connections/{id}/test` answers `409` ("Testing is not available for this connector yet.") before
+  claiming the rate limit, calling anything or recording anything; no event, activity row or `test_claimed_at` is written. Activity is simply empty.
+- **Console.** The card says "Saved settings only" and offers "Add PADS4 connection"; the dialog shows the four fields and a calm note, with no Test and no
+  "Save and test"; the list shows a "Saved" badge with the note instead of the last-test and token facts. The test for hiding Test is the missing `test`
+  capability, not the connector's key. A required secret (the password) offers Replace only, never Remove.
+- **next step.** The real PADS4 sign-in and the content-library calls: give the descriptor the `test` capability (and the strategy or sign-in call PADS4 needs),
+  replace `StoredCredentialsConnector` by a connector built on `ConnectionRuntime`, and migrate any saved connection's settings if the fields change.
 
 ### Configuration added
 

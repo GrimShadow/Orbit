@@ -72,7 +72,7 @@ interface SecretFieldProps {
   error?: string;
 }
 
-/** A write-only secret. A stored one shows "Set (…hint)" with Replace and Remove; a typed one never leaves its password input
+/** A write-only secret. A stored one shows "Set (…hint)" with Replace (and Remove, unless the secret is required); a typed one never leaves its password input
  * (a toggle shows it while you type). The stored value is never shown or prefilled. */
 function SecretField({ field, stored, draft, onChange, error }: SecretFieldProps) {
   const { t } = useTranslation();
@@ -100,14 +100,17 @@ function SecretField({ field, stored, draft, onChange, error }: SecretFieldProps
         >
           {t('integrations.secret.replace')}
         </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          aria-label={t('integrations.secret.removeNamed', { label })}
-          onClick={() => set({ mode: 'clear', value: '' })}
-        >
-          {t('integrations.secret.remove')}
-        </Button>
+        {/* A required secret can only be replaced: removing it would leave the connection incomplete. */}
+        {!field.required && (
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label={t('integrations.secret.removeNamed', { label })}
+            onClick={() => set({ mode: 'clear', value: '' })}
+          >
+            {t('integrations.secret.remove')}
+          </Button>
+        )}
       </div>
     );
   } else if (draft.mode === 'clear') {

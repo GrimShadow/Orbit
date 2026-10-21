@@ -40,6 +40,7 @@ public static class FieldKeys
     public const string ApiKeyName = "apiKeyName";
     public const string ApiKey = "apiKey";
     public const string BearerToken = "bearerToken";
+    public const string Domain = "domain";
     public const string Username = "username";
     public const string Password = "password";
     public const string TokenUrl = "tokenUrl";

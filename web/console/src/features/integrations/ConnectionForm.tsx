@@ -1,3 +1,4 @@
+import { Info } from '@phosphor-icons/react';
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Drawer, useToast } from '../../ui';
@@ -6,6 +7,7 @@ import { FieldControl, FieldFrame } from './FieldControl';
 import { TestPanel } from './TestPanel';
 import {
   GROUP_ORDER,
+  canTestConnector,
   formFields,
   initialDraft,
   isDirty,
@@ -50,8 +52,12 @@ function Form({ connector, connection, onClose }: FormProps) {
 
   // `saved` is what the server holds: the connection being edited, or the one this form created and stayed open to test.
   const [saved, setSaved] = useState<ConnectionDto | null>(connection);
-  const stored = useMemo(() => initialDraft(fields, saved), [fields, saved]);
-  const [draft, setDraft] = useState<Draft>(() => initialDraft(fields, connection));
+  // A connector that only stores settings has no Test: no "Save and test", no test result, a plain Save as the main action.
+  const testable = canTestConnector(connector);
+  // Such a connector is usually used once per system, so its own name is a sensible name to start from.
+  const defaultName = testable ? '' : connector.name;
+  const stored = useMemo(() => initialDraft(fields, saved, defaultName), [fields, saved, defaultName]);
+  const [draft, setDraft] = useState<Draft>(() => initialDraft(fields, connection, defaultName));
   const [clientErrors, setClientErrors] = useState<FormErrors>({});
   const [serverErrors, setServerErrors] = useState<MappedServerErrors>(NO_SERVER_ERRORS);
   const [general, setGeneral] = useState<string | null>(null);
@@ -166,6 +172,12 @@ function Form({ connector, connection, onClose }: FormProps) {
   return (
     <form className="dam-intform" onSubmit={onSubmit} noValidate aria-describedby={summary.length > 0 ? summaryId : undefined}>
       <p className="dam-hint">{t('integrations.form.intro', { name: connector.name })}</p>
+      {!testable && (
+        <p className="dam-intnote dam-intnote--info">
+          <Info size={16} weight="bold" aria-hidden="true" />
+          <span>{t('integrations.storedOnlyNote', { name: connector.name })}</span>
+        </p>
+      )}
       {summary.length > 0 && (
         <div
           ref={summaryRef}
@@ -239,18 +251,27 @@ function Form({ connector, connection, onClose }: FormProps) {
         </section>
       ))}
 
-      <TestPanel state={testState} result={test.data} error={test.error} onRetry={saved ? () => runTest(saved.id) : undefined} />
+      {testable && (
+        <TestPanel
+          state={testState}
+          result={test.data}
+          error={test.error}
+          onRetry={saved ? () => runTest(saved.id) : undefined}
+        />
+      )}
 
       <div className="dam-intform__actions">
         <Button variant="ghost" onClick={onClose}>
           {t('integrations.cancel')}
         </Button>
-        <Button type="submit" variant="secondary" loading={busy} disabled={test.isPending}>
+        <Button type="submit" variant={testable ? 'secondary' : 'primary'} loading={busy} disabled={test.isPending}>
           {creating ? t('integrations.form.create') : t('integrations.form.save')}
         </Button>
-        <Button variant="primary" loading={busy || test.isPending} onClick={() => submit(true)}>
-          {dirty ? t('integrations.form.saveAndTest') : t('integrations.form.test')}
-        </Button>
+        {testable && (
+          <Button variant="primary" loading={busy || test.isPending} onClick={() => submit(true)}>
+            {dirty ? t('integrations.form.saveAndTest') : t('integrations.form.test')}
+          </Button>
+        )}
       </div>
     </form>
   );
@@ -265,7 +286,9 @@ export function ConnectionForm(props: FormProps & { open: boolean }) {
       title={
         rest.connection
           ? t('integrations.form.editTitle', { name: rest.connection.name })
-          : t('integrations.form.newTitle', { name: rest.connector.name })
+          : t(canTestConnector(rest.connector) ? 'integrations.form.newTitle' : 'integrations.form.newTitleStored', {
+              name: rest.connector.name,
+            })
       }
       closeLabel={t('integrations.close')}
       onClose={rest.onClose}

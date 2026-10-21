@@ -30,6 +30,18 @@ public sealed class PlannedConnector(ConnectorDescriptor descriptor) : IConnecto
         Task.FromResult(new ConnectorTestResult(false, [new ConnectorStep("Test", false, $"{descriptor.Name} is not available yet.", 0)]));
 }
 
+/// <summary>
+/// A connector that only keeps a connection's settings and secrets (stored credentials): it makes no call to the other system, so it has no test and its connections are not checked
+/// against the outbound URL guard at save. The connector for a system whose integration is still being built (PADS4 for now).
+/// </summary>
+public sealed class StoredCredentialsConnector(ConnectorDescriptor descriptor) : IConnector
+{
+    public ConnectorDescriptor Descriptor => descriptor;
+
+    public Task<ConnectorTestResult> TestAsync(IntegrationConnection connection, CancellationToken ct) =>
+        Task.FromResult(new ConnectorTestResult(false, [new ConnectorStep("Test", false, "Testing is not available for this connector yet.", 0)]));
+}
+
 /// <summary>The descriptors of the connectors that ship now (ADR-0040 decision 1).</summary>
 public static class ShippedConnectors
 {
@@ -135,13 +147,21 @@ public static class ShippedConnectors
         HttpFields([AuthStrategies.None, AuthStrategies.ApiKey, AuthStrategies.Bearer, AuthStrategies.Basic, AuthStrategies.OAuth2ClientCredentials, AuthStrategies.LoginCall],
             AuthStrategies.ApiKey, "The address of the API, such as https://api.example.test/v1. Paths below are added to it.", "https://api.example.test"));
 
+    /// <summary>
+    /// PADS4 for now only stores the details of a PADS4 server (address, sign-in domain, user name, password) for show: no outbound call is made and no authentication strategy applies.
+    /// next step: the real PADS4 sign-in call and the content-library actions. Add the "test" capability (and the strategy or sign-in call PADS4 needs) here, and replace
+    /// <see cref="StoredCredentialsConnector"/> by a connector that implements them; a connector that makes calls is guarded against private addresses at save again.
+    /// </summary>
     public static readonly ConnectorDescriptor Pads4 = new(
-        "pads4", "PADS4", "Connect to a PADS4 server by its own sign-in call. Adding content from the library to PADS4 comes with the next step; for now the connection can be configured and tested.",
-        "Digital signage", ConnectorStatuses.Preview,
-        [AuthStrategies.LoginCall, AuthStrategies.Bearer, AuthStrategies.ApiKey], AuthStrategies.LoginCall, ["test"],
-        // next step: content-library actions. Add them to the capabilities here and implement them on the connector (see IConnector).
-        HttpFields([AuthStrategies.LoginCall, AuthStrategies.Bearer, AuthStrategies.ApiKey], AuthStrategies.LoginCall,
-            "The address of the PADS4 server's API, such as https://pads4.example.test/api. Paths below are added to it.", "https://pads4.example.test/api"));
+        "pads4", "PADS4", "Save the details of a PADS4 server: its address, sign-in domain, user name and password. Orbit stores them but does not connect to PADS4 yet; adding content from the library to PADS4 comes with the next step.",
+        "Digital signage", ConnectorStatuses.Preview, [], null, [],
+        [
+            new(FieldKeys.BaseUrl, "PADS4 server URL", FieldTypes.Url, Required: true, Help: "The address of your PADS4 server, for example https://pads4.example.test.", Placeholder: "https://pads4.example.test",
+                Group: FieldGroups.Connection),
+            new(FieldKeys.Domain, "Domain", FieldTypes.Text, Required: true, Help: "The PADS4 sign-in domain that the user name belongs to.", Group: FieldGroups.Connection),
+            new(FieldKeys.Username, "Username", FieldTypes.Text, Required: true, Group: FieldGroups.Connection),
+            new(FieldKeys.Password, "Password", FieldTypes.Secret, Required: true, Group: FieldGroups.Connection),
+        ]);
 
     public static readonly ConnectorDescriptor Canva = new(
         "canva", "Canva", "Send designs and assets to and from Canva. Needs the OAuth authorisation-code flow, which arrives with its connector step.", "Design",

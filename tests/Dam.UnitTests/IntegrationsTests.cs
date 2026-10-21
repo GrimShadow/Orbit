@@ -576,8 +576,8 @@ public sealed class IntegrationsTests
         var errors = ConnectionRules.CheckComplete(Http, new Dictionary<string, JsonElement>(), _ => false);
         Assert.Contains("config.baseUrl", errors.Keys);
         Assert.Contains("config.authStrategy", errors.Keys);
-        var wrong = ConnectionRules.CheckComplete(ShippedConnectors.Pads4, Cfg(("baseUrl", S("https://x.example.test")), ("authStrategy", S("basic"))), _ => true);
-        Assert.Contains("config.authStrategy", wrong.Keys);   // PADS4 does not offer basic
+        var wrong = ConnectionRules.CheckComplete(Http, Cfg(("baseUrl", S("https://x.example.test")), ("authStrategy", S("magic"))), _ => true);
+        Assert.Contains("config.authStrategy", wrong.Keys);   // not one of the strategies the connector offers
     }
 
     [Fact]
@@ -637,10 +637,10 @@ public sealed class IntegrationsTests
     public void The_shipped_connectors_are_http_available_pads4_preview_and_canva_planned()
     {
         Assert.Equal((ConnectorStatuses.Available, AuthStrategies.ApiKey), (ShippedConnectors.Http.Status, ShippedConnectors.Http.DefaultAuthStrategy));
-        Assert.Equal((ConnectorStatuses.Preview, AuthStrategies.LoginCall), (ShippedConnectors.Pads4.Status, ShippedConnectors.Pads4.DefaultAuthStrategy));
+        Assert.Equal((ConnectorStatuses.Preview, (string?)null), (ShippedConnectors.Pads4.Status, ShippedConnectors.Pads4.DefaultAuthStrategy));
         Assert.False(ShippedConnectors.Canva.CanBeCreated);
         Assert.Empty(ShippedConnectors.Canva.Fields);
-        Assert.Equal(HttpAuthSettings.DefaultTokenPrefix, ShippedConnectors.Pads4.Field(FieldKeys.TokenPrefix)!.Default!.Value.GetString());
+        Assert.Equal(HttpAuthSettings.DefaultTokenPrefix, ShippedConnectors.Http.Field(FieldKeys.TokenPrefix)!.Default!.Value.GetString());
         Assert.All(ShippedConnectors.Http.Fields.Where(f => f.IsSecret), f => Assert.Equal(FieldGroups.Authentication, f.Group));
     }
 
@@ -724,5 +724,126 @@ public sealed class IntegrationsTests
         Assert.Equal("integrations.manage", Dam.Domain.Authorization.Permissions.IntegrationsManage);
         var holders = Dam.Domain.Authorization.BuiltInRoles.All.Where(r => r.Permissions.Contains(Dam.Domain.Authorization.Permissions.IntegrationsManage)).Select(r => r.Name).ToArray();
         Assert.Equal([Dam.Domain.Authorization.BuiltInRoles.Admin], holders);
+    }
+
+    // ---- PADS4: a stored-credentials connector (nothing is called) -----------------------------------------------
+
+    private static ConnectorDescriptor Pads4 => ShippedConnectors.Pads4;
+
+    private sealed class ThrowingGuard : Dam.Application.Abstractions.IOutboundUrlGuard
+    {
+        public int Calls { get; private set; }
+        public Task<string?> CheckAsync(string url, CancellationToken ct) { Calls++; return Task.FromResult<string?>("The host name could not be resolved."); }
+    }
+
+    [Fact]
+    public void The_pads4_descriptor_has_exactly_four_required_connection_fields_and_no_strategy_or_capability()
+    {
+        Assert.Equal(("pads4", "PADS4", ConnectorStatuses.Preview), (Pads4.Key, Pads4.Name, Pads4.Status));
+        Assert.Empty(Pads4.AuthStrategies);
+        Assert.Null(Pads4.DefaultAuthStrategy);
+        Assert.Empty(Pads4.Capabilities);
+        Assert.False(Pads4.CanTest);
+        Assert.False(Pads4.MakesCalls);
+        Assert.Equal(
+            [("baseUrl", "PADS4 server URL", FieldTypes.Url), ("domain", "Domain", FieldTypes.Text), ("username", "Username", FieldTypes.Text), ("password", "Password", FieldTypes.Secret)],
+            Pads4.Fields.Select(f => (f.Key, f.Label, f.Type)).ToArray());
+        Assert.All(Pads4.Fields, f =>
+        {
+            Assert.True(f.Required);
+            Assert.Equal(FieldGroups.Connection, f.Group);
+            Assert.Null(f.ShowWhen);
+            Assert.Null(f.Default);
+        });
+        Assert.Contains("https://pads4.example.test", Pads4.Field("baseUrl")!.Help, StringComparison.Ordinal);
+        Assert.Contains("sign-in domain", Pads4.Field("domain")!.Help, StringComparison.Ordinal);
+        Assert.Equal("Saved. Orbit does not connect to PADS4 yet.", Pads4.SavedOnlyDetail);
+        Assert.Null(Http.SavedOnlyDetail);
+        Assert.True(Http.CanTest && Http.MakesCalls);
+    }
+
+    [Fact]
+    public void A_pads4_connection_needs_all_four_values_and_names_them_as_config_or_secrets()
+    {
+        var empty = ConnectionRules.CheckComplete(Pads4, new Dictionary<string, JsonElement>(), _ => false);
+        Assert.Equal(["config.baseUrl", "config.domain", "config.username", "secrets.password"], empty.Keys.Order(StringComparer.Ordinal).ToArray());
+        var full = Cfg(("baseUrl", S("https://pads4.example.test")), ("domain", S("acme")), ("username", S("ann")));
+        Assert.Empty(ConnectionRules.CheckComplete(Pads4, full, k => k == "password"));
+        // A kept (already stored) secret counts; a missing one does not.
+        Assert.Equal(["secrets.password"], ConnectionRules.CheckComplete(Pads4, full, _ => false).Keys.ToArray());
+    }
+
+    [Theory]
+    [InlineData("http://192.168.1.20:8080")]
+    [InlineData("http://pads4.internal.example.test")]
+    [InlineData("https://10.0.0.5/pads4")]
+    [InlineData("http://localhost:8080")]
+    public void A_pads4_server_may_be_on_a_private_network_so_the_save_time_check_is_syntax_only(string url)
+    {
+        var check = ConnectionRules.CheckInput(Pads4, Cfg(("baseUrl", S(url))), null, null);
+        Assert.Empty(check.Errors);
+    }
+
+    [Theory]
+    [InlineData("ftp://pads4.example.test")]
+    [InlineData("pads4.example.test")]
+    [InlineData("https://ann:secret@pads4.example.test")]
+    public void The_scheme_and_shape_rules_still_apply_to_the_pads4_address(string url)
+    {
+        Assert.Contains("config.baseUrl", ConnectionRules.CheckInput(Pads4, Cfg(("baseUrl", S(url))), null, null).Errors.Keys);
+    }
+
+    [Fact]
+    public void The_pads4_length_rules_apply_and_strategy_settings_are_unknown_to_it()
+    {
+        var tooLong = ConnectionRules.CheckInput(Pads4, Cfg(("baseUrl", S("https://pads4.example.test/" + new string('a', ConnectionRules.MaxUrlLength))), ("domain", S(new string('d', ConnectionRules.MaxTextLength + 1)))), null, null);
+        Assert.Contains("config.baseUrl", tooLong.Errors.Keys);
+        Assert.Contains("config.domain", tooLong.Errors.Keys);
+        var unknown = ConnectionRules.CheckInput(Pads4, Cfg(("authStrategy", S("login_call")), ("loginUrl", S("/login"))), new Dictionary<string, string?> { ["apiKey"] = "x-1234567", ["password"] = "pw-12345678" }, null);
+        Assert.Contains("config.authStrategy", unknown.Errors.Keys);
+        Assert.Contains("config.loginUrl", unknown.Errors.Keys);
+        Assert.Contains("secrets.apiKey", unknown.Errors.Keys);
+        Assert.DoesNotContain("secrets.password", unknown.Errors.Keys);
+        // The password is a secret: it may not travel in config.
+        Assert.Contains("config.password", ConnectionRules.CheckInput(Pads4, Cfg(("password", S("pw-12345678"))), null, null).Errors.Keys);
+    }
+
+    [Fact]
+    public async Task The_outbound_guard_is_not_asked_about_a_pads4_address_but_is_for_a_connector_that_makes_calls()
+    {
+        var guard = new ThrowingGuard();
+        var pads4 = await Dam.Application.Integrations.CreateConnectionHandler.UrlProblemsAsync(guard, Pads4, Cfg(("baseUrl", S("http://192.168.1.20:8080"))), null, default);
+        Assert.Empty(pads4);
+        Assert.Equal(0, guard.Calls);
+
+        var http = await Dam.Application.Integrations.CreateConnectionHandler.UrlProblemsAsync(guard, Http, Cfg(("baseUrl", S("http://192.168.1.20:8080"))), null, default);
+        Assert.Equal(["config.baseUrl"], http.Keys.ToArray());
+        Assert.Equal(1, guard.Calls);
+    }
+
+    [Fact]
+    public async Task The_stored_credentials_connector_makes_no_test()
+    {
+        var connector = new StoredCredentialsConnector(Pads4);
+        Assert.Same(Pads4, connector.Descriptor);
+        var result = await connector.TestAsync(NewConnection(), default);
+        Assert.False(result.Ok);
+        Assert.Equal("Testing is not available for this connector yet.", Assert.Single(result.Steps).Detail);
+    }
+
+    [Fact]
+    public void A_saved_only_connection_keeps_its_saved_detail_through_updates_that_reset_the_status()
+    {
+        const string detail = "Saved. Orbit does not connect to PADS4 yet.";
+        var c = IntegrationConnection.Create(Guid.NewGuid(), Guid.NewGuid(), "pads4", "PADS4", true, Cfg(("baseUrl", S("http://192.168.1.20:8080"))),
+            new Dictionary<string, StoredSecret> { ["password"] = new("v1.CIPHER", "x9z1") }, null, Now, detail);
+        Assert.Equal((ConnectionStatuses.New, detail), (c.Status, c.StatusDetail));
+        c.Update("PADS4", true, Cfg(("baseUrl", S("http://192.168.1.21:8080"))), c.Secrets, [], Now.AddMinutes(1), detail);
+        Assert.Equal((ConnectionStatuses.New, detail), (c.Status, c.StatusDetail));
+        c.Update("Renamed", true, c.Config, c.Secrets, [], Now.AddMinutes(2), detail);
+        Assert.Equal(detail, c.StatusDetail);
+        var json = string.Join("\n", c.PullEvents().Select(e => JsonSerializer.Serialize(e, e.GetType())));
+        Assert.DoesNotContain("CIPHER", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("x9z1", json, StringComparison.Ordinal);
     }
 }

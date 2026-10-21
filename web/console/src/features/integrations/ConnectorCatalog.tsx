@@ -1,6 +1,7 @@
 import { Plug } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, EmptyState, Plus, Skeleton, WarningCircle } from '../../ui';
+import { canTestConnector } from './formModel';
 import { ConnectorStatusBadge } from './badges';
 import { isForbidden } from './integrationsApi';
 import type { ConnectorDto } from './integrationsTypes';
@@ -71,6 +72,8 @@ export function ConnectorCatalog({ connectors, loading, error, onRetry, onConnec
     <ul className="dam-intgrid" aria-label={t('integrations.catalog.title')}>
       {connectors.map((c) => {
         const planned = c.status === 'planned';
+        // No `test` capability: Orbit only stores the details for now, so the card says so and offers "Add … connection".
+        const storedOnly = !canTestConnector(c);
         return (
           <li key={c.key}>
             <Card
@@ -82,23 +85,26 @@ export function ConnectorCatalog({ connectors, loading, error, onRetry, onConnec
                 <h3 id={`int-connector-${c.key}`} className="dam-intcard__name">
                   {c.name}
                 </h3>
-                <ConnectorStatusBadge status={c.status} />
+                <ConnectorStatusBadge status={c.status} storedOnly={storedOnly} />
               </div>
               <p className="dam-intcard__desc">{c.description}</p>
               <div className="dam-intcard__meta">
                 <Badge size="sm">{t(`integrations.category.${categoryKey(c.category)}`, { defaultValue: c.category })}</Badge>
-                {c.status === 'preview' && <span className="dam-hint">{t('integrations.catalog.previewNote')}</span>}
+                {!planned && storedOnly && <span className="dam-hint">{t('integrations.storedOnlyNote', { name: c.name })}</span>}
+                {c.status === 'preview' && !storedOnly && (
+                  <span className="dam-hint">{t('integrations.catalog.previewNote')}</span>
+                )}
                 {planned && <span className="dam-hint">{t('integrations.catalog.plannedNote')}</span>}
               </div>
               {!planned && (
                 <div className="dam-intcard__foot">
                   <Button
                     variant="primary"
-                    aria-label={t('integrations.connectNamed', { name: c.name })}
+                    aria-label={t(storedOnly ? 'integrations.addNamed' : 'integrations.connectNamed', { name: c.name })}
                     onClick={() => onConnect(c)}
                   >
                     <Plus size={16} weight="bold" aria-hidden="true" />
-                    {t('integrations.connect')}
+                    {storedOnly ? t('integrations.addNamed', { name: c.name }) : t('integrations.connect')}
                   </Button>
                 </div>
               )}

@@ -6,6 +6,7 @@ import { relativeTime } from '../../lib/relativeTime';
 import { Switch } from '../webhooks/Switch';
 import { ActivityDrawer } from './ActivityDrawer';
 import { TestPanel } from './TestPanel';
+import { canTestConnector } from './formModel';
 import { ConnectionStatusBadge } from './badges';
 import { errorText, isForbidden, useDeleteConnection, useTestConnection, useToggleConnection } from './integrationsApi';
 import type { ConnectionDto, ConnectorDto } from './integrationsTypes';
@@ -15,6 +16,8 @@ const isPast = (iso: string) => new Date(iso).getTime() < Date.now();
 interface CardProps {
   connection: ConnectionDto;
   connectorName: string;
+  /** Whether the connector has Test connection (a connector that only stores settings does not, and shows "Saved"). */
+  canTest: boolean;
   canEdit: boolean;
   onToggle: (enabled: boolean) => void;
   onTest: () => void;
@@ -35,7 +38,17 @@ function Time({ iso, prefixKey }: { iso: string; prefixKey: string }) {
   );
 }
 
-function ConnectionCard({ connection: c, connectorName, canEdit, onToggle, onTest, onEdit, onActivity, onDelete }: CardProps) {
+function ConnectionCard({
+  connection: c,
+  connectorName,
+  canTest,
+  canEdit,
+  onToggle,
+  onTest,
+  onEdit,
+  onActivity,
+  onDelete,
+}: CardProps) {
   const { t, i18n } = useTranslation();
   const expiry = c.tokenExpiresAt ? new Date(c.tokenExpiresAt) : null;
   const expired = c.tokenExpiresAt ? isPast(c.tokenExpiresAt) : false;
@@ -58,31 +71,39 @@ function ConnectionCard({ connection: c, connectorName, canEdit, onToggle, onTes
         </div>
 
         <div className="dam-intcard__status">
-          <ConnectionStatusBadge status={c.status} />
-          {c.statusDetail && <span className="dam-intcard__detail">{c.statusDetail}</span>}
+          <ConnectionStatusBadge status={c.status} saved={!canTest} />
+          {canTest && c.statusDetail && <span className="dam-intcard__detail">{c.statusDetail}</span>}
         </div>
 
-        <p className="dam-intcard__facts">
-          {c.lastTestedAt ? (
-            <Time iso={c.lastTestedAt} prefixKey="integrations.lastTested" />
-          ) : (
-            <span>{t('integrations.neverTested')}</span>
-          )}
-          {expiry && c.tokenExpiresAt && (
-            <span>
-              {t(expired ? 'integrations.tokenExpired' : 'integrations.tokenExpires')}{' '}
-              <time dateTime={c.tokenExpiresAt} title={expiry.toLocaleString(i18n.language)}>
-                {relativeTime(c.tokenExpiresAt, i18n.language)}
-              </time>
-            </span>
-          )}
-        </p>
+        {canTest ? (
+          <p className="dam-intcard__facts">
+            {c.lastTestedAt ? (
+              <Time iso={c.lastTestedAt} prefixKey="integrations.lastTested" />
+            ) : (
+              <span>{t('integrations.neverTested')}</span>
+            )}
+            {expiry && c.tokenExpiresAt && (
+              <span>
+                {t(expired ? 'integrations.tokenExpired' : 'integrations.tokenExpires')}{' '}
+                <time dateTime={c.tokenExpiresAt} title={expiry.toLocaleString(i18n.language)}>
+                  {relativeTime(c.tokenExpiresAt, i18n.language)}
+                </time>
+              </span>
+            )}
+          </p>
+        ) : (
+          <p className="dam-intcard__facts">
+            <span>{t('integrations.storedOnlyNote', { name: connectorName })}</span>
+          </p>
+        )}
 
         <div className="dam-intcard__actions">
-          <Button size="sm" aria-label={t('integrations.testNamed', { name: c.name })} onClick={onTest}>
-            <Flask size={16} aria-hidden="true" />
-            {t('integrations.testAction')}
-          </Button>
+          {canTest && (
+            <Button size="sm" aria-label={t('integrations.testNamed', { name: c.name })} onClick={onTest}>
+              <Flask size={16} aria-hidden="true" />
+              {t('integrations.testAction')}
+            </Button>
+          )}
           <Button
             size="sm"
             aria-label={t('integrations.editNamed', { name: c.name })}
@@ -196,6 +217,7 @@ export function ConnectionList({ connections, connectors, loading, error, onRetr
               key={c.id}
               connection={c}
               connectorName={connector?.name ?? c.connector}
+              canTest={connector ? canTestConnector(connector) : true}
               canEdit={!!connector}
               onToggle={(enabled) =>
                 toggle.mutate(

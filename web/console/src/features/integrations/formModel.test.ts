@@ -1,4 +1,5 @@
 import {
+  canTestConnector,
   formFields,
   initialDraft,
   isDirty,
@@ -9,7 +10,7 @@ import {
   validate,
   type Draft,
 } from './formModel';
-import { HTTP_FIELDS, connection, connector } from './testKit';
+import { CONNECTORS, HTTP_FIELDS, connection, connector } from './testKit';
 
 const http = connector();
 const fields = formFields(http, { label: 'Authentication method', optionLabel: (s) => s });
@@ -230,5 +231,47 @@ describe('mapServerErrors', () => {
       name: 'Name is taken.',
     });
     expect(out.other).toEqual(['Unknown field.', 'Something else.']);
+  });
+});
+
+describe('a connector that only stores its settings', () => {
+  const pads4 = CONNECTORS.find((c) => c.key === 'pads4')!;
+  const pads4Fields = formFields(pads4, { label: 'Authentication method', optionLabel: (s) => s });
+
+  it('can be tested only with the test capability', () => {
+    expect(canTestConnector(http)).toBe(true);
+    expect(canTestConnector(pads4)).toBe(false);
+  });
+
+  it('adds no authentication select and starts a new connection from the given name', () => {
+    expect(pads4Fields.map((f) => f.key)).toEqual(['baseUrl', 'domain', 'username', 'password']);
+    const draft = initialDraft(pads4Fields, null, 'PADS4');
+    expect(draft.name).toBe('PADS4');
+    expect(draft.secrets.password).toEqual({ mode: 'replace', value: '' });
+    expect(initialDraft(pads4Fields, null).name).toBe('');
+  });
+
+  it('sends the address, domain and user name as settings and the password as a secret, and asks for all four', () => {
+    const draft = initialDraft(pads4Fields, null, 'PADS4');
+    expect(validate(pads4Fields, draft)).toEqual({
+      'config.baseUrl': 'required',
+      'config.domain': 'required',
+      'config.username': 'required',
+      'secrets.password': 'required',
+    });
+    const full = withValues(
+      draft,
+      { baseUrl: 'http://192.168.1.20:8080', domain: 'acme', username: 'ann' },
+      { password: { mode: 'replace', value: 'pw-0042' } },
+    );
+    expect(validate(pads4Fields, full)).toEqual({});
+    expect(toInput(pads4, pads4Fields, full, true)).toEqual({
+      connector: 'pads4',
+      name: 'PADS4',
+      enabled: true,
+      config: { baseUrl: 'http://192.168.1.20:8080', domain: 'acme', username: 'ann' },
+      secrets: { password: 'pw-0042' },
+      clearSecrets: [],
+    });
   });
 });

@@ -4,8 +4,8 @@ using Dam.Domain.Integrations;
 namespace Dam.Infrastructure.Integrations;
 
 /// <summary>
-/// The connector behind <c>http</c> and <c>pads4</c>: both are an HTTP API with a configurable authentication strategy, so one implementation serves both descriptors (ADR-0040 decision 1).
-/// A specific connector (what is pushed, in what shape) is a subclass or a wrapper around this plus its actions, in its own step.
+/// The connector behind <c>http</c>: an HTTP API with a configurable authentication strategy (ADR-0040 decision 1). A specific connector that talks HTTP (what is pushed, in what shape)
+/// is a subclass or a wrapper around this plus its actions, in its own step; PADS4 will be one (for now it is a stored-credentials connector that makes no calls).
 /// </summary>
 public class HttpApiConnector(ConnectorDescriptor descriptor, ConnectionRuntime runtime) : IConnector
 {

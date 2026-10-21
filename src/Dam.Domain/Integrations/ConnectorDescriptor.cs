@@ -5,7 +5,7 @@ public static class ConnectorStatuses
 {
     /// <summary>Works now.</summary>
     public const string Available = "available";
-    /// <summary>Can be configured and tested; its actions are still to come.</summary>
+    /// <summary>Can be configured; its actions are still to come. Whether it can also be tested depends on its capabilities (a connector that makes no calls yet only stores its settings).</summary>
     public const string Preview = "preview";
     /// <summary>Listed so people can see it is coming; a connection cannot be created.</summary>
     public const string Planned = "planned";
@@ -30,6 +30,12 @@ public static class FieldGroups
     public const string Authentication = "authentication";
     public const string Advanced = "advanced";
     public static readonly IReadOnlyList<string> All = [Connection, Authentication, Advanced];
+}
+
+public static class ConnectorCapabilities
+{
+    /// <summary>The connector can sign in and make a test request (<c>POST /connections/{id}/test</c>).</summary>
+    public const string Test = "test";
 }
 
 public sealed record FieldOption(string Value, string Label);
@@ -65,4 +71,16 @@ public sealed record ConnectorDescriptor(
 {
     public ConnectorField? Field(string key) => Fields.FirstOrDefault(f => f.Key == key);
     public bool CanBeCreated => Status != ConnectorStatuses.Planned;
+
+    /// <summary>Whether Test connection exists for this connector.</summary>
+    public bool CanTest => Capabilities.Contains(ConnectorCapabilities.Test);
+
+    /// <summary>
+    /// Whether the connector makes any call to the other system. One that does not (a stored-credentials connector: it only keeps the settings) saves a connection without
+    /// the outbound URL check, since nothing is ever requested; the check applies as soon as it gains a capability (ADR-0040).
+    /// </summary>
+    public bool MakesCalls => Capabilities.Count > 0;
+
+    /// <summary>The status detail of a connection whose connector makes no calls: the settings are kept and that is all.</summary>
+    public string? SavedOnlyDetail => MakesCalls ? null : $"Saved. Orbit does not connect to {Name} yet.";
 }

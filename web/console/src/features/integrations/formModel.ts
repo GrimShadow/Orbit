@@ -4,6 +4,12 @@ import type { ConfigValue, ConnectionDto, ConnectionInput, ConnectorDto, FieldDt
 
 export const GROUP_ORDER: FieldGroup[] = ['connection', 'authentication', 'advanced'];
 
+/** Whether the connector has Test connection. A connector without the `test` capability only stores its settings (it makes no
+ * call to the other system yet), so the console hides Test and "Save and test" for it and says so instead. */
+export function canTestConnector(connector: ConnectorDto): boolean {
+  return connector.capabilities.includes('test');
+}
+
 /** `keep`: the stored secret stays (omitted from the request). `replace`: a typed value is sent. `clear`: the key goes into
  * `clearSecrets`. A secret that is not stored yet is always `replace`. */
 export type SecretMode = 'keep' | 'replace' | 'clear';
@@ -75,9 +81,9 @@ function initialValue(field: FieldDto, stored: ConfigValue | null | undefined): 
   return asText(from);
 }
 
-/** The draft a form starts from: stored values when editing, the descriptor's defaults when creating. Secrets are never
- * prefilled. */
-export function initialDraft(fields: FieldDto[], connection: ConnectionDto | null): Draft {
+/** The draft a form starts from: stored values when editing, the descriptor's defaults when creating (and `defaultName` as the
+ * name of a new connection). Secrets are never prefilled. */
+export function initialDraft(fields: FieldDto[], connection: ConnectionDto | null, defaultName = ''): Draft {
   const values: Draft['values'] = {};
   const secrets: Draft['secrets'] = {};
   for (const f of fields) {
@@ -86,7 +92,7 @@ export function initialDraft(fields: FieldDto[], connection: ConnectionDto | nul
       secrets[f.key] = { mode: stored ? 'keep' : 'replace', value: '' };
     } else values[f.key] = initialValue(f, connection?.config[f.key]);
   }
-  return { name: connection?.name ?? '', enabled: connection?.enabled ?? true, values, secrets };
+  return { name: connection?.name ?? defaultName, enabled: connection?.enabled ?? true, values, secrets };
 }
 
 /** What the request carries. Fields hidden by `showWhen` are left out entirely (values and secrets alike), empty optional

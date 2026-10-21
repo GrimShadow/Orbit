@@ -92,12 +92,13 @@ public sealed class IntegrationConnection : AggregateRoot
     public DateTimeOffset UpdatedAt { get; private set; }
 
     public static IntegrationConnection Create(Guid id, Guid tenantId, string connector, string name, bool enabled, IReadOnlyDictionary<string, JsonElement> config,
-        IReadOnlyDictionary<string, StoredSecret> secrets, Guid? createdBy, DateTimeOffset now)
+        IReadOnlyDictionary<string, StoredSecret> secrets, Guid? createdBy, DateTimeOffset now, string? statusDetail = null)
     {
         var c = new IntegrationConnection
         {
             TenantId = tenantId, Connector = connector, Name = name.Trim(), Enabled = enabled, Config = new Dictionary<string, JsonElement>(config),
             Secrets = new Dictionary<string, StoredSecret>(secrets), CreatedBy = createdBy, CreatedAt = now, UpdatedAt = now,
+            StatusDetail = statusDetail,
         };
         c.SetId(id);
         c.Raise(new IntegrationConnectionCreated(c.Id, c.Connector, c.Name, c.Enabled));
@@ -106,9 +107,12 @@ public sealed class IntegrationConnection : AggregateRoot
 
     private void SetId(Guid id) => Id = id;
 
-    /// <summary>Replaces the settings. Any change to settings or secrets drops the cached token (it was fetched with the old ones) and the last test result (it no longer applies).</summary>
+    /// <summary>
+    /// Replaces the settings. Any change to settings or secrets drops the cached token (it was fetched with the old ones) and the last test result (it no longer applies).
+    /// <paramref name="detailAfterChange"/> is the status detail that goes with the reset status (a connector that is never tested says "saved" there); null for none.
+    /// </summary>
     public void Update(string name, bool enabled, IReadOnlyDictionary<string, JsonElement> config, IReadOnlyDictionary<string, StoredSecret> secrets, IReadOnlyList<string> changedSecrets,
-        DateTimeOffset now)
+        DateTimeOffset now, string? detailAfterChange = null)
     {
         var changed = new List<string>();
         if (!string.Equals(Name, name.Trim(), StringComparison.Ordinal)) changed.Add("name");
@@ -126,7 +130,7 @@ public sealed class IntegrationConnection : AggregateRoot
             TokenCipher = null;
             TokenExpiresAt = null;
             Status = ConnectionStatuses.New;
-            StatusDetail = null;
+            StatusDetail = detailAfterChange;
         }
         Raise(new IntegrationConnectionUpdated(Id, Connector, Name, Enabled, changed));
     }
