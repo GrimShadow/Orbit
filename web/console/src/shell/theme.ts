@@ -34,7 +34,7 @@ function syncThemeColor(preference: ThemePreference) {
     }
     const dark = /dark/.test(m.media);
     const original = [...metas].find((x) => /dark/.test(x.media) === (preference === 'dark'));
-    m.content = (original?.dataset.original ?? original?.content ?? m.content) || (dark ? '#0e1411' : '#f6f5f1');
+    m.content = (original?.dataset.original ?? original?.content ?? m.content) || (dark ? '#06110C' : '#f5f5f4');
   });
 }
 
