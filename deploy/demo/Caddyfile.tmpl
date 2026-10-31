@@ -1,0 +1,111 @@
+# Orbit demo front door. demo.sh fills in the {{...}} values and writes the result to a temp directory; nothing is generated into the repo.
+# One address serves everything the browser needs, so the console, the API, sign-in, uploads and previews are all same-origin (no CORS).
+# Anything not listed here answers 404. The address (Host header) is passed through untouched: presigned storage URLs are signed for it.
+{
+	admin off
+	auto_https off
+	servers {
+		timeouts {
+			read_header 30s
+		}
+	}
+}
+
+:{{PORT}} {
+	bind 127.0.0.1
+
+	log {
+		output file {{LOG_FILE}} {
+			roll_size 5MiB
+			roll_keep 3
+		}
+		# Sign-in codes, presigned signatures and share tokens live in the query string and the delivery path: keep neither in the log.
+		format filter {
+			wrap console
+			request>uri regexp (\?|/d/).* $1
+			request>headers delete
+		}
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# 1. Pages of the console that live under /admin. Everything else under /admin is Keycloak's admin console and REST API: never reachable.
+	@console_admin path /admin/ai /admin/glossary /admin/rights /admin/webhooks /admin/audit /admin/workflows /admin/workflows/*
+	handle @console_admin {
+		root * {{CONSOLE_DIR}}
+		rewrite * /index.html
+		header Cache-Control "no-cache"
+		header X-Frame-Options DENY
+		file_server
+	}
+
+	# 2. Explicitly refused, whatever else is configured below: Keycloak admin and master realm, the developer realm, service endpoints.
+	@blocked path /admin /admin/* /realms/master /realms/master/* /realms/dam /realms/dam/* /healthz /readyz /metrics /metrics/* /openapi /openapi/* /swagger /swagger/* /scalar /scalar/* /api/openapi* /api/swagger*
+	handle @blocked {
+		respond "Not found" 404
+	}
+
+	# 3. The API (one path prefix, versioned).
+	handle /api/v1/* {
+		reverse_proxy 127.0.0.1:{{API_PORT}}
+	}
+
+	# 4. Sign-in. Only the demo realm, and only what the browser flow uses (checked against a real sign-in and sign-out): discovery, authorize,
+	#    token, logout, the login form's submit and "restart" actions, and the login theme's static files. The API reads Keycloak's signing keys
+	#    itself, locally, so /certs is not exposed. No account console, no client registration, no admin, no other realm.
+	@kc path /realms/{{REALM}}/.well-known/openid-configuration /realms/{{REALM}}/protocol/openid-connect/auth /realms/{{REALM}}/protocol/openid-connect/token /realms/{{REALM}}/protocol/openid-connect/logout /realms/{{REALM}}/login-actions/authenticate /realms/{{REALM}}/login-actions/restart /resources/*
+	handle @kc {
+		reverse_proxy 127.0.0.1:{{KC_PORT}}
+	}
+
+	# 5. Browser uploads and downloads that go straight to object storage through presigned URLs (path style: /bucket/key?X-Amz-...).
+	#    Only the three buckets, only GET/HEAD/PUT, and only with a signature in the query. The path and Host are not rewritten.
+	@s3 {
+		path /dam-originals/* /dam-renditions/* /dam-quarantine/*
+		method GET HEAD PUT
+		query X-Amz-Signature=*
+	}
+	handle @s3 {
+		reverse_proxy 127.0.0.1:{{S3_PORT}} {
+			flush_interval -1
+		}
+	}
+
+	# 6. Previews and downloads served by the delivery origin: /d/<signed token>/<asset>/<rendition>. The token carries the permission.
+	@delivery {
+		path /d/*
+		method GET HEAD
+	}
+	handle @delivery {
+		reverse_proxy 127.0.0.1:{{DELIVERY_PORT}} {
+			flush_interval -1
+		}
+	}
+
+	# 7. Namespaces that belong to the services above never fall through to the console.
+	@reserved path /api /api/* /realms /realms/* /resources /resources/* /d /d/* /dam-originals /dam-originals/* /dam-renditions /dam-renditions/* /dam-quarantine /dam-quarantine/* /js /js/*
+	handle @reserved {
+		respond "Not found" 404
+	}
+
+	# 8. The console: static files, with index.html for client-side routes. A missing file with an extension is a real 404.
+	handle {
+		root * {{CONSOLE_DIR}}
+		header X-Frame-Options DENY
+		header Cache-Control "no-cache"
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@hasext path_regexp \.[A-Za-z0-9]{1,8}$
+		handle @hasext {
+			file_server
+		}
+		handle {
+			rewrite * /index.html
+			file_server
+		}
+	}
+}

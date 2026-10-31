@@ -39,6 +39,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     o.TokenValidationParameters.NameClaimType = "preferred_username";
     o.TokenValidationParameters.RoleClaimType = "roles";
     o.TokenValidationParameters.ClockSkew = TimeSpan.FromSeconds(30);
+    OidcBackchannel.Apply(o, cfg["DAM_OIDC_METADATA_ADDRESS"]);
 });
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
