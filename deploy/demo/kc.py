@@ -80,6 +80,7 @@ class Keycloak:
             headers["Authorization"] = f"Bearer {token}"
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
+            # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- the URL is Keycloak's own admin address plus a fixed path (http/https only), never user input
             with urllib.request.urlopen(req, timeout=30) as r:
                 raw = r.read()
                 code, location = r.status, r.headers.get("Location")

@@ -90,6 +90,7 @@ def s3(method: str, path: str, query: dict[str, str]) -> bytes:
     auth = f"AWS4-HMAC-SHA256 Credential={key}/{scope}, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature={sig}"
     req = urllib.request.Request(f"{S3_URL}{urllib.parse.quote(path)}" + (f"?{canon_q}" if canon_q else ""), method=method,
                                  headers={"x-amz-date": amz, "x-amz-content-sha256": payload, "Authorization": auth})
+    # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- the URL is the local S3 or OpenSearch address from the environment plus a fixed path (http/https only), never user input
     with urllib.request.urlopen(req, timeout=60) as r:
         return r.read()
 
@@ -116,6 +117,7 @@ def purge_files() -> int:
 def purge_search() -> int:
     req = urllib.request.Request(f"{OS_URL}/dam-{SLUG}-assets-*", method="DELETE")
     try:
+        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- the URL is the local S3 or OpenSearch address from the environment plus a fixed path (http/https only), never user input
         with urllib.request.urlopen(req, timeout=30) as r:
             return 1 if r.status == 200 else 0
     except urllib.error.HTTPError as e:

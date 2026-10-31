@@ -462,6 +462,7 @@ def check_public(api: Api, public: str, token: str, seeder: Seeder) -> list[str]
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh) orbit-demo-check", **(headers or {})}, method=method)
         for attempt in range(40):               # a brand-new tunnel address needs a few seconds before it resolves everywhere
             try:
+                # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- the URL is the demo API or public address this script was started with (http/https only), never user input
                 with urllib.request.urlopen(req, timeout=30) as r:
                     return r.status, r.read()
             except urllib.error.HTTPError as e:
@@ -480,6 +481,7 @@ def check_public(api: Api, public: str, token: str, seeder: Seeder) -> list[str]
         req = urllib.request.Request(f"{public}/api/v1/assets/{first['id']}/links", data=json.dumps({"renditions": ["thumb", "original"]}).encode(),
                                      headers={**auth, "Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Macintosh) orbit-demo-check"}, method="POST")
         try:
+            # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- the URL is the demo API or public address this script was started with (http/https only), never user input
             with urllib.request.urlopen(req, timeout=30) as r:
                 links = json.loads(r.read())["links"]
         except Exception as e:  # noqa: BLE001
