@@ -2,6 +2,8 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
 import { setLanguage } from '../../i18n';
+import { renderPage } from '../settings/settingsTestKit';
+import { IntegrationsPage } from './IntegrationsPage';
 import {
   CONNECTORS,
   MIN,
@@ -48,7 +50,7 @@ async function card(name: string) {
 describe('connector catalog', () => {
   it('shows each connector with its status, category and what a person can do with it', async () => {
     install(world({ connections: [] }));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Integrations' })).toBeInTheDocument();
     expect(screen.getByText(/never shown again/)).toBeInTheDocument();
@@ -74,7 +76,7 @@ describe('connector catalog', () => {
 
   it('lists a planned connector as coming later, with no Connect button', async () => {
     install(world({ connections: [] }));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     const canva = (await screen.findByRole('heading', { name: 'Canva' })).closest('article')!;
     expect(within(canva).getByText('Planned')).toBeInTheDocument();
     expect(within(canva).getByText('Coming later.')).toBeInTheDocument();
@@ -85,7 +87,7 @@ describe('connector catalog', () => {
   it('shows a loading state, then an error with a retry', async () => {
     let fail = true;
     install(world(), (c) => (c.pathname === '/api/v1/integrations/connectors' && fail ? problem(500, 'Boom') : undefined));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     expect(await screen.findByText('We could not load the connectors', undefined, { timeout: 6000 })).toBeInTheDocument();
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -94,7 +96,7 @@ describe('connector catalog', () => {
 
   it('shows skeletons while loading', async () => {
     install(world(), (c) => (c.pathname === '/api/v1/integrations/connectors' ? new Promise<Response>(() => {}) : undefined));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     expect((await screen.findAllByText('Loading')).length).toBeGreaterThan(0);
   });
 });
@@ -102,7 +104,7 @@ describe('connector catalog', () => {
 describe('access', () => {
   it('shows a calm no-access state without the integrations permission and loads nothing', async () => {
     const calls = install(world({ permissions: ['assets.read'] }));
-    renderAt('/integrations');
+    renderPage(<IntegrationsPage />, '/settings/integrations');
     expect(await screen.findByText('You do not have access to integrations')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Available connectors' })).not.toBeInTheDocument();
     expect(calls.some((c) => c.pathname.startsWith('/api/v1/integrations'))).toBe(false);
@@ -110,44 +112,45 @@ describe('access', () => {
 
   it('shows no-access when the server answers 403', async () => {
     install(world(), (c) => (c.pathname.startsWith('/api/v1/integrations') ? problem(403, 'Forbidden') : undefined));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     expect((await screen.findAllByText('You do not have access to integrations')).length).toBeGreaterThan(0);
   });
 
-  it('lists Integrations in the sidebar only with the permission', async () => {
+  it('lists Integrations in the Settings navigation only with the permission', async () => {
     install(world());
-    renderAt('/');
-    const link = await screen.findByRole('link', { name: 'Integrations' });
-    expect(link).toHaveAttribute('href', '/integrations');
+    renderAt('/settings/integrations');
+    const nav = await screen.findByRole('navigation', { name: 'Settings sections' });
+    expect(await within(nav).findByRole('link', { name: 'Integrations' })).toHaveAttribute('href', '/settings/integrations');
     cleanup();
 
     install(world({ permissions: ['assets.read', 'webhooks.manage'] }));
-    renderAt('/');
+    renderAt('/settings/webhooks');
     // Webhooks appears once permissions have loaded; Integrations must not.
-    await screen.findByRole('link', { name: 'Webhooks' });
-    expect(screen.queryByRole('link', { name: 'Integrations' })).not.toBeInTheDocument();
+    const other = await screen.findByRole('navigation', { name: 'Settings sections' });
+    await within(other).findByRole('link', { name: 'Webhooks' });
+    expect(within(other).queryByRole('link', { name: 'Integrations' })).not.toBeInTheDocument();
   });
 
-  it('lists Integrations in the primary navigation (icon, label and route) and under its Hindi name', async () => {
+  it('lists Integrations in the Settings navigation (icon, label and route) and under its Hindi name', async () => {
     install(world());
-    renderAt('/');
-    const nav = await screen.findByRole('navigation', { name: 'Primary' });
+    renderAt('/settings/integrations');
+    const nav = await screen.findByRole('navigation', { name: 'Settings sections' });
     const link = await within(nav).findByRole('link', { name: 'Integrations' });
-    expect(link).toHaveAttribute('href', '/integrations');
+    expect(link).toHaveAttribute('href', '/settings/integrations');
     expect(link.querySelector('svg')).not.toBeNull();
     cleanup();
 
     setLanguage('hi');
     install(world());
-    renderAt('/');
-    expect(await screen.findByRole('link', { name: 'इंटीग्रेशन' })).toHaveAttribute('href', '/integrations');
+    renderAt('/settings/integrations');
+    expect(await screen.findByRole('link', { name: 'इंटीग्रेशन' })).toHaveAttribute('href', '/settings/integrations');
   });
 });
 
 describe('connections', () => {
   it('shows a connection with its status, detail, last test, token expiry and enabled switch', async () => {
     install(world());
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     const c = await card('Acme CMS');
     expect(within(c).getByText('Generic HTTP API')).toBeInTheDocument();
     expect(within(c).getByText('Working')).toBeInTheDocument();
@@ -176,7 +179,7 @@ describe('connections', () => {
         ],
       }),
     );
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     const failing = await card('Acme CMS');
     expect(within(failing).getByText('Needs attention')).toBeInTheDocument();
     expect(within(failing).getByText('The login call was refused (HTTP 401).')).toBeInTheDocument();
@@ -190,7 +193,7 @@ describe('connections', () => {
     install(
       world({ connections: [connection({ tokenExpiresAt: new Date(Date.now() - 2 * 3_600_000 - 30_000).toISOString() })] }),
     );
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     const c = await card('Acme CMS');
     expect(within(c).getByText('Sign-in token expired')).toBeInTheDocument();
     expect(within(c).getByText('2 hours ago')).toBeInTheDocument();
@@ -198,14 +201,14 @@ describe('connections', () => {
 
   it('invites you to add the first connection', async () => {
     install(world({ connections: [] }));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     expect(await screen.findByText('No connections yet')).toBeInTheDocument();
   });
 
   it('shows an error with a retry when the connections cannot be loaded', async () => {
     let fail = true;
     install(world(), (c) => (c.pathname === CONNECTIONS && c.method === 'GET' && fail ? problem(500, 'Boom') : undefined));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     expect(await screen.findByText('We could not load your connections', undefined, { timeout: 6000 })).toBeInTheDocument();
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -214,7 +217,7 @@ describe('connections', () => {
 
   it('turns a connection off with the switch, sending the stored values and no secrets', async () => {
     const calls = install(world());
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('switch', { name: 'Acme CMS: enabled' }));
     await waitFor(() => expect(writes(calls, 'PUT', `${CONNECTIONS}/k1`)).toHaveLength(1));
     expect(await writes(calls, 'PUT', `${CONNECTIONS}/k1`)[0]!.json()).toEqual({
@@ -230,7 +233,7 @@ describe('connections', () => {
 
   it('rolls the switch back and says so when the change fails', async () => {
     install(world(), (c) => (c.method === 'PUT' ? problem(500, 'Boom') : undefined));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('switch', { name: 'Acme CMS: enabled' }));
     expect((await screen.findAllByText('Could not change “Acme CMS”')).length).toBeGreaterThan(0);
     await waitFor(() =>
@@ -240,7 +243,7 @@ describe('connections', () => {
 
   it('asks before deleting, deletes on confirm and keeps the connection on cancel', async () => {
     const calls = install(world());
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Acme CMS' }));
     const confirm = await dialog('Delete this connection?');
     expect(within(confirm).getByText(/“Acme CMS” will be removed/)).toBeInTheDocument();
@@ -257,7 +260,7 @@ describe('connections', () => {
 
   it('disables Edit when the connector is no longer in the catalog', async () => {
     install(world({ connections: [connection({ connector: 'gone' })] }));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     const c = await card('Acme CMS');
     expect(within(c).getByText('gone')).toBeInTheDocument();
     expect(within(c).getByRole('button', { name: 'Edit Acme CMS' })).toBeDisabled();
@@ -267,7 +270,7 @@ describe('connections', () => {
 describe('connect dialog', () => {
   async function openCreate() {
     install(world({ connections: [] }));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Connect Generic HTTP API' }));
     return dialog('Connect Generic HTTP API');
   }
@@ -318,7 +321,7 @@ describe('connect dialog', () => {
   it('shows and hides authentication fields as the authentication method changes, and does not send hidden values', async () => {
     const w = world({ connections: [] });
     const calls = install(w);
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Connect Generic HTTP API' }));
     const form = await dialog('Connect Generic HTTP API');
 
@@ -372,7 +375,7 @@ describe('connect dialog', () => {
         connectors: [{ ...bare, fields: bare.fields.filter((f) => f.key !== 'authStrategy') }],
       }),
     );
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Connect Generic HTTP API' }));
     const form = await dialog('Connect Generic HTTP API');
     const select = within(form).getByRole('combobox', { name: 'Authentication method' });
@@ -386,7 +389,7 @@ describe('connect dialog', () => {
 
   it('checks required fields and addresses before sending anything, and summarises the problems', async () => {
     const calls = install(world({ connections: [] }));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Connect Generic HTTP API' }));
     const form = await dialog('Connect Generic HTTP API');
     await userEvent.click(within(form).getByRole('button', { name: 'Create connection' }));
@@ -425,7 +428,7 @@ describe('connect dialog', () => {
           })
         : undefined,
     );
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Connect Generic HTTP API' }));
     const form = await dialog('Connect Generic HTTP API');
     await userEvent.type(within(form).getByRole('textbox', { name: 'Name' }), 'Acme CMS');
@@ -462,7 +465,7 @@ describe('connect dialog', () => {
         ? problem(409, 'Conflict', { detail: 'You can have at most 50 connections.' })
         : undefined,
     );
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Connect Generic HTTP API' }));
     const form = await dialog('Connect Generic HTTP API');
     await userEvent.type(within(form).getByRole('textbox', { name: 'Name' }), 'Acme CMS');
@@ -474,7 +477,7 @@ describe('connect dialog', () => {
 
   it('shows what is typed in a secret only while the toggle is on', async () => {
     install(world({ connections: [] }));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Connect Generic HTTP API' }));
     const form = await dialog('Connect Generic HTTP API');
     const secret = within(form).getByLabelText(/^API key/);
@@ -499,7 +502,7 @@ describe('a connector that only stores its settings (PADS4)', () => {
 
   async function openAdd(w = world({ connections: [] })) {
     const calls = install(w);
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Add PADS4 connection' }));
     return { calls, w, form: await dialog('Add PADS4 connection') };
   }
@@ -596,7 +599,7 @@ describe('a connector that only stores its settings (PADS4)', () => {
         ? validation({ 'config.baseUrl': ['Only http and https URLs are allowed.'] })
         : undefined,
     );
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Add PADS4 connection' }));
     const form = await dialog('Add PADS4 connection');
     await fill(form);
@@ -612,7 +615,7 @@ describe('a connector that only stores its settings (PADS4)', () => {
 
     it('shows a Saved badge and the note instead of the test facts, with no Test button', async () => {
       const calls = install(world1());
-      renderAt('/integrations');
+      renderAt('/settings/integrations');
       const c = await card('PADS4');
       expect(within(c).getByText('Saved')).toBeInTheDocument();
       expect(within(c).getByText('Orbit saves these details but does not connect to PADS4 yet.')).toBeInTheDocument();
@@ -628,14 +631,14 @@ describe('a connector that only stores its settings (PADS4)', () => {
 
     it('keeps Test for a connector that has it, next to the saved one', async () => {
       install(world({ connections: [pads4Connection(), connection()] }));
-      renderAt('/integrations');
+      renderAt('/settings/integrations');
       expect(await screen.findByRole('button', { name: 'Test Acme CMS' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Test PADS4' })).not.toBeInTheDocument();
     });
 
     it('opens Activity, which is simply empty', async () => {
       install(world1());
-      renderAt('/integrations');
+      renderAt('/settings/integrations');
       await userEvent.click(await screen.findByRole('button', { name: 'Activity of PADS4' }));
       const drawer = await dialog('Activity: PADS4');
       expect(await within(drawer).findByText('No calls yet')).toBeInTheDocument();
@@ -644,7 +647,7 @@ describe('a connector that only stores its settings (PADS4)', () => {
     it('edits with the write-only password: Set (…hint) with Replace only, and unchanged it is not sent', async () => {
       const w = world1();
       const calls = install(w);
-      renderAt('/integrations');
+      renderAt('/settings/integrations');
       await userEvent.click(await screen.findByRole('button', { name: 'Edit PADS4' }));
       const form = await dialog('Edit PADS4');
       expect(within(form).getByRole('textbox', { name: /^PADS4 server URL/ })).toHaveValue('http://192.168.1.20:8080');
@@ -674,7 +677,7 @@ describe('a connector that only stores its settings (PADS4)', () => {
 
     it('replaces the password only after Replace', async () => {
       const calls = install(world1());
-      renderAt('/integrations');
+      renderAt('/settings/integrations');
       await userEvent.click(await screen.findByRole('button', { name: 'Edit PADS4' }));
       const form = await dialog('Edit PADS4');
       await userEvent.click(within(form).getByRole('button', { name: 'Replace Password' }));
@@ -693,7 +696,7 @@ describe('a connector that only stores its settings (PADS4)', () => {
   it('is in Hindi', async () => {
     setLanguage('hi');
     install(world({ connections: [pads4Connection()] }));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     const pads4 = (await screen.findAllByRole('heading', { name: 'PADS4' }))[0]!.closest('article')!;
     expect(within(pads4).getByText('केवल सहेजी गई सेटिंग')).toBeInTheDocument();
     expect(within(pads4).getByText('Orbit ये विवरण सहेजता है, लेकिन अभी PADS4 से कनेक्ट नहीं करता।')).toBeInTheDocument();
@@ -709,7 +712,7 @@ describe('a connector that only stores its settings (PADS4)', () => {
 
   it('has no accessibility violations in the list, the add dialog and the edit dialog', async () => {
     install(world({ connections: [pads4Connection()] }));
-    const { container } = renderAt('/integrations');
+    const { container } = renderAt('/settings/integrations');
     await card('PADS4');
     expect(await axe(container)).toHaveNoViolations();
     await userEvent.click(screen.getByRole('button', { name: 'Add PADS4 connection' }));
@@ -728,7 +731,7 @@ describe('a connector that only stores its settings (PADS4)', () => {
 describe('edit dialog and secrets', () => {
   async function openEdit(w = world()) {
     const calls = install(w);
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Edit Acme CMS' }));
     const form = await dialog('Edit Acme CMS');
     return { calls, form, w };
@@ -834,7 +837,7 @@ describe('edit dialog and secrets', () => {
 
   it('maps a 422 on a replaced secret to its field', async () => {
     install(world(), (c) => (c.method === 'PUT' ? validation({ 'secrets.apiKey': ['The key was refused.'] }) : undefined));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Edit Acme CMS' }));
     const form = await dialog('Edit Acme CMS');
     await userEvent.click(within(form).getByRole('button', { name: 'Replace API key' }));
@@ -858,7 +861,7 @@ describe('testing a connection', () => {
         }),
       }),
     );
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Test Acme CMS' }));
     const panel = await dialog('Test connection: Acme CMS');
     expect(await within(panel).findByText('The test failed.')).toBeInTheDocument();
@@ -883,7 +886,7 @@ describe('testing a connection', () => {
 
   it('shows a success when every step passes', async () => {
     install(world());
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Test Acme CMS' }));
     const panel = await dialog('Test connection: Acme CMS');
     expect(await within(panel).findByText('The connection works.')).toBeInTheDocument();
@@ -897,7 +900,7 @@ describe('testing a connection', () => {
         ? problem(429, 'Too Many Requests', { detail: 'Wait 5 seconds.' })
         : undefined,
     );
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Test Acme CMS' }));
     const panel = await dialog('Test connection: Acme CMS');
     expect(await within(panel).findByText(/Please wait a few seconds, then test again/)).toBeInTheDocument();
@@ -915,7 +918,7 @@ describe('testing a connection', () => {
         ? problem(500, 'Boom', { detail: 'The worker is unavailable.' })
         : undefined,
     );
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Test Acme CMS' }));
     const panel = await dialog('Test connection: Acme CMS');
     expect(await within(panel).findByText('The test could not be run.')).toBeInTheDocument();
@@ -925,7 +928,7 @@ describe('testing a connection', () => {
   it('saves and tests from the dialog, keeping it open with the steps and the new “Set” hint', async () => {
     const w = world({ connections: [] });
     const calls = install(w);
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Connect Generic HTTP API' }));
     const form = await dialog('Connect Generic HTTP API');
     await userEvent.type(within(form).getByRole('textbox', { name: 'Name' }), 'Acme CMS');
@@ -988,7 +991,7 @@ describe('activity', () => {
         ],
       }),
     );
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Activity of Acme CMS' }));
     const drawer = await dialog('Activity: Acme CMS');
     const items = within(await within(drawer).findByRole('list', { name: 'Recent calls, newest first' })).getAllByRole(
@@ -1019,7 +1022,7 @@ describe('activity', () => {
         activity: [1, 2, 3, 4, 5].map((n) => call({ id: `a${n}`, target: `api.example.test/p${n}` })),
       }),
     );
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Activity of Acme CMS' }));
     const drawer = await dialog('Activity: Acme CMS');
     await within(drawer).findByText('api.example.test/p2');
@@ -1037,7 +1040,7 @@ describe('activity', () => {
 
   it('says when there are no calls yet', async () => {
     install(world({ activity: [] }));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Activity of Acme CMS' }));
     const drawer = await dialog('Activity: Acme CMS');
     expect(await within(drawer).findByText('No calls yet')).toBeInTheDocument();
@@ -1047,7 +1050,7 @@ describe('activity', () => {
   it('shows an error with a retry', async () => {
     let fail = true;
     install(world({ activity: [call()] }), (c) => (c.pathname.endsWith('/activity') && fail ? problem(500, 'Boom') : undefined));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Activity of Acme CMS' }));
     const drawer = await dialog('Activity: Acme CMS');
     expect(await within(drawer).findByText('We could not load the activity')).toBeInTheDocument();
@@ -1060,7 +1063,7 @@ describe('activity', () => {
 describe('accessibility', () => {
   it('has no violations on the page, the connect and edit dialogs, the test result and the activity panel', async () => {
     install(world({ activity: [call(), call({ id: 'a2', ok: false, statusCode: 500, error: 'Boom' })] }));
-    const { container } = renderAt('/integrations');
+    const { container } = renderAt('/settings/integrations');
     await card('Acme CMS');
     expect(await axe(container)).toHaveNoViolations();
 
@@ -1100,7 +1103,7 @@ describe('Hindi', () => {
   it('renders the page, the connect dialog and the test result in Hindi', async () => {
     setLanguage('hi');
     install(world());
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     expect(await screen.findByRole('heading', { level: 1, name: 'इंटीग्रेशन' })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'उपलब्ध कनेक्टर' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'आपके कनेक्शन' })).toBeInTheDocument();
@@ -1118,7 +1121,7 @@ describe('Hindi', () => {
     cleanup();
 
     install(world());
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     await userEvent.click(await screen.findByRole('button', { name: 'Acme CMS जाँचें' }));
     const panel = await dialog('कनेक्शन की जाँच: Acme CMS');
     expect(await within(panel).findByText('कनेक्शन सही काम कर रहा है।')).toBeInTheDocument();
@@ -1127,7 +1130,7 @@ describe('Hindi', () => {
   it('marks a planned connector in Hindi', async () => {
     setLanguage('hi');
     install(world({ connections: [] }));
-    renderAt('/integrations');
+    renderAt('/settings/integrations');
     const canva = (await screen.findByRole('heading', { name: 'Canva' })).closest('article')!;
     expect(within(canva).getByText('योजनाबद्ध')).toBeInTheDocument();
     expect(within(canva).getByText('डिज़ाइन')).toBeInTheDocument();

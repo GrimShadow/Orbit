@@ -71,7 +71,7 @@ describe('audit display helpers', () => {
 
   it('links entities that have a console route', () => {
     expect(entityRoute('asset', 'a1')).toBe('/library/assets/a1');
-    expect(entityRoute('workflow', 'w1')).toBe('/admin/workflows/w1');
+    expect(entityRoute('workflow', 'w1')).toBe('/settings/workflows/w1');
     expect(entityRoute('folder', 'f1')).toBe('/library?folder=f1');
     expect(entityRoute('collection', 'c1')).toBe('/collections/c1');
     expect(entityRoute('webhook', 'x')).toBeNull();

@@ -157,7 +157,7 @@ describe('Translate with AI, by capability', () => {
   it('links an administrator to the AI settings from that hint', async () => {
     renderMetadata(newWorld({ caps: caps({ translate: false }) }), { permissions: ADMIN });
     const links = await screen.findAllByRole('link', { name: 'AI settings' });
-    expect(links[0]).toHaveAttribute('href', '/admin/ai');
+    expect(links[0]).toHaveAttribute('href', '/settings/ai');
   });
 
   it('says AI is off when it is off for the organisation', async () => {
@@ -437,7 +437,7 @@ describe('Translate dialog', () => {
     const button = await screen.findByRole('button', { name: 'Translate…' });
     expect(button).toBeDisabled();
     expect(button).toHaveAccessibleDescription(/cannot translate text/);
-    expect(screen.getByRole('link', { name: 'AI settings' })).toHaveAttribute('href', '/admin/ai');
+    expect(screen.getByRole('link', { name: 'AI settings' })).toHaveAttribute('href', '/settings/ai');
   });
 
   it('is disabled with an explanation when AI is off', async () => {

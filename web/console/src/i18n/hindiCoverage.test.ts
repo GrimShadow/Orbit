@@ -19,6 +19,7 @@ const NAMESPACES = [
   'notifications',
   'smartSearch',
   'integrations',
+  'settings',
 ];
 const EXTRA_PREFIXES = ['home.stats.', 'nav.', 'upload.', 'item.'];
 

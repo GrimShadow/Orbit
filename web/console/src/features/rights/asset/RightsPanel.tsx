@@ -175,7 +175,7 @@ function AssignDialog({ asset, current, onClose }: { asset: AssetDto; current: R
         </p>
       )}
       <div className="dam-rights-dialog__actions">
-        <Link className="dam-rights-dialog__link" to="/admin/rights" onClick={onClose}>
+        <Link className="dam-rights-dialog__link" to="/settings/rights" onClick={onClose}>
           {t('rightsAsset.actions.manage')}
         </Link>
         <Button variant="ghost" onClick={onClose}>

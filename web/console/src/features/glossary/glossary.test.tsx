@@ -94,7 +94,7 @@ describe('Glossary page', () => {
       calls: [],
     };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     expect(await screen.findByRole('heading', { level: 1, name: 'Glossary' })).toBeInTheDocument();
     expect(screen.getByText(/A locked term is kept exactly as written in every language/)).toBeInTheDocument();
     const rows = within(await table())
@@ -112,24 +112,24 @@ describe('Glossary page', () => {
     expect(screen.getByText(/2 terms shown\. A glossary holds up to 5,000 terms\./)).toBeInTheDocument();
   });
 
-  it('is behind the glossary.manage permission: no nav entry and an explanation for those without it', async () => {
-    install({ terms: [term()], calls: [] }, ['assets.read']);
-    renderAt('/admin/glossary');
-    expect(await screen.findByText('You do not have access to the glossary')).toBeInTheDocument();
+  it('is behind the glossary.manage permission: no Settings entry and an explanation for those without it', async () => {
+    install({ terms: [term()], calls: [] }, ['assets.read', 'rights.manage']);
+    renderAt('/settings/glossary');
+    expect(await screen.findByText('You do not have access to this section')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Glossary' })).not.toBeInTheDocument();
   });
 
-  it('shows the nav entry to those who can manage it', async () => {
+  it('lists Glossary in the Settings navigation for those who can manage it', async () => {
     install({ terms: [term()], calls: [] });
-    renderAt('/admin/glossary');
-    const nav = await screen.findByRole('navigation', { name: 'Primary' });
-    expect(await within(nav).findByRole('link', { name: 'Glossary' })).toHaveAttribute('href', '/admin/glossary');
+    renderAt('/settings/glossary');
+    const nav = await screen.findByRole('navigation', { name: 'Settings sections' });
+    expect(await within(nav).findByRole('link', { name: 'Glossary' })).toHaveAttribute('href', '/settings/glossary');
   });
 
   it('shows an empty state with the ways to add terms', async () => {
     install({ terms: [], calls: [] });
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     expect(await screen.findByRole('heading', { name: 'No glossary terms yet' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add term' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Paste terms' })).toBeInTheDocument();
@@ -145,7 +145,7 @@ describe('Glossary page', () => {
       if (fail && input.url.includes('/api/v1/glossary')) return json({ title: 'Boom', status: 500 }, 500);
       return (base as typeof fetch)(input);
     });
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     expect(await screen.findByText('Could not load the glossary', undefined, { timeout: 8000 })).toBeInTheDocument();
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -155,7 +155,7 @@ describe('Glossary page', () => {
   it('searches by term, and says when nothing matches', async () => {
     const w: World = { terms: [term(), term({ id: 't2', term: 'Acme Cloud', note: null })], calls: [] };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     await table();
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search terms' }), 'cloud');
     await waitFor(() => expect(w.calls.some((c) => c.search.get('q') === 'cloud')).toBe(true));
@@ -172,9 +172,9 @@ describe('Glossary page', () => {
     const terms = Array.from({ length: 3 }, (_, i) => term({ id: `t${i}`, term: `Acme ${i}`, note: null }));
     const w: World = { terms, calls: [], pageSize: 2 };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     await table();
-    expect(screen.getByText('Acme 1')).toBeInTheDocument();
+    expect(await screen.findByText('Acme 1')).toBeInTheDocument();
     expect(screen.queryByText('Acme 2')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Load more' }));
     expect(await screen.findByText('Acme 2')).toBeInTheDocument();
@@ -183,7 +183,7 @@ describe('Glossary page', () => {
 
   it('has no axe violations', async () => {
     install({ terms: [term()], calls: [] });
-    const { container } = renderAt('/admin/glossary');
+    const { container } = renderAt('/settings/glossary');
     await table();
     expect(await axe(container)).toHaveNoViolations();
   });
@@ -198,7 +198,7 @@ describe('Glossary form', () => {
   it('adds a locked term without renderings', async () => {
     const w: World = { terms: [term()], calls: [] };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     const dialog = await openAdd();
     expect(within(dialog).queryByText('Rendering in each language')).not.toBeInTheDocument();
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Term' }), 'Acme Hub');
@@ -212,7 +212,7 @@ describe('Glossary form', () => {
   it('asks for the term', async () => {
     const w: World = { terms: [term()], calls: [] };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     const dialog = await openAdd();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Add term' }));
     expect(within(dialog).getByText('Enter the term.')).toBeInTheDocument();
@@ -222,7 +222,7 @@ describe('Glossary form', () => {
   it('needs a rendering for a mapped term, and sends one per language', async () => {
     const w: World = { terms: [term()], calls: [] };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     const dialog = await openAdd();
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Term' }), 'Acme Cloud');
     await userEvent.click(within(dialog).getByRole('radio', { name: /Mapped/ }));
@@ -252,7 +252,7 @@ describe('Glossary form', () => {
 
   it('removes a rendering row, and offers the language again', async () => {
     install({ terms: [term()], calls: [] });
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     const dialog = await openAdd();
     await userEvent.click(within(dialog).getByRole('radio', { name: /Mapped/ }));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Add a language' }));
@@ -271,7 +271,7 @@ describe('Glossary form', () => {
       calls: [],
     };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     await userEvent.click(await screen.findByRole('button', { name: 'Edit Acme Cloud' }));
     const dialog = await screen.findByRole('dialog', { name: 'Edit glossary term' });
     expect(within(dialog).getByRole('textbox', { name: 'Term' })).toHaveValue('Acme Cloud');
@@ -295,7 +295,7 @@ describe('Glossary form', () => {
   it('says a term is already there when the server refuses a duplicate', async () => {
     const w: World = { terms: [term()], calls: [] };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     const dialog = await openAdd();
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Term' }), 'Acme Lumen');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Add term' }));
@@ -309,7 +309,7 @@ describe('Glossary form', () => {
       refuse: json({ title: 'Conflict', status: 409, detail: 'A tenant may have at most 5000 glossary terms.' }, 409),
     };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     const dialog = await openAdd();
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Term' }), 'Acme Hub');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Add term' }));
@@ -321,7 +321,7 @@ describe('Glossary delete', () => {
   it('confirms first, then deletes and says so', async () => {
     const w: World = { terms: [term(), term({ id: 't2', term: 'Acme Cloud', note: null })], calls: [] };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Acme Lumen' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete this term?' });
     expect(dialog).toHaveTextContent('Acme Lumen will no longer be protected when text is translated.');
@@ -336,7 +336,7 @@ describe('Glossary delete', () => {
   it('cancelling deletes nothing', async () => {
     const w: World = { terms: [term()], calls: [] };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Acme Lumen' }));
     await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }));
     expect(writes(w, 'DELETE')).toHaveLength(0);
@@ -358,7 +358,7 @@ describe('Glossary paste import', () => {
   it('previews what will be created and each problem line before anything is sent', async () => {
     const w: World = { terms: [term()], calls: [] };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     const dialog = await openImport();
     expect(within(dialog).getByRole('button', { name: 'Import 0 terms' })).toBeDisabled();
     await paste(
@@ -378,7 +378,7 @@ describe('Glossary paste import', () => {
   it('creates the valid lines one by one and reports the result', async () => {
     const w: World = { terms: [term()], calls: [] };
     install(w);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     const dialog = await openImport();
     await paste(within(dialog).getByRole('textbox', { name: 'Terms' }), 'Acme Hub\nAcme Cloud | hi=ऐक्मे क्लाउड\nAcme Lumen');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Import 3 terms' }));
@@ -401,7 +401,7 @@ describe('Glossary paste import', () => {
     const w: World = { terms: [term()], calls: [] };
     install(w);
     const limit = json({ title: 'Conflict', status: 409, detail: 'At most 5000 terms.' }, 409);
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     const dialog = await openImport();
     await paste(within(dialog).getByRole('textbox', { name: 'Terms' }), 'Acme One\nAcme Two\nAcme Three');
     w.refuse = limit;
@@ -414,7 +414,7 @@ describe('Glossary paste import', () => {
 
   it('shows a one-line example', async () => {
     install({ terms: [term()], calls: [] });
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     const dialog = await openImport();
     expect(within(dialog).getByLabelText('Example of pasted terms')).toHaveTextContent('Acme Cloud | hi=');
   });
@@ -427,13 +427,13 @@ describe('Glossary in Hindi', () => {
       terms: [term(), term({ id: 't2', term: 'Acme Cloud', mode: 'mapped', translations: { hi: 'x' }, note: null })],
       calls: [],
     });
-    renderAt('/admin/glossary');
+    renderAt('/settings/glossary');
     expect(await screen.findByRole('heading', { level: 1, name: 'शब्दावली' })).toBeInTheDocument();
     expect(screen.getByText(/लॉक किया हुआ शब्द हर भाषा में ठीक वैसा ही रहता है/)).toBeInTheDocument();
     expect(await screen.findByRole('table', { name: 'शब्दावली के शब्द' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'शब्द जोड़ें' }));
     const dialog = await screen.findByRole('dialog', { name: 'शब्दावली में शब्द जोड़ें' });
     expect(within(dialog).getByRole('radio', { name: /मैप किया हुआ/ })).toBeInTheDocument();
-    expect(await screen.findByRole('link', { name: 'शब्दावली' })).toHaveAttribute('href', '/admin/glossary');
+    expect(await screen.findByRole('link', { name: 'शब्दावली' })).toHaveAttribute('href', '/settings/glossary');
   });
 });

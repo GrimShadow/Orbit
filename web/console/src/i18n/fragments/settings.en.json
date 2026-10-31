@@ -1,0 +1,27 @@
+{
+  "nav": {
+    "settings": "Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "navLabel": "Settings sections",
+    "group": {
+      "connections": "Connections",
+      "security": "Security and compliance",
+      "automation": "Automation",
+      "content": "Content rules"
+    },
+    "loading": "Loading settings",
+    "loadFailed": "We could not load settings",
+    "loadFailedHint": "Check your connection and try again.",
+    "retry": "Try again",
+    "none": {
+      "title": "There is nothing to manage here",
+      "hint": "Settings are for administrators. Ask an administrator if you need access to something."
+    },
+    "forbidden": {
+      "title": "You do not have access to this section",
+      "hint": "Ask an administrator for the permission it needs."
+    }
+  }
+}

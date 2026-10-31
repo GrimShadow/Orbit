@@ -106,7 +106,7 @@ export function TranslateInline({ scope, field, fieldLabel, source, target, sour
       {(support.state === 'off' || support.state === 'unsupported') && (
         <p className="dam-hint dam-ml__nohint">
           {t(support.state === 'off' ? 'translation.inline.off' : 'translation.inline.unsupported')}{' '}
-          {support.canManageAi && <Link to="/admin/ai">{t('translation.inline.settings')}</Link>}
+          {support.canManageAi && <Link to="/settings/ai">{t('translation.inline.settings')}</Link>}
         </p>
       )}
       <div role="status" aria-live="polite" className="dam-ml__live">

@@ -325,7 +325,10 @@ describe('Assign and remove', () => {
     expect(within(group).getAllByRole('radio')).toHaveLength(3);
     // An expired record is obviously expired before anyone picks it.
     expect(within(group).getByText('Expired on Mar 3, 2026')).toBeInTheDocument();
-    expect(within(dialog).getByRole('link', { name: 'Create or edit rights records' })).toHaveAttribute('href', '/admin/rights');
+    expect(within(dialog).getByRole('link', { name: 'Create or edit rights records' })).toHaveAttribute(
+      'href',
+      '/settings/rights',
+    );
 
     const assign = within(dialog).getByRole('button', { name: 'Assign' });
     expect(assign).toBeDisabled();

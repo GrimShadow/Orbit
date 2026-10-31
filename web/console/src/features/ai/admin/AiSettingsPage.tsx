@@ -5,6 +5,7 @@ import { WarningCircle } from '@phosphor-icons/react';
 import { Button, EmptyState, Modal, PageHeader, Skeleton, useToast } from '../../../ui';
 import { relativeTime } from '../../../lib/relativeTime';
 import { useDocumentTitle } from '../../library/useDocumentTitle';
+import { useSettingsEyebrow } from '../../settings/useSettingsEyebrow';
 import { useLeaveGuard } from '../../workflow/designer/useLeaveGuard';
 import { AiApiError, isForbidden, useAiReindex, useAiSettings, useAiStatus, useSaveAiSettings, type AiSettings } from '../aiApi';
 import {
@@ -27,12 +28,13 @@ import './aiAdmin.css';
 /** While a rebuild or a backfill is going, look at the status this often (it otherwise refreshes every 15 s). */
 const BUSY_POLL_MS = 4000;
 
-/** `/admin/ai`: whether AI is on for the organisation, which provider does the work, what it does, and how far it has got. */
+/** `/settings/ai`: whether AI is on for the organisation, which provider does the work, what it does, and how far it has got. */
 export function AiSettingsPage() {
   const { t, i18n } = useTranslation();
   const { push } = useToast();
   const qc = useQueryClient();
   useDocumentTitle(t('aiAdmin.title'));
+  const eyebrow = useSettingsEyebrow();
 
   const settings = useAiSettings();
   const status = useAiStatus();
@@ -239,7 +241,7 @@ export function AiSettingsPage() {
 
   return (
     <div className="dam-page dam-aipage">
-      <PageHeader title={t('aiAdmin.title')} description={t('aiAdmin.description')} />
+      <PageHeader title={t('aiAdmin.title')} eyebrow={eyebrow} description={t('aiAdmin.description')} />
       {body}
 
       <Modal open={guard.pending !== null} title={t('aiAdmin.leave.title')} onClose={guard.stay}>
