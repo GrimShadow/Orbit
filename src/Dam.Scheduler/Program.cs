@@ -29,6 +29,8 @@ builder.Services.AddDamNotificationJobs(cfg);
 builder.Services.AddDamAiScheduling(cfg);
 // Usage partitions and retention, the daily rollup and the scheduled (emailed) reports (ADR-0037).
 builder.Services.AddDamAnalyticsJobs(cfg);
+// Trims each connection's integration activity log to its latest 500 calls (ADR-0040).
+builder.Services.AddDamIntegrationJobs();
 
 var app = builder.Build();
 app.MapGet("/healthz", () => Results.Ok("ok"));
@@ -54,4 +56,6 @@ if (string.Equals(cfg["DAM_SIEM_ENABLED"], "true", StringComparison.OrdinalIgnor
 if (cfg["DAM_AI_BACKFILL_CRON"] is { Length: > 0 } backfillCron)
     await scheduler.ScheduleCronAsync("ai.backfill", AiBackfillJob.JobKey, backfillCron);
 await scheduler.ScheduleAnalyticsJobsAsync(cfg);
+// Daily at 03:30 UTC: keep the latest 500 calls per integration connection and delete older ones (ADR-0040 decision 5).
+await scheduler.ScheduleCronAsync("integrations.cleanup", IntegrationActivityCleanupJob.JobKey, cfg["DAM_INTEGRATIONS_CLEANUP_CRON"] ?? "0 30 3 * * ?");
 app.Run();

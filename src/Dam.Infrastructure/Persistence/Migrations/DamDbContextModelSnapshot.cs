@@ -2079,6 +2079,171 @@ namespace Dam.Infrastructure.Persistence.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
+            modelBuilder.Entity("Dam.Domain.Integrations.IntegrationCall", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ConnectionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("connection_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("DurationMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_ms");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("error");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("method");
+
+                    b.Property<bool>("Ok")
+                        .HasColumnType("boolean")
+                        .HasColumnName("ok");
+
+                    b.Property<int?>("StatusCode")
+                        .HasColumnType("integer")
+                        .HasColumnName("status_code");
+
+                    b.Property<string>("Target")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("target");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_integration_calls");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_integration_calls_tenant_id");
+
+                    b.HasIndex("ConnectionId", "Id")
+                        .HasDatabaseName("ix_integration_calls_connection_id_id");
+
+                    b.ToTable("integration_calls", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_integration_calls_kind", "kind IN ('auth','test','action')");
+                        });
+                });
+
+            modelBuilder.Entity("Dam.Domain.Integrations.IntegrationConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Config")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("config");
+
+                    b.Property<string>("Connector")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("connector");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enabled");
+
+                    b.Property<DateTimeOffset?>("LastOkAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_ok_at");
+
+                    b.Property<DateTimeOffset?>("LastTestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_tested_at");
+
+                    b.Property<DateTimeOffset?>("LoginLeaseUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("login_lease_until");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Secrets")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("secrets");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StatusDetail")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("status_detail");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("TestClaimedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("test_claimed_at");
+
+                    b.Property<string>("TokenCipher")
+                        .HasColumnType("text")
+                        .HasColumnName("token_cipher");
+
+                    b.Property<DateTimeOffset?>("TokenExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("token_expires_at");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_integration_connections");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_integration_connections_tenant_id");
+
+                    b.ToTable("integration_connections", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_integration_connections_status", "status IN ('new','ok','error')");
+                        });
+                });
+
             modelBuilder.Entity("Dam.Domain.Licensing.Rights", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3312,6 +3477,16 @@ namespace Dam.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_comment_mentions_comments_comment_id");
+                });
+
+            modelBuilder.Entity("Dam.Domain.Integrations.IntegrationCall", b =>
+                {
+                    b.HasOne("Dam.Domain.Integrations.IntegrationConnection", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_integration_calls_integration_connections_connection_id");
                 });
 
             modelBuilder.Entity("Dam.Domain.Licensing.RightsAlert", b =>

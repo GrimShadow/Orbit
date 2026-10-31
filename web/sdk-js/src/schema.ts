@@ -2227,6 +2227,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/integrations/connectors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The systems Orbit can connect to, with the fields each needs. Status is available, preview or planned (planned ones cannot be connected yet). Needs integrations.manage */
+        get: operations["ListConnectors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The tenant's connections with their status. Secrets are shown only as set/not set and a hint. Needs integrations.manage */
+        get: operations["ListConnections"];
+        put?: never;
+        /** Creates a connection. Secrets go in 'secrets' and are stored encrypted. 422 names the fields as config.<field> or secrets.<field>; 409 when the name is taken; planned connectors are refused */
+        post: operations["CreateConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/connections/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetConnection"];
+        /** Replaces a connection's name, enabled flag and settings. A secret you send replaces the stored one, one you leave out is kept, and 'clearSecrets' removes the named ones */
+        put: operations["UpdateConnection"];
+        post?: never;
+        /** Deletes a connection, its stored secrets and its activity log */
+        delete: operations["DeleteConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/connections/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Signs in to the other system and, when the connection has a test path, requests it once. Returns the steps and updates the connection's status. At most once every 5 seconds per connection (429 otherwise) */
+        post: operations["TestConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/connections/{id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The calls made for a connection, newest first (host and path only, never a query string, body or header). The latest 500 are kept */
+        get: operations["ListConnectionActivity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2249,6 +2336,21 @@ export interface components {
                 [key: string]: string[];
             };
             permissions: string[];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ActivityDto: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            method: string;
+            target: string;
+            /** Format: int32 */
+            statusCode: number | null;
+            ok: boolean;
+            /** Format: int32 */
+            durationMs: number;
+            error: string | null;
             /** Format: date-time */
             createdAt: string;
         };
@@ -2846,6 +2948,78 @@ export interface components {
             /** @default null */
             sha256: string | null;
         };
+        ConnectionDto: {
+            /** Format: uuid */
+            id: string;
+            connector: string;
+            name: string;
+            enabled: boolean;
+            config: {
+                [key: string]: unknown;
+            };
+            secrets: {
+                [key: string]: components["schemas"]["SecretStateDto"];
+            };
+            status: string;
+            statusDetail: string | null;
+            /** Format: date-time */
+            lastTestedAt: string | null;
+            /** Format: date-time */
+            lastOkAt: string | null;
+            /** Format: date-time */
+            tokenExpiresAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ConnectionInput: {
+            connector: string | null;
+            name: string;
+            /** @default true */
+            enabled: boolean;
+            /** @default null */
+            config: {
+                [key: string]: unknown;
+            } | null;
+            /** @default null */
+            secrets: {
+                [key: string]: string;
+            } | null;
+            /** @default null */
+            clearSecrets: string[] | null;
+        };
+        ConnectorDto: {
+            key: string;
+            name: string;
+            description: string;
+            category: string;
+            status: string;
+            authStrategies: string[];
+            defaultAuthStrategy: string | null;
+            capabilities: string[];
+            fields: components["schemas"]["ConnectorFieldDto"][];
+        };
+        ConnectorFieldDto: {
+            key: string;
+            label: string;
+            type: string;
+            required: boolean;
+            help: string | null;
+            placeholder: string | null;
+            group: string;
+            options: components["schemas"]["ConnectorFieldOptionDto"][];
+            default: components["schemas"]["NullableOfJsonElement"];
+            showWhen: components["schemas"]["ConnectorShowWhenDto"];
+        };
+        ConnectorFieldOptionDto: {
+            value: string;
+            label: string;
+        };
+        ConnectorShowWhenDto: {
+            field: string;
+            equals: string[];
+        } | null;
         CreateAccessRuleRequest: {
             principalType: string;
             /** Format: uuid */
@@ -3181,6 +3355,10 @@ export interface components {
             emailAvailable: boolean;
         };
         NullableOfJsonElement: unknown;
+        PageOfActivityDto: {
+            items: components["schemas"]["ActivityDto"][];
+            nextCursor: string | null;
+        };
         PageOfActivityItemDto: {
             items: components["schemas"]["ActivityItemDto"][];
             nextCursor: string | null;
@@ -3676,6 +3854,10 @@ export interface components {
             /** @default null */
             semanticFallback: string | null;
         };
+        SecretStateDto: {
+            set: boolean;
+            hint: string | null;
+        };
         SendReportNowResultDto: {
             /** Format: int32 */
             sent: number;
@@ -3810,6 +3992,21 @@ export interface components {
         TermNodeDto: {
             term: components["schemas"]["TermDto"];
             children: unknown[];
+        };
+        TestResultDto: {
+            ok: boolean;
+            /** Format: int32 */
+            durationMs: number;
+            /** Format: date-time */
+            testedAt: string;
+            steps: components["schemas"]["TestStepDto"][];
+        };
+        TestStepDto: {
+            name: string;
+            ok: boolean;
+            detail: string;
+            /** Format: int32 */
+            durationMs: number;
         };
         ThumbnailLinksBatchRequest: {
             assetIds: string[];
@@ -8653,6 +8850,185 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    ListConnectors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorDto"][];
+                };
+            };
+        };
+    };
+    ListConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionDto"][];
+                };
+            };
+        };
+    };
+    CreateConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectionInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionDto"];
+                };
+            };
+        };
+    };
+    GetConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionDto"];
+                };
+            };
+        };
+    };
+    UpdateConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectionInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionDto"];
+                };
+            };
+        };
+    };
+    DeleteConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TestConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestResultDto"];
+                };
+            };
+        };
+    };
+    ListConnectionActivity: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOfActivityDto"];
+                };
             };
         };
     };

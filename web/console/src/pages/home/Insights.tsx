@@ -37,10 +37,10 @@ export function percentChange(now: number, before: number): number | null {
 const STATUS_ORDER: { value: string; series: number }[] = [
   { value: 'draft', series: 5 },
   { value: 'in_review', series: 3 },
-  { value: 'approved', series: 1 },
-  { value: 'published', series: 0 },
+  { value: 'approved', series: 4 },
+  { value: 'published', series: 1 },
   { value: 'expired', series: 2 },
-  { value: 'archived', series: 4 },
+  { value: 'archived', series: 0 },
 ];
 const TYPE_ORDER = ['image', 'video', 'document', 'audio', 'other'];
 

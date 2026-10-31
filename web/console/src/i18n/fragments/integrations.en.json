@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "integrations": "Integrations"
+  },
+  "integrations": {
+    "title": "Integrations",
+    "description": "Connect Orbit to other systems by their APIs. Credentials are stored encrypted and are never shown again.",
+    "loading": "Loading",
+    "loadFailed": "We could not load integrations",
+    "loadFailedHint": "Check your connection and try again.",
+    "retry": "Try again",
+    "forbidden": {
+      "title": "You do not have access to integrations",
+      "description": "Managing integrations needs the integrations permission. Ask an administrator if you need it."
+    },
+    "close": "Close",
+    "done": "Done",
+    "cancel": "Cancel",
+    "connect": "Connect",
+    "connectNamed": "Connect {{name}}",
+    "addNamed": "Add {{name}} connection",
+    "storedOnlyNote": "Orbit saves these details but does not connect to {{name}} yet.",
+    "saved": "Saved “{{name}}”",
+    "enabled": "Enabled",
+    "enabledNamed": "{{name}}: enabled",
+    "toggleFailed": "Could not change “{{name}}”",
+    "lastTested": "Last tested",
+    "neverTested": "Not tested yet",
+    "tokenExpires": "Sign-in token expires",
+    "tokenExpired": "Sign-in token expired",
+    "testAction": "Test",
+    "testNamed": "Test {{name}}",
+    "edit": "Edit",
+    "editNamed": "Edit {{name}}",
+    "activity": "Activity",
+    "activityNamed": "Activity of {{name}}",
+    "delete": "Delete",
+    "deleteNamed": "Delete {{name}}",
+    "connectorMissing": "This connector is no longer available, so the connection cannot be edited.",
+    "ms": "{{ms}} ms",
+    "catalog": {
+      "title": "Available connectors",
+      "intro": "Pick a system to connect. Each connector asks only for what it needs.",
+      "loadFailed": "We could not load the connectors",
+      "empty": {
+        "title": "No connectors available",
+        "description": "This installation has no connectors yet."
+      },
+      "previewNote": "Works for connecting and testing; its actions are coming.",
+      "plannedNote": "Coming later."
+    },
+    "connections": {
+      "title": "Your connections",
+      "intro": "Each connection is one configured use of a connector, with its own address and credentials.",
+      "loadFailed": "We could not load your connections",
+      "empty": {
+        "title": "No connections yet",
+        "description": "Choose Connect on a connector above to add the first one."
+      }
+    },
+    "connectorStatus": {
+      "available": "Available",
+      "preview": "Preview",
+      "previewStored": "Saved settings only",
+      "planned": "Planned"
+    },
+    "connectionStatus": {
+      "ok": "Working",
+      "error": "Needs attention",
+      "saved": "Saved",
+      "new": "Not tested"
+    },
+    "category": {
+      "general": "General",
+      "digital_signage": "Digital signage",
+      "design": "Design"
+    },
+    "strategy": {
+      "none": "No authentication",
+      "api_key": "API key",
+      "bearer": "Bearer token",
+      "basic": "Username and password",
+      "oauth2_client_credentials": "OAuth 2.0 client credentials",
+      "login_call": "Login request"
+    },
+    "group": {
+      "connection": "Connection",
+      "authentication": "Authentication",
+      "advanced": "Advanced"
+    },
+    "form": {
+      "intro": "Set up {{name}}. Fields marked * are required. Credentials are stored encrypted and never shown again.",
+      "newTitle": "Connect {{name}}",
+      "newTitleStored": "Add {{name}} connection",
+      "editTitle": "Edit {{name}}",
+      "strategy": "Authentication method",
+      "name": "Name",
+      "namePlaceholder": "For example, Acme production",
+      "enabled": "Enabled",
+      "enabledHint": "A disabled connection is kept but not used.",
+      "choose": "Choose…",
+      "create": "Create connection",
+      "save": "Save",
+      "saveAndTest": "Save and test",
+      "test": "Test connection",
+      "saveFailed": "Could not save the connection.",
+      "summaryLabel": "Problems with the form",
+      "summary_one": "{{count}} problem to fix",
+      "summary_other": "{{count}} problems to fix",
+      "problem": {
+        "required": "This is required.",
+        "url": "Enter a web address that starts with http:// or https://.",
+        "number": "Enter a number."
+      }
+    },
+    "secret": {
+      "set": "Set (…{{hint}})",
+      "replace": "Replace",
+      "replaceNamed": "Replace {{label}}",
+      "remove": "Remove",
+      "removeNamed": "Remove {{label}}",
+      "removed": "Will be removed when you save.",
+      "undo": "Undo",
+      "undoNamed": "Keep {{label}}",
+      "cancel": "Cancel",
+      "cancelNamed": "Keep the stored {{label}}",
+      "toggleNamed": "Show {{label}}",
+      "setNoHint": "Set"
+    },
+    "test": {
+      "title": "Test connection: {{name}}",
+      "running": "Testing the connection…",
+      "wait": "Please wait a few seconds, then test again. A connection can be tested once every few seconds.",
+      "again": "Test again",
+      "couldNotRun": "The test could not be run.",
+      "passed": "The connection works.",
+      "failed": "The test failed.",
+      "steps": "Test steps",
+      "stepOk": "passed",
+      "stepFailed": "failed",
+      "footer": "Tested {{when}}, {{ms}} ms in total."
+    },
+    "deleteDialog": {
+      "title": "Delete this connection?",
+      "body": "“{{name}}” will be removed with its stored credentials and its activity. Anything that uses it will stop working. This cannot be undone.",
+      "confirm": "Delete connection",
+      "done": "Deleted “{{name}}”",
+      "failed": "Could not delete the connection"
+    },
+    "activityPanel": {
+      "title": "Activity: {{name}}",
+      "note": "Only the time, address, result and duration of each call are kept. Request and response bodies, headers and credentials are never recorded.",
+      "refresh": "Refresh",
+      "list": "Recent calls, newest first",
+      "ok": "OK",
+      "failed": "Failed",
+      "kind": {
+        "auth": "Sign-in",
+        "test": "Test",
+        "action": "Action"
+      },
+      "http": "HTTP {{code}}",
+      "noResponse": "No response",
+      "more": "Load more",
+      "loadFailed": "We could not load the activity",
+      "empty": {
+        "title": "No calls yet",
+        "description": "Calls made for this connection, such as tests, appear here."
+      }
+    }
+  }
+}

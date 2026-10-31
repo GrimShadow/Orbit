@@ -10,6 +10,7 @@ using Dam.Infrastructure;
 using Dam.Infrastructure.Persistence;
 using Dam.Infrastructure.Ai;
 using Dam.Infrastructure.Delivery;
+using Dam.Infrastructure.Integrations;
 using Dam.Infrastructure.Notifications;
 using Dam.Infrastructure.Search;
 using Dam.Infrastructure.Storage;
@@ -56,6 +57,7 @@ builder.Services.AddDamDelivery(cfg);
 builder.Services.AddDamSearch(cfg);
 builder.Services.AddDamAi(cfg);
 builder.Services.AddDamNotifications(cfg);
+builder.Services.AddDamIntegrations(cfg);
 
 // ---- Errors: RFC 9457 problem+json everywhere, including bare 401/403/404.
 builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
@@ -82,12 +84,26 @@ builder.Services.AddRateLimiter(o =>
 builder.Services.AddHealthChecks().AddCheck<DbReadyCheck>("postgres", tags: ["ready"]);
 
 // ---- OpenAPI
-builder.Services.AddOpenApi(o => o.AddDocumentTransformer((doc, _, _) =>
+builder.Services.AddOpenApi(o =>
 {
-    doc.Info.Title = "Orbit API";
-    doc.Info.Description = "Digital asset management: assets, metadata, taxonomy, access control and delivery.";
-    return Task.CompletedTask;
-}));
+    o.AddDocumentTransformer((doc, _, _) =>
+    {
+        doc.Info.Title = "Orbit API";
+        doc.Info.Description = "Digital asset management: assets, metadata, taxonomy, access control and delivery.";
+        return Task.CompletedTask;
+    });
+    // A connection's settings are a dictionary of values of different types (text, number, boolean): say so, so generated clients type it as a map of unknowns.
+    o.AddSchemaTransformer((schema, context, _) =>
+    {
+        if (context.JsonTypeInfo.Type == typeof(Dam.Shared.Integrations.ConnectionDto) || context.JsonTypeInfo.Type == typeof(Dam.Shared.Integrations.ConnectionInput))
+            if (schema.Properties.TryGetValue("config", out var config))
+            {
+                config.AdditionalPropertiesAllowed = true;
+                config.AdditionalProperties = new Microsoft.OpenApi.Models.OpenApiSchema();
+            }
+        return Task.CompletedTask;
+    });
+});
 
 // ---- OpenTelemetry (traces + metrics + logs). OTLP export only when an endpoint is configured.
 var otlp = cfg["OTEL_EXPORTER_OTLP_ENDPOINT"];

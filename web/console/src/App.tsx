@@ -8,6 +8,7 @@ import { WorkflowsPage } from './features/workflow/designer/WorkflowsPage';
 import { AuditPage } from './features/audit/AuditPage';
 import { NotificationsPage } from './features/notifications/NotificationsPage';
 import { WebhooksPage } from './features/webhooks/WebhooksPage';
+import { IntegrationsPage } from './features/integrations/IntegrationsPage';
 import { RightsPage } from './features/rights/admin/RightsPage';
 import { AiSettingsPage } from './features/ai/admin/AiSettingsPage';
 import { GlossaryPage } from './features/glossary/GlossaryPage';
@@ -61,6 +62,7 @@ export function App() {
                 <Route path="/admin/glossary" element={<GlossaryPage />} />
                 <Route path="/admin/rights" element={<RightsPage />} />
                 <Route path="/admin/webhooks" element={<WebhooksPage />} />
+                <Route path="/integrations" element={<IntegrationsPage />} />
                 <Route path="/admin/audit" element={<AuditPage />} />
                 <Route path="/admin/workflows" element={<WorkflowsPage />} />
                 <Route path="/admin/workflows/:id" element={<WorkflowDesignerPage />} />

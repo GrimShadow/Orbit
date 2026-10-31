@@ -8,6 +8,7 @@ import {
   House,
   Images,
   ListMagnifyingGlass,
+  PlugsConnected,
   SealCheck,
   Sparkle,
   MagnifyingGlass,
@@ -47,6 +48,7 @@ export const ADMIN_ITEMS: (NavItem & { permission: string })[] = [
   { to: '/admin/ai', labelKey: 'nav.ai', Icon: Sparkle, permission: 'ai.manage' },
   { to: '/admin/glossary', labelKey: 'nav.glossary', Icon: BookOpenText, permission: 'glossary.manage' },
   { to: '/admin/rights', labelKey: 'nav.rights', Icon: SealCheck, permission: 'rights.manage' },
+  { to: '/integrations', labelKey: 'nav.integrations', Icon: PlugsConnected, permission: 'integrations.manage' },
   { to: '/admin/webhooks', labelKey: 'nav.webhooks', Icon: WebhooksLogo, permission: 'webhooks.manage' },
   { to: '/admin/audit', labelKey: 'nav.audit', Icon: ListMagnifyingGlass, permission: 'audit.read' },
 ];

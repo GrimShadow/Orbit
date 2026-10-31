@@ -37,6 +37,7 @@ public static class ApiEndpoints
         v1.MapRightsEndpoints();
         v1.MapAiEndpoints();
         v1.MapGlossaryEndpoints();
+        v1.MapIntegrationEndpoints();
     }
 
     /// <summary>Maps a failed application Result to RFC 9457 problem+json.</summary>
@@ -50,6 +51,19 @@ public static class ApiEndpoints
         ErrorType.Conflict => Results.Problem(statusCode: 409, title: e.Message,
             extensions: e.Extensions?.ToDictionary(k => k.Key, k => k.Value)
                         ?? e.FieldErrors?.ToDictionary(k => k.Key, k => (object?)(k.Value.Length == 1 ? k.Value[0] : k.Value))),
+        ErrorType.TooManyRequests => new RetryAfterResult(
+            Results.Problem(statusCode: 429, title: e.Message, extensions: e.Extensions?.ToDictionary(k => k.Key, k => k.Value)),
+            e.Extensions?.GetValueOrDefault("retryAfterSeconds") is int seconds ? seconds : null),
         _ => Results.Problem(statusCode: 500, title: e.Message),
     };
+}
+
+/// <summary>A problem answer with a <c>Retry-After</c> header, for "too many requests".</summary>
+internal sealed class RetryAfterResult(IResult inner, int? seconds) : IResult
+{
+    public Task ExecuteAsync(HttpContext httpContext)
+    {
+        if (seconds is { } s) httpContext.Response.Headers.RetryAfter = s.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return inner.ExecuteAsync(httpContext);
+    }
 }
