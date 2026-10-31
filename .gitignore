@@ -13,3 +13,4 @@ TestResults/
 test-results/
 tests/e2e/playwright-report/
 tests/e2e/.cache/
+__pycache__/
