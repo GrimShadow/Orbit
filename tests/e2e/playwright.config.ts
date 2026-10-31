@@ -23,5 +23,7 @@ export default defineConfig({
       testMatch: /mobile-responsive\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } },
     },
+    // Opt-in: only does anything when DEMO_URL, DEMO_USER and DEMO_PASSWORD are set (deploy/demo/README.md).
+    { name: 'demo', testMatch: /demo\.spec\.ts/, use: { ...devices['Desktop Chrome'], baseURL: process.env.DEMO_URL ?? 'http://demo.localhost:8088' } },
   ],
 });
