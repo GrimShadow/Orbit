@@ -1,5 +1,5 @@
 // Test-only scaffolding for the AI admin page: fixtures, a small in-memory API behind a fetch mock (it enforces the
-// server's rules for the privacy acknowledgement and an unconfigured provider), and the console rendered at /admin/ai.
+// server's rules for the privacy acknowledgement and an unconfigured provider), and the console rendered at /settings/ai.
 // Nothing in the app imports this.
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -176,7 +176,7 @@ export function install(w: World, extra: (c: Call) => Response | Promise<Respons
   );
 }
 
-export function renderAt(route = '/admin/ai') {
+export function renderAt(route = '/settings/ai') {
   queryClient.clear();
   return render(
     <AuthContext.Provider value={signedIn}>

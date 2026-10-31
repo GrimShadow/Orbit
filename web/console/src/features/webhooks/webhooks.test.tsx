@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { axe } from 'vitest-axe';
 import { setLanguage } from '../../i18n';
+import { renderPage } from '../settings/settingsTestKit';
 import { EventPicker } from './EventPicker';
+import { WebhooksPage } from './WebhooksPage';
 import {
   EVENTS,
   MIN,
@@ -57,7 +59,7 @@ describe('webhook list', () => {
         ],
       }),
     );
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Webhooks' })).toBeInTheDocument();
     const card = (await screen.findByRole('heading', { name: 'Acme publishing hook' })).closest('article')!;
@@ -89,7 +91,7 @@ describe('webhook list', () => {
     const writeText = vi.fn(async () => {});
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
     install(world());
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     await userEvent.click(await screen.findByRole('button', { name: 'Copy URL of Acme publishing hook' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('https://hooks.acme.test/orbit'));
     expect((await screen.findAllByText('Copied to the clipboard')).length).toBeGreaterThan(0);
@@ -97,21 +99,21 @@ describe('webhook list', () => {
 
   it('invites you to add the first webhook', async () => {
     install(world({ webhooks: [] }));
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     expect(await screen.findByText('No webhooks yet')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New webhook' })).toBeInTheDocument();
   });
 
   it('shows a calm no-access state on 403 and an error with retry on failure', async () => {
     install(world(), (c) => (c.pathname === '/api/v1/webhooks' && c.method === 'GET' ? problem(403, 'Forbidden') : undefined));
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     expect(await screen.findByText('You do not have access to webhooks')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New webhook' })).not.toBeInTheDocument();
     cleanup();
 
     let fail = true;
     install(world(), (c) => (c.pathname === '/api/v1/webhooks' && c.method === 'GET' && fail ? problem(500, 'Boom') : undefined));
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     expect(await screen.findByText('We could not load the webhooks', undefined, { timeout: 4000 })).toBeInTheDocument();
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -122,13 +124,13 @@ describe('webhook list', () => {
     install(world(), (c) =>
       c.pathname === '/api/v1/webhooks' && c.method === 'GET' ? new Promise<Response>(() => {}) : undefined,
     );
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     expect(await screen.findByText('Loading')).toBeInTheDocument();
   });
 
   it('turns a webhook off with the switch, sending the stored values with active=false', async () => {
     const calls = install(world());
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     const sw = await screen.findByRole('switch', { name: 'Acme publishing hook: active' });
     await userEvent.click(sw);
     await waitFor(() => expect(writes(calls, 'PUT', '/api/v1/webhooks/w1')).toHaveLength(1));
@@ -145,7 +147,7 @@ describe('webhook list', () => {
 
   it('puts the switch back and says so when the change is refused', async () => {
     install(world(), (c) => (c.method === 'PUT' ? problem(409, 'Conflict', { detail: 'Try again later.' }) : undefined));
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     await userEvent.click(await screen.findByRole('switch', { name: 'Acme publishing hook: active' }));
     expect(await screen.findByText('Could not change “Acme publishing hook”')).toBeInTheDocument();
     await waitFor(() =>
@@ -159,7 +161,7 @@ describe('creating a webhook', () => {
     const writeText = vi.fn(async () => {});
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
     const calls = install(world({ webhooks: [] }));
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
 
     await userEvent.click(await screen.findByRole('button', { name: 'New webhook' }));
     const form = await dialog('New webhook');
@@ -201,7 +203,7 @@ describe('creating a webhook', () => {
 
   it('checks the form before sending anything', async () => {
     const calls = install(world({ webhooks: [] }));
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     await userEvent.click(await screen.findByRole('button', { name: 'New webhook' }));
     const form = await dialog('New webhook');
     await userEvent.click(within(form).getByRole('button', { name: 'Create webhook' }));
@@ -228,7 +230,7 @@ describe('creating a webhook', () => {
         ? validation({ Url: ['That address is not allowed: it resolves to a private network.'] })
         : undefined,
     );
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     await userEvent.click(await screen.findByRole('button', { name: 'New webhook' }));
     const form = await dialog('New webhook');
     await userEvent.type(within(form).getByLabelText('Name'), 'Internal');
@@ -255,7 +257,7 @@ describe('creating a webhook', () => {
           })
         : undefined,
     );
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     await userEvent.click(await screen.findByRole('button', { name: 'New webhook' }));
     const form = await dialog('New webhook');
     await userEvent.type(within(form).getByLabelText('Name'), 'x');
@@ -273,7 +275,7 @@ describe('creating a webhook', () => {
 
   it('edits an existing webhook with its values filled in', async () => {
     const calls = install(world());
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     await openMenu('Acme publishing hook', 'Edit');
     const form = await dialog('Edit webhook');
     expect(within(form).getByLabelText('Name')).toHaveValue('Acme publishing hook');
@@ -297,7 +299,7 @@ describe('creating a webhook', () => {
 describe('webhook actions', () => {
   it('rotates the secret after a confirmation and shows the new one once', async () => {
     const calls = install(world());
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     await openMenu('Acme publishing hook', 'Rotate secret');
     const confirm = await dialog('Rotate the signing secret?');
     expect(within(confirm).getByText(/old secret stops working immediately/)).toBeInTheDocument();
@@ -315,7 +317,7 @@ describe('webhook actions', () => {
 
   it('sends a test ping and reports the outcome', async () => {
     const calls = install(world());
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     await openMenu('Acme publishing hook', 'Send test ping');
     await waitFor(() => expect(writes(calls, 'POST', '/api/v1/webhooks/w1/ping')).toHaveLength(1));
     expect(await screen.findByText('Ping delivered to “Acme publishing hook”')).toBeInTheDocument();
@@ -335,7 +337,7 @@ describe('webhook actions', () => {
           )
         : undefined,
     );
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     await openMenu('Acme publishing hook', 'Send test ping');
     expect(await screen.findByText('Ping to “Acme publishing hook” failed')).toBeInTheDocument();
     expect(screen.getByText('The receiver answered HTTP 500.')).toBeInTheDocument();
@@ -346,7 +348,7 @@ describe('webhook actions', () => {
 
   it('deletes only after a confirmation', async () => {
     const calls = install(world());
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     await openMenu('Acme publishing hook', 'Delete');
     const confirm = await dialog('Delete this webhook?');
     expect(within(confirm).getByText(/delivery history will be removed/)).toBeInTheDocument();
@@ -362,7 +364,7 @@ describe('webhook actions', () => {
 
   it('"View deliveries" opens the deliveries tab filtered to that webhook', async () => {
     install(world({ deliveries: [delivery()] }));
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     await openMenu('Acme publishing hook', 'View deliveries');
     expect(await screen.findByRole('tab', { name: 'Deliveries', selected: true })).toBeInTheDocument();
     expect(await screen.findByLabelText('Webhook')).toHaveValue('w1');
@@ -415,7 +417,7 @@ describe('deliveries', () => {
 
   it('lists deliveries with status, retry countdown, attempt, HTTP status, duration and replay badge', async () => {
     install(world({ deliveries: rows() }));
-    renderAt('/admin/webhooks?tab=deliveries');
+    renderAt('/settings/webhooks?tab=deliveries');
     await table();
 
     const ok = await rowOf('asset.published');
@@ -444,7 +446,7 @@ describe('deliveries', () => {
 
   it('keeps filters in the URL and sends them to the API', async () => {
     const calls = install(world({ deliveries: rows() }));
-    renderAt('/admin/webhooks?tab=deliveries&status=failed');
+    renderAt('/settings/webhooks?tab=deliveries&status=failed');
     await table();
     expect(screen.getByLabelText('Status')).toHaveValue('failed');
     const first = calls.find((c) => c.pathname === '/api/v1/webhook-deliveries')!;
@@ -481,12 +483,12 @@ describe('deliveries', () => {
 
   it('says so when no delivery matches the filters', async () => {
     install(world({ deliveries: [] }));
-    renderAt('/admin/webhooks?tab=deliveries&status=failed');
+    renderAt('/settings/webhooks?tab=deliveries&status=failed');
     expect(await screen.findByText('No deliveries match these filters')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
     cleanup();
     install(world({ deliveries: [] }));
-    renderAt('/admin/webhooks?tab=deliveries');
+    renderAt('/settings/webhooks?tab=deliveries');
     expect(await screen.findByText('No deliveries yet')).toBeInTheDocument();
   });
 
@@ -501,7 +503,7 @@ describe('deliveries', () => {
         pageSize: 2,
       }),
     );
-    renderAt('/admin/webhooks?tab=deliveries');
+    renderAt('/settings/webhooks?tab=deliveries');
     const t = await table();
     expect(within(t).getAllByRole('button', { name: /^Open / })).toHaveLength(2);
     await userEvent.click(screen.getByRole('button', { name: 'Load more' }));
@@ -522,7 +524,7 @@ describe('deliveries', () => {
         deliveries: [delivery({ id: 'd3', status: 'pending', attempt: 1, lastStatusCode: 500, nextAttemptAt: ahead(MIN) })],
       }),
     );
-    renderAt('/admin/webhooks?tab=deliveries');
+    renderAt('/settings/webhooks?tab=deliveries');
     await table();
     expect(screen.getByText(/refreshes every 10 seconds/)).toBeInTheDocument();
     const count = () => calls.filter((c) => c.pathname === '/api/v1/webhook-deliveries' && c.method === 'GET').length;
@@ -533,7 +535,7 @@ describe('deliveries', () => {
 
   it('refreshes on demand', async () => {
     const calls = install(world({ deliveries: [delivery()] }));
-    renderAt('/admin/webhooks?tab=deliveries');
+    renderAt('/settings/webhooks?tab=deliveries');
     await table();
     const count = () => calls.filter((c) => c.pathname === '/api/v1/webhook-deliveries' && c.method === 'GET').length;
     const before = count();
@@ -565,7 +567,7 @@ describe('deliveries', () => {
     );
     const writeText = vi.fn(async () => {});
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
-    renderAt('/admin/webhooks?tab=deliveries');
+    renderAt('/settings/webhooks?tab=deliveries');
 
     await userEvent.click(await screen.findByRole('button', { name: /^Open asset\.published/ }));
     const drawer = await dialog('Delivery');
@@ -628,7 +630,7 @@ describe('deliveries', () => {
             )
           : undefined,
     );
-    renderAt('/admin/webhooks?tab=deliveries&delivery=d1');
+    renderAt('/settings/webhooks?tab=deliveries&delivery=d1');
     const drawer = await dialog('Delivery');
     await userEvent.click(await within(drawer).findByRole('button', { name: 'Replay' }));
     await userEvent.click(within(await dialog('Replay this delivery?')).getByRole('button', { name: 'Replay' }));
@@ -648,7 +650,7 @@ describe('deliveries', () => {
     install(world({ deliveries: [delivery()], details: { d1: detail() } }), (c) =>
       c.pathname.endsWith('/replay') ? problem(409, 'Conflict', { detail: 'The webhook is switched off.' }) : undefined,
     );
-    renderAt('/admin/webhooks?tab=deliveries&delivery=d1');
+    renderAt('/settings/webhooks?tab=deliveries&delivery=d1');
     const drawer = await dialog('Delivery');
     await userEvent.click(await within(drawer).findByRole('button', { name: 'Replay' }));
     await userEvent.click(within(await dialog('Replay this delivery?')).getByRole('button', { name: 'Replay' }));
@@ -667,7 +669,7 @@ describe('deliveries', () => {
       nextAttemptAt: ahead(30 * MIN + 20_000),
     });
     install(world({ deliveries: [d], details: { d3: detail({ ...d, responseExcerpt: null }) } }));
-    renderAt('/admin/webhooks?tab=deliveries&delivery=d3');
+    renderAt('/settings/webhooks?tab=deliveries&delivery=d3');
     const drawer = await dialog('Delivery');
     expect(await within(drawer).findByText('Retry in 30 min')).toBeInTheDocument();
     expect(within(drawer).getByText('Next attempt')).toBeInTheDocument();
@@ -676,7 +678,7 @@ describe('deliveries', () => {
 });
 
 describe('chat channels', () => {
-  const open = () => renderAt('/admin/webhooks?tab=channels');
+  const open = () => renderAt('/settings/webhooks?tab=channels');
 
   it('lists channels with kind, hint, events and the active switch', async () => {
     install(
@@ -824,7 +826,7 @@ describe('chat channels', () => {
 describe('permissions', () => {
   it('shows all three tabs to someone who can manage both', async () => {
     install(world());
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
     expect(await screen.findAllByRole('tab')).toHaveLength(3);
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Webhooks', 'Deliveries', 'Chat channels']);
     await userEvent.click(screen.getByRole('tab', { name: 'Chat channels' }));
@@ -834,15 +836,16 @@ describe('permissions', () => {
 
   it('shows no chat channels tab without notifications.manage', async () => {
     const calls = install(world({ permissions: ['webhooks.manage'] }));
-    renderAt('/admin/webhooks?tab=channels');
+    renderAt('/settings/webhooks?tab=channels');
     expect(await screen.findByRole('heading', { name: 'Acme publishing hook' })).toBeInTheDocument();
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Webhooks', 'Deliveries']);
     expect(calls.some((c) => c.pathname === '/api/v1/notification-channels')).toBe(false);
   });
 
   it('shows only the chat channels tab without webhooks.manage', async () => {
+    // The page on its own: the Settings layout does not open Webhooks without webhooks.manage, but the page keeps its rule.
     const calls = install(world({ permissions: ['notifications.manage'], channels: [channel()] }));
-    renderAt('/admin/webhooks');
+    renderPage(<WebhooksPage />, '/settings/webhooks');
     expect(await screen.findByRole('heading', { name: 'Acme releases' })).toBeInTheDocument();
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Chat channels']);
     expect(calls.some((c) => c.pathname === '/api/v1/webhooks' || c.pathname === '/api/v1/webhook-deliveries')).toBe(false);
@@ -850,7 +853,7 @@ describe('permissions', () => {
 
   it('shows a calm message to someone with neither permission', async () => {
     install(world({ permissions: ['assets.read'] }));
-    renderAt('/admin/webhooks');
+    renderPage(<WebhooksPage />, '/settings/webhooks');
     expect(await screen.findByText('You do not have access to webhooks')).toBeInTheDocument();
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
   });
@@ -919,7 +922,7 @@ describe('accessibility', () => {
         channels: [channel()],
       }),
     );
-    const { container } = renderAt('/admin/webhooks');
+    const { container } = renderAt('/settings/webhooks');
     await screen.findByRole('heading', { name: 'Acme publishing hook' });
     expect(await axe(container)).toHaveNoViolations();
 
@@ -940,7 +943,7 @@ describe('accessibility', () => {
     cleanup();
 
     // Deliveries and the drawer.
-    const second = renderAt('/admin/webhooks?tab=deliveries&delivery=d1');
+    const second = renderAt('/settings/webhooks?tab=deliveries&delivery=d1');
     const drawer = await dialog('Delivery');
     await within(drawer).findByRole('region', { name: 'Request payload' });
     expect(await axe(drawer)).toHaveNoViolations();
@@ -948,7 +951,7 @@ describe('accessibility', () => {
     cleanup();
 
     // Chat channels, with the form open.
-    const third = renderAt('/admin/webhooks?tab=channels');
+    const third = renderAt('/settings/webhooks?tab=channels');
     await screen.findByRole('heading', { name: 'Acme releases' });
     expect(await axe(third.container)).toHaveNoViolations();
     await userEvent.click(screen.getByRole('button', { name: 'Edit Acme releases' }));
@@ -960,7 +963,7 @@ describe('Hindi', () => {
   it('renders the list, the new-webhook form and the deliveries tab in Hindi', async () => {
     setLanguage('hi');
     install(world({ webhooks: [webhook()], deliveries: [delivery()] }));
-    renderAt('/admin/webhooks');
+    renderAt('/settings/webhooks');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'वेबहुक' })).toBeInTheDocument();
     const card = (await screen.findByRole('heading', { name: 'Acme publishing hook' })).closest('article')!;
@@ -975,7 +978,7 @@ describe('Hindi', () => {
     await userEvent.click(within(form).getByRole('button', { name: 'रद्द करें' }));
     cleanup();
 
-    renderAt('/admin/webhooks?tab=deliveries');
+    renderAt('/settings/webhooks?tab=deliveries');
     expect(await screen.findByRole('table', { name: 'वेबहुक डिलीवरी, नई सबसे ऊपर' })).toBeInTheDocument();
   });
 });

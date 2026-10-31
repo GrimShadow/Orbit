@@ -25,6 +25,21 @@ export interface Call {
   body: unknown;
 }
 
+/** Settings only opens for someone holding the section's permission, so the signed-in person has `workflow.manage`. */
+const ME = {
+  userId: 'u1',
+  email: 'admin@dam.local',
+  displayName: 'Dev Admin',
+  tenantId: '0197a000-0000-7000-8000-000000000001',
+  roles: ['Admin'],
+  groups: [],
+  permissions: ['workflow.manage'],
+  attributes: {},
+  accessRuleCount: 1,
+  inactiveRoles: [],
+  status: 'active',
+};
+
 export let calls: Call[] = [];
 export const callsTo = (method: string, pathname: string) => calls.filter((c) => c.method === method && c.pathname === pathname);
 
@@ -43,7 +58,9 @@ export function mockApi(handler: (c: Call) => Response | undefined) {
         body: text ? JSON.parse(text) : undefined,
       };
       calls.push(call);
-      return handler(call) ?? json({ title: 'Not found', status: 404 }, 404);
+      const answer = handler(call);
+      if (answer) return answer;
+      return call.pathname === '/api/v1/me' ? json(ME, 200) : json({ title: 'Not found', status: 404 }, 404);
     }),
   );
 }

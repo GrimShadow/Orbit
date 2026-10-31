@@ -40,7 +40,7 @@ const savingApi = (extra: Parameters<typeof standardApi>[0] = {}) => {
 describe('designer: opening a workflow', () => {
   it('lays the steps out as cards between Submitted and Approved', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     expect(await screen.findByRole('heading', { level: 1, name: 'Two-level approval' })).toBeInTheDocument();
     const review = stepButton('Step 1: Review');
     expect(review).toHaveTextContent('Approver');
@@ -64,7 +64,7 @@ describe('designer: opening a workflow', () => {
     standardApi({ workflows: [workflow({ definition: def })], users: [asha] }, (c) =>
       /^\/api\/v1\/users\/(?!directory$)[^/]+$/.test(c.pathname) ? json({ title: 'Forbidden', status: 403 }, 403) : undefined,
     );
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     const review = await screen.findByRole('button', { name: 'Step 1: Review' });
     await waitFor(() => expect(review).toHaveTextContent('Asha Rao'));
     expect(review).toHaveTextContent('99999999…');
@@ -74,13 +74,13 @@ describe('designer: opening a workflow', () => {
 
   it('says so when the workflow does not exist', async () => {
     savingApi();
-    renderAt('/admin/workflows/missing');
+    renderAt('/settings/workflows/missing');
     expect(await screen.findByText('That workflow does not exist')).toBeInTheDocument();
   });
 
   it('shows a no-permission state on 403', async () => {
     standardApi({}, (c) => (c.pathname === '/api/v1/workflows' ? json({ title: 'Forbidden', status: 403 }, 403) : undefined));
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     expect(await screen.findByText('You do not have access to workflows')).toBeInTheDocument();
   });
 });
@@ -88,7 +88,7 @@ describe('designer: opening a workflow', () => {
 describe('designer: editing the flow', () => {
   it('adds a step after another, selects it and chains it into the flow', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await screen.findByRole('heading', { level: 1, name: 'Two-level approval' });
     await userEvent.click(screen.getByRole('button', { name: 'Add a step after Review' }));
     const added = stepButton('Step 2: Untitled step');
@@ -103,7 +103,7 @@ describe('designer: editing the flow', () => {
 
   it('inserts a step at the start and at the end', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await screen.findByRole('heading', { level: 1, name: 'Two-level approval' });
     await userEvent.click(screen.getByRole('button', { name: 'Add a step at the start' }));
     expect(stepButton('Step 1: Untitled step')).toHaveAttribute('aria-pressed', 'true');
@@ -115,7 +115,7 @@ describe('designer: editing the flow', () => {
 
   it('edits flow through the inspector onto the card', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     const panel = inspector();
 
@@ -143,7 +143,7 @@ describe('designer: editing the flow', () => {
 
   it('switches between Any one and Everyone and explains each', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     const panel = inspector();
     expect(within(panel).getByText(/first person to decide settles the step/)).toBeInTheDocument();
@@ -156,7 +156,7 @@ describe('designer: editing the flow', () => {
 
   it('routes a rejection to another step and shows it on the card', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 2: Final approval' }));
     await userEvent.selectOptions(within(inspector()).getByRole('combobox', { name: 'On reject' }), 'review');
     expect(stepButton('Step 2: Final approval')).toHaveTextContent('Rejected → Review');
@@ -164,7 +164,7 @@ describe('designer: editing the flow', () => {
 
   it('adds a person by searching and shows their name', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     const who = within(inspector()).getByRole('group', { name: 'Who decides' });
     const box = within(who).getByRole('combobox', { name: 'People' });
@@ -179,7 +179,7 @@ describe('designer: editing the flow', () => {
 
   it('picks a search result with the keyboard', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     const box = within(inspector()).getAllByRole('combobox', { name: 'People' })[0]!;
     await userEvent.type(box, 'asha');
@@ -190,7 +190,7 @@ describe('designer: editing the flow', () => {
 
   it('falls back to typing role names when roles cannot be listed', async () => {
     savingApi({ rolesStatus: 403 });
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     const who = within(inspector()).getByRole('group', { name: 'Who decides' });
     expect(await within(who).findByText(/Roles could not be loaded/)).toBeInTheDocument();
@@ -200,7 +200,7 @@ describe('designer: editing the flow', () => {
 
   it('renames a step id only once it is valid and keeps the references', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     await userEvent.click(within(inspector()).getByText('Advanced'));
     const id = within(inspector()).getByRole('textbox', { name: 'Step id' });
@@ -217,7 +217,7 @@ describe('designer: editing the flow', () => {
 
   it('workflow-level settings change the definition', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await screen.findByRole('heading', { name: 'Workflow settings' });
     await userEvent.click(screen.getByRole('checkbox', { name: 'Publish automatically after the final approval' }));
     expect(screen.getByText('Published automatically')).toBeInTheDocument();
@@ -233,7 +233,7 @@ describe('designer: editing the flow', () => {
 describe('designer: removing steps', () => {
   it('removes a step after confirming and reconnects the flow', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     await userEvent.click(within(inspector()).getByRole('button', { name: 'Delete step' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete this step?' });
@@ -245,7 +245,7 @@ describe('designer: removing steps', () => {
 
   it('cancelling the confirmation keeps the step', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     const card = await screen.findByRole('button', { name: 'Step 2: Final approval' });
     card.focus();
     await userEvent.keyboard('{Delete}');
@@ -256,7 +256,7 @@ describe('designer: removing steps', () => {
 
   it('never deletes the only step', async () => {
     savingApi({ workflows: [workflow({ definition: blankDefinition() })] });
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     expect(within(inspector()).getByRole('button', { name: 'Delete step' })).toBeDisabled();
     stepButton('Step 1: Review').focus();
@@ -268,7 +268,7 @@ describe('designer: removing steps', () => {
 describe('designer: keyboard', () => {
   it('moves the selection with the arrow keys and selects with Enter', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     const first = await screen.findByRole('button', { name: 'Step 1: Review' });
     first.focus();
     await userEvent.keyboard('{Enter}');
@@ -290,7 +290,7 @@ describe('designer: keyboard', () => {
 describe('designer: validation and saving', () => {
   it('blocks Save while a step is invalid and lists the problems, each leading to its step', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await screen.findByRole('heading', { level: 1, name: 'Two-level approval' });
     await userEvent.click(screen.getByRole('button', { name: 'Add a step after Review' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save workflow' }));
@@ -311,7 +311,7 @@ describe('designer: validation and saving', () => {
 
   it('needs a name', async () => {
     savingApi();
-    renderAt('/admin/workflows/new');
+    renderAt('/settings/workflows/new');
     await userEvent.click(await screen.findByRole('button', { name: 'Save workflow' }));
     expect(await screen.findByText('Give the workflow a name.', { selector: '.dam-error' })).toBeInTheDocument();
     expect(callsTo('POST', '/api/v1/workflows')).toHaveLength(0);
@@ -323,7 +323,7 @@ describe('designer: validation and saving', () => {
         ? json({ valid: false, errors: [{ path: 'steps[0].assignees.roles[0]', message: "There is no role named 'Approver'." }] })
         : undefined,
     );
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Check' }));
     const panel = screen.getByRole('region', { name: /Problems/ });
     expect(await within(panel).findByText("There is no role named 'Approver'.")).toBeInTheDocument();
@@ -339,7 +339,7 @@ describe('designer: validation and saving', () => {
 
   it('confirms a clean check', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Check' }));
     expect(await screen.findByText('Checked by the server: all good.')).toBeInTheDocument();
   });
@@ -353,7 +353,7 @@ describe('designer: validation and saving', () => {
           })
         : undefined,
     );
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     await userEvent.click(within(inspector()).getByRole('button', { name: 'Everyone' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save workflow' }));
@@ -376,7 +376,7 @@ describe('designer: validation and saving', () => {
         );
       return undefined;
     });
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     await userEvent.click(within(inspector()).getByRole('button', { name: 'Everyone' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save workflow' }));
@@ -390,7 +390,7 @@ describe('designer: validation and saving', () => {
       if (c.method === 'PUT') return json({ title: "A workflow named 'x' already exists.", status: 409 }, 409);
       return undefined;
     });
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     const name = await screen.findByRole('textbox', { name: 'Name' });
     await userEvent.type(name, ' 2');
     await userEvent.click(screen.getByRole('button', { name: 'Save workflow' }));
@@ -399,7 +399,7 @@ describe('designer: validation and saving', () => {
 
   it('validates on the server, then PUTs the exact payload, and the unsaved marker clears', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     await userEvent.click(within(inspector()).getByRole('button', { name: 'Everyone' }));
     const desc = screen.getByRole('textbox', { name: 'Description' });
@@ -423,7 +423,7 @@ describe('designer: validation and saving', () => {
 
   it('creates a new workflow from the blank template and opens it', async () => {
     savingApi();
-    renderAt('/admin/workflows/new');
+    renderAt('/settings/workflows/new');
     expect(await screen.findByRole('heading', { level: 1, name: 'New workflow' })).toBeInTheDocument();
     expect(stepButton('Step 1: Review')).toHaveTextContent('Approver');
     await userEvent.type(screen.getByRole('textbox', { name: 'Name' }), '  Brand sign-off ');
@@ -481,7 +481,7 @@ describe('designer: validation and saving', () => {
 
   it('starts from the Two-level approval template, asking before it replaces edits', async () => {
     savingApi();
-    renderAt('/admin/workflows/new');
+    renderAt('/settings/workflows/new');
     await screen.findByRole('heading', { level: 1, name: 'New workflow' });
     await userEvent.click(screen.getByRole('button', { name: 'Two-level approval' }));
     expect(stepButton('Step 1: Review')).toHaveTextContent('48 h');
@@ -503,7 +503,7 @@ describe('designer: validation and saving', () => {
 
   it('discards edits back to the saved workflow', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Add a step at the end' }));
     expect(screen.getByRole('button', { name: 'Step 3: Untitled step' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Discard' }));
@@ -517,7 +517,7 @@ describe('designer: JSON view', () => {
 
   it('round-trips the definition exactly', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await screen.findByRole('heading', { level: 1, name: 'Two-level approval' });
     await userEvent.click(screen.getByRole('button', { name: 'JSON' }));
     expect(JSON.parse(jsonBox().value)).toEqual(twoLevelApproval());
@@ -529,7 +529,7 @@ describe('designer: JSON view', () => {
 
   it('applies an edit to the visual editor', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await screen.findByRole('heading', { level: 1, name: 'Two-level approval' });
     await userEvent.click(screen.getByRole('button', { name: 'JSON' }));
     const edited = twoLevelApproval();
@@ -545,7 +545,7 @@ describe('designer: JSON view', () => {
 
   it('shows a parse error inline and stays on the JSON view until it is fixed', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await screen.findByRole('heading', { level: 1, name: 'Two-level approval' });
     await userEvent.click(screen.getByRole('button', { name: 'JSON' }));
     fireEvent.change(jsonBox(), { target: { value: '{ "steps": [' } });
@@ -562,7 +562,7 @@ describe('designer: JSON view', () => {
   it('keeps properties it does not know when saving', async () => {
     const stored = { ...twoLevelApproval(), layout: { zoom: 2 } };
     savingApi({ workflows: [workflow({ definition: stored })] });
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     await userEvent.click(within(inspector()).getByRole('button', { name: 'Everyone' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save workflow' }));
@@ -574,7 +574,7 @@ describe('designer: JSON view', () => {
 describe('designer: leaving with unsaved changes', () => {
   it('asks before an in-app link discards edits, and lets you stay or leave', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Add a step at the end' }));
     await userEvent.click(screen.getByRole('link', { name: 'All workflows' }));
     const dialog = await screen.findByRole('dialog', { name: 'Leave without saving?' });
@@ -591,7 +591,7 @@ describe('designer: leaving with unsaved changes', () => {
 
   it('does not interrupt when nothing changed, and warns the browser when something did', async () => {
     savingApi();
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     await screen.findByRole('heading', { level: 1, name: 'Two-level approval' });
     const clean = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(clean);
@@ -606,7 +606,7 @@ describe('designer: leaving with unsaved changes', () => {
 describe('designer: accessibility', () => {
   it('has no violations with a step selected', async () => {
     savingApi();
-    const { container } = renderAt('/admin/workflows/w1');
+    const { container } = renderAt('/settings/workflows/w1');
     await userEvent.click(await screen.findByRole('button', { name: 'Step 1: Review' }));
     await within(inspector()).findAllByRole('checkbox', { name: 'Approver' });
     expect(await axe(container)).toHaveNoViolations();
@@ -614,7 +614,7 @@ describe('designer: accessibility', () => {
 
   it('has no violations in the settings, JSON and problem states', async () => {
     savingApi({ users: [asha] });
-    const { container } = renderAt('/admin/workflows/new');
+    const { container } = renderAt('/settings/workflows/new');
     await screen.findByRole('heading', { level: 1, name: 'New workflow' });
     await userEvent.click(screen.getByRole('button', { name: 'Add a step at the end' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save workflow' }));

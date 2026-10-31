@@ -29,6 +29,21 @@ interface Call {
   search: URLSearchParams;
 }
 
+/** Settings only opens for someone holding the section's permission, so the signed-in person has `audit.read`. */
+const ME = {
+  userId: 'u1',
+  email: 'admin@dam.local',
+  displayName: 'Dev Admin',
+  tenantId: '0197a000-0000-7000-8000-000000000001',
+  roles: ['Admin'],
+  groups: [],
+  permissions: ['audit.read'],
+  attributes: {},
+  accessRuleCount: 1,
+  inactiveRoles: [],
+  status: 'active',
+};
+
 let calls: Call[] = [];
 let rawCalls: { url: URL; headers: Headers }[] = [];
 let currentUrl = '';
@@ -57,12 +72,14 @@ function mockApi(handler: (c: Call) => Response | undefined, raw?: (url: URL) =>
       const u = new URL(input.url);
       const call: Call = { method: input.method, pathname: u.pathname, search: u.searchParams };
       calls.push(call);
-      return handler(call) ?? json({ title: 'Not found', status: 404 }, 404);
+      const answer = handler(call);
+      if (answer) return answer;
+      return call.pathname === '/api/v1/me' ? json(ME, 200) : json({ title: 'Not found', status: 404 }, 404);
     }),
   );
 }
 
-function renderAt(route = '/admin/audit') {
+function renderAt(route = '/settings/audit') {
   return render(
     <AuthContext.Provider value={signedIn}>
       <MemoryRouter initialEntries={[route]}>
@@ -167,10 +184,10 @@ describe('audit page - results', () => {
 
   it('shows an empty state that offers to clear the filters', async () => {
     mockApi((c) => (c.pathname === '/api/v1/audit' ? auditPage([]) : defaults(c)));
-    renderAt('/admin/audit?action=nothing.here');
+    renderAt('/settings/audit?action=nothing.here');
     expect(await screen.findByText('No entries match these filters')).toBeInTheDocument();
     await userEvent.click(screen.getAllByRole('button', { name: 'Clear filters' }).at(-1)!);
-    await waitFor(() => expect(currentUrl).toBe('/admin/audit'));
+    await waitFor(() => expect(currentUrl).toBe('/settings/audit'));
   });
 
   it('shows an error note with a retry that refetches', async () => {
@@ -197,7 +214,7 @@ describe('audit page - results', () => {
 describe('audit page - filters', () => {
   it('reads the filters from the URL, sends them, and shows them as removable chips', async () => {
     mockApi((c) => defaults(c));
-    renderAt(`/admin/audit?action=asset.&q=hero&entityType=asset&entityId=${ASSET}&actor=${ADMIN}`);
+    renderAt(`/settings/audit?action=asset.&q=hero&entityType=asset&entityId=${ASSET}&actor=${ADMIN}`);
     await screen.findByText('Showing 3 entries');
     const q = listCalls()[0]!.search;
     expect(q.get('action')).toBe('asset.');
@@ -221,14 +238,14 @@ describe('audit page - filters', () => {
     renderAt();
     await screen.findByText('Showing 3 entries');
     await userEvent.type(screen.getByRole('combobox', { name: /^Action/ }), 'folder.');
-    await waitFor(() => expect(currentUrl).toBe('/admin/audit?action=folder.'));
+    await waitFor(() => expect(currentUrl).toBe('/settings/audit?action=folder.'));
     await waitFor(() => expect(listCalls().some((c) => c.search.get('action') === 'folder.')).toBe(true));
 
     await userEvent.type(within(screen.getByRole('search', { name: 'Audit filters' })).getByRole('searchbox'), 'x{Enter}');
     expect(currentUrl).toContain('q=x');
 
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
-    await waitFor(() => expect(currentUrl).toBe('/admin/audit'));
+    await waitFor(() => expect(currentUrl).toBe('/settings/audit'));
     expect(screen.getByRole('combobox', { name: /^Action/ })).toHaveValue('');
   });
 
@@ -243,7 +260,7 @@ describe('audit page - filters', () => {
 
   it('quick ranges set an open-ended "from" and the date inputs follow', async () => {
     mockApi((c) => defaults(c));
-    renderAt('/admin/audit?to=2026-10-01T00:00:00Z');
+    renderAt('/settings/audit?to=2026-10-01T00:00:00Z');
     await screen.findByText('Showing 3 entries');
     await userEvent.click(screen.getByRole('button', { name: 'Last 24 hours' }));
     await waitFor(() => expect(currentUrl).toMatch(/from=/));
@@ -261,7 +278,7 @@ describe('audit page - filters', () => {
     await screen.findByText('Showing 3 entries');
     const table = screen.getByRole('table');
     await userEvent.click(within(table).getAllByRole('button', { name: 'Show only entries by Dev Admin' })[0]!);
-    await waitFor(() => expect(currentUrl).toBe(`/admin/audit?actor=${ADMIN}`));
+    await waitFor(() => expect(currentUrl).toBe(`/settings/audit?actor=${ADMIN}`));
     await waitFor(() => expect(listCalls().some((c) => c.search.get('actor') === ADMIN)).toBe(true));
   });
 
@@ -272,7 +289,7 @@ describe('audit page - filters', () => {
     await userEvent.type(screen.getByLabelText('Entity ID'), '01a154');
     expect(await screen.findByText('Enter a full ID (a UUID).')).toBeInTheDocument();
     await new Promise((r) => setTimeout(r, 500));
-    expect(currentUrl).toBe('/admin/audit');
+    expect(currentUrl).toBe('/settings/audit');
   });
 });
 
@@ -351,7 +368,7 @@ describe('audit page - detail drawer', () => {
     await userEvent.click((await screen.findAllByRole('button', { name: /^View details/ }))[0]!);
     const dialog = await screen.findByRole('dialog');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Show only this actor' }));
-    await waitFor(() => expect(currentUrl).toBe(`/admin/audit?actor=${ADMIN}`));
+    await waitFor(() => expect(currentUrl).toBe(`/settings/audit?actor=${ADMIN}`));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });
@@ -387,7 +404,7 @@ describe('audit page - integrity', () => {
 
   it("verifies the filters' date range", async () => {
     mockApi((c) => (c.pathname === '/api/v1/audit/verify' ? json(OK) : defaults(c)));
-    renderAt('/admin/audit?from=2026-10-01T00:00:00Z&to=2026-10-05T00:00:00Z');
+    renderAt('/settings/audit?from=2026-10-01T00:00:00Z&to=2026-10-05T00:00:00Z');
     await userEvent.click(await screen.findByRole('button', { name: 'Verify integrity' }));
     await screen.findByText('Chain intact');
     const verify = calls.find((c) => c.pathname === '/api/v1/audit/verify')!;
@@ -477,7 +494,7 @@ describe('audit page - export', () => {
       (c) => defaults(c),
       () => new Response(body, { status: 200, headers: { 'Content-Type': 'text/csv' } }),
     );
-    renderAt('/admin/audit?action=asset.&from=2026-10-12T12:00:00Z&to=2026-10-19T12:00:00Z');
+    renderAt('/settings/audit?action=asset.&from=2026-10-12T12:00:00Z&to=2026-10-19T12:00:00Z');
     await screen.findByText('Showing 3 entries');
     expect(screen.getByText(/starts and ends with a chain-integrity statement/)).toBeInTheDocument();
 
@@ -525,7 +542,7 @@ describe('audit page - accessibility', () => {
     mockApi((c) =>
       c.pathname === '/api/v1/audit/verify' ? json(OK) : defaults(c, [entry(2, { before: { a: 1 }, after: { a: 2 } }), entry(1)]),
     );
-    const { container } = renderAt('/admin/audit?q=x');
+    const { container } = renderAt('/settings/audit?q=x');
     await screen.findByText('Showing 2 entries');
     await userEvent.click(screen.getByRole('button', { name: 'Verify integrity' }));
     await screen.findByText('Chain intact');

@@ -8,13 +8,15 @@ import { ChannelsTab } from './ChannelsTab';
 import { DeliveriesTab } from './DeliveriesTab';
 import { WebhooksTab } from './WebhooksTab';
 import './webhooks.css';
+import { useSettingsEyebrow } from '../settings/useSettingsEyebrow';
 
 type TabId = 'webhooks' | 'deliveries' | 'channels';
 
-/** `/admin/webhooks`: signed webhooks and their delivery log (`webhooks.manage`), and chat channels (`notifications.manage`). */
+/** `/settings/webhooks`: signed webhooks and their delivery log (`webhooks.manage`), and chat channels (`notifications.manage`). */
 export function WebhooksPage() {
   const { t } = useTranslation();
   useDocumentTitle(t('webhooks.title'));
+  const eyebrow = useSettingsEyebrow();
   const me = useMe();
   const [params, setParams] = useSearchParams();
   const permissions = me.data?.permissions ?? [];
@@ -41,7 +43,7 @@ export function WebhooksPage() {
 
   return (
     <div className="dam-page dam-whpage">
-      <PageHeader title={t('webhooks.title')} description={t('webhooks.description')} />
+      <PageHeader title={t('webhooks.title')} eyebrow={eyebrow} description={t('webhooks.description')} />
       {me.isPending ? (
         <div role="status" aria-live="polite" className="dam-stack dam-stack--fill">
           <span className="dam-sr-only">{t('webhooks.loading')}</span>

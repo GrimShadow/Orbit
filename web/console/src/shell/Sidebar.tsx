@@ -1,26 +1,21 @@
 import {
   CaretDoubleLeft,
   CaretDoubleRight,
-  BookOpenText,
   ChartLineUp,
   CheckSquareOffset,
-  FlowArrow,
+  GearSix,
   House,
   Images,
-  ListMagnifyingGlass,
-  PlugsConnected,
-  SealCheck,
-  Sparkle,
   MagnifyingGlass,
   Stack,
   UploadSimple,
-  WebhooksLogo,
   type Icon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 import { useMe } from '../api/me';
 import { Brand } from './Brand';
+import { canUseSettings, SETTINGS_ROOT } from '../features/settings/settingsModel';
 import { NavCount, useTasksBadge } from './NavBadge';
 
 export interface NavItem {
@@ -41,17 +36,15 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 /** Sections shown in the sidebar only to people holding the named permission. Insights links to `/insights`, which opens Key
- * results; the link stays current on all three of its pages because a non-`end` link matches by prefix. */
+ * results; the link stays current on all three of its pages because a non-`end` link matches by prefix. The administrative
+ * pages are not here: they live under the one Settings entry below (ADR-0042). */
 export const ADMIN_ITEMS: (NavItem & { permission: string })[] = [
   { to: '/insights', labelKey: 'nav.insights', Icon: ChartLineUp, permission: 'analytics.read' },
-  { to: '/admin/workflows', labelKey: 'nav.workflows', Icon: FlowArrow, permission: 'workflow.manage' },
-  { to: '/admin/ai', labelKey: 'nav.ai', Icon: Sparkle, permission: 'ai.manage' },
-  { to: '/admin/glossary', labelKey: 'nav.glossary', Icon: BookOpenText, permission: 'glossary.manage' },
-  { to: '/admin/rights', labelKey: 'nav.rights', Icon: SealCheck, permission: 'rights.manage' },
-  { to: '/integrations', labelKey: 'nav.integrations', Icon: PlugsConnected, permission: 'integrations.manage' },
-  { to: '/admin/webhooks', labelKey: 'nav.webhooks', Icon: WebhooksLogo, permission: 'webhooks.manage' },
-  { to: '/admin/audit', labelKey: 'nav.audit', Icon: ListMagnifyingGlass, permission: 'audit.read' },
 ];
+
+/** The single entry to the Settings area. Shown to anyone who holds at least one section's permission (`canUseSettings`);
+ * a non-`end` link, so it is current on every `/settings/*` URL. */
+export const SETTINGS_ITEM: NavItem = { to: SETTINGS_ROOT, labelKey: 'nav.settings', Icon: GearSix };
 
 interface SidebarProps {
   collapsed: boolean;
@@ -64,6 +57,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { t } = useTranslation();
   const { data: me } = useMe();
   const tasksBadge = useTasksBadge();
+  const gatedItems: NavItem[] = [
+    ...ADMIN_ITEMS.filter((i) => me?.permissions.includes(i.permission)),
+    ...(canUseSettings(me?.permissions) ? [SETTINGS_ITEM] : []),
+  ];
   return (
     <aside className={`dam-sidebar${collapsed ? ' dam-sidebar--collapsed' : ''}`} aria-label={t('shell.sidebar')}>
       <div className="dam-sidebar__brand">
@@ -87,7 +84,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </NavLink>
           );
         })}
-        {ADMIN_ITEMS.filter((i) => me?.permissions.includes(i.permission)).map(({ to, end, labelKey, Icon }) => (
+        {gatedItems.map(({ to, end, labelKey, Icon }) => (
           <NavLink
             key={to}
             to={to}

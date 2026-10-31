@@ -25,7 +25,7 @@ export function entityRoute(entityType: string | null, entityId: string | null):
     case 'collection':
       return `/collections/${entityId}`;
     case 'workflow':
-      return `/admin/workflows/${entityId}`;
+      return `/settings/workflows/${entityId}`;
     default:
       return null;
   }

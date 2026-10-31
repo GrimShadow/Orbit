@@ -1,10 +1,11 @@
-import { Bell, CaretDown, Keyboard, SignOut, UserCircle } from '@phosphor-icons/react';
+import { Bell, CaretDown, GearSix, Keyboard, SignOut, UserCircle } from '@phosphor-icons/react';
 import { Avatar, Select } from '@dam/ui-kit';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useMe } from '../api/me';
 import { useAuth } from '../auth/AuthProvider';
+import { canUseSettings, SETTINGS_ROOT } from '../features/settings/settingsModel';
 import { LANGUAGES, setLanguage } from '../i18n';
 import { ThemeSwitcher } from './ThemeSwitcher';
 
@@ -74,6 +75,12 @@ export function UserMenu({ onShowShortcuts }: { onShowShortcuts: () => void }) {
               <Bell size={18} aria-hidden="true" />
               {t('notifications.title')}
             </Link>
+            {canUseSettings(me?.permissions) && (
+              <Link to={SETTINGS_ROOT} className="dam-usermenu__link" onClick={close}>
+                <GearSix size={18} aria-hidden="true" />
+                {t('nav.settings')}
+              </Link>
+            )}
             <button
               type="button"
               className="dam-usermenu__link"

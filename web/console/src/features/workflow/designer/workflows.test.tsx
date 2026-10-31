@@ -29,7 +29,7 @@ const second = () =>
 describe('workflows list', () => {
   it('shows each workflow with its flow, counts and actions', async () => {
     standardApi({ workflows: [workflow(), second()] });
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     expect(await screen.findByRole('heading', { level: 1, name: 'Workflows' })).toBeInTheDocument();
     const card = (await screen.findByRole('heading', { name: 'Two-level approval' })).closest('article')!;
     const flow = within(card).getByRole('list', { name: 'Flow of Two-level approval' });
@@ -45,14 +45,14 @@ describe('workflows list', () => {
     expect(within(card).getByText('Running now').nextSibling).toHaveTextContent('3');
     expect(within(card).getByText('Folder defaults').nextSibling).toHaveTextContent('1');
     expect(within(card).getByText('Bindings').nextSibling).toHaveTextContent('2');
-    expect(within(card).getByRole('link', { name: 'Edit Two-level approval' })).toHaveAttribute('href', '/admin/workflows/w1');
+    expect(within(card).getByRole('link', { name: 'Edit Two-level approval' })).toHaveAttribute('href', '/settings/workflows/w1');
     expect(screen.getByText('Publishes automatically')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'New workflow' })).toHaveAttribute('href', '/admin/workflows/new');
+    expect(screen.getByRole('link', { name: 'New workflow' })).toHaveAttribute('href', '/settings/workflows/new');
   });
 
   it('explains how to get started when the tenant has no workflows', async () => {
     standardApi({ workflows: [] });
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     expect(await screen.findByText('No workflows yet')).toBeInTheDocument();
     expect(screen.getByText(/Two-level approval/)).toBeInTheDocument();
     expect(screen.getByText(/Create a workflow first/)).toBeInTheDocument();
@@ -60,14 +60,14 @@ describe('workflows list', () => {
 
   it('shows a no-permission state on 403 and an error with retry on failure', async () => {
     standardApi({}, (c) => (c.pathname === '/api/v1/workflows' ? json({ title: 'Forbidden', status: 403 }, 403) : undefined));
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     expect(await screen.findByText('You do not have access to workflows')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'New workflow' })).not.toBeInTheDocument();
     cleanup();
 
     let fail = true;
     standardApi({}, (c) => (c.pathname === '/api/v1/workflows' && fail ? json({ title: 'Boom', status: 500 }, 500) : undefined));
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     expect(await screen.findByText('We could not load the workflows', undefined, { timeout: 4000 })).toBeInTheDocument();
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -80,7 +80,7 @@ describe('workflows list', () => {
         ? json(workflow({ id: 'w9', name: 'Two-level approval copy' }), 201)
         : undefined,
     );
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     await userEvent.click(await screen.findByRole('button', { name: 'Duplicate Two-level approval' }));
     await waitFor(() => expect(callsTo('POST', '/api/v1/workflows')).toHaveLength(1));
     expect(callsTo('POST', '/api/v1/workflows')[0]!.body).toEqual({
@@ -102,7 +102,7 @@ describe('workflows list', () => {
         ? json({ title: '2 folder(s) use this workflow as their default. Change them first.', status: 409 }, 409)
         : undefined,
     );
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Two-level approval' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete this workflow?' });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
@@ -115,7 +115,7 @@ describe('workflows list', () => {
 
   it('deletes after confirming', async () => {
     standardApi({}, (c) => (c.method === 'DELETE' ? new Response(null, { status: 204 }) : undefined));
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Two-level approval' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete this workflow?' });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
@@ -128,7 +128,7 @@ describe('workflows list', () => {
       bindings: [{ id: 'b1', workflowId: 'w1', workflowName: 'Two-level approval', assetType: 'image', region: 'EMEA' }],
       folders: [folder(), folder({ id: 'f2', parentId: 'f1', path: 'campaigns.summer', label: 'summer', name: 'Summer' })],
     });
-    const { container } = renderAt('/admin/workflows');
+    const { container } = renderAt('/settings/workflows');
     await screen.findByRole('heading', { name: 'Two-level approval' });
     await screen.findByRole('group', { name: 'Binding 1' });
     await screen.findByText('Summer');
@@ -143,7 +143,7 @@ describe('bindings editor', () => {
     standardApi({ workflows: [workflow(), second()], bindings: [existing] }, (c) =>
       c.method === 'PUT' && c.pathname === '/api/v1/workflows/bindings' ? json([]) : undefined,
     );
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     const first = await screen.findByRole('group', { name: 'Binding 1' });
     expect(within(first).getByRole('combobox', { name: 'Asset type' })).toHaveValue('image');
     expect(within(first).getByRole('textbox', { name: 'Region (optional)' })).toHaveValue('EMEA');
@@ -167,7 +167,7 @@ describe('bindings editor', () => {
 
   it('can remove the last binding (an empty list replaces everything)', async () => {
     standardApi({ bindings: [existing] }, (c) => (c.method === 'PUT' ? json([]) : undefined));
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     await userEvent.click(await screen.findByRole('button', { name: 'Remove binding 1' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save bindings' }));
     await waitFor(() => expect(callsTo('PUT', '/api/v1/workflows/bindings')).toHaveLength(1));
@@ -176,7 +176,7 @@ describe('bindings editor', () => {
 
   it('refuses a duplicate type and region, and a binding with neither', async () => {
     standardApi({ bindings: [existing] });
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     await screen.findByRole('group', { name: 'Binding 1' });
     await userEvent.click(screen.getByRole('button', { name: 'Add binding' }));
     const added = await screen.findByRole('group', { name: 'Binding 2' });
@@ -191,7 +191,7 @@ describe('bindings editor', () => {
 
   it('explains the resolution order', async () => {
     standardApi();
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     expect(await screen.findByText(/A folder default wins first/)).toBeInTheDocument();
   });
 });
@@ -215,7 +215,7 @@ describe('folder defaults', () => {
       },
       (c) => (c.method === 'PATCH' ? json(folder()) : undefined),
     );
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     const campaigns = await screen.findByRole('combobox', { name: 'Default workflow for Campaigns' });
     expect(campaigns).toHaveValue('');
     expect(screen.getByRole('combobox', { name: 'Default workflow for Summer' })).toHaveValue('w1');
@@ -246,7 +246,7 @@ describe('folder defaults', () => {
         folder({ id: 'f2', parentId: 'f1', path: 'campaigns.summer', label: 'summer', name: 'Summer' }),
       ],
     });
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     expect(await screen.findByText('Uses “Two-level approval” from Campaigns')).toBeInTheDocument();
   });
 
@@ -254,7 +254,7 @@ describe('folder defaults', () => {
     standardApi({ folders: [folder()] }, (c) =>
       c.method === 'PATCH' ? json({ title: 'Workflow not found.', status: 422 }, 422) : undefined,
     );
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Default workflow for Campaigns' }), 'w1');
     expect(await screen.findByText('Could not update the folder')).toBeInTheDocument();
   });
@@ -264,19 +264,19 @@ describe('Hindi', () => {
   it('renders the workflows list and the designer in Hindi', async () => {
     setLanguage('hi');
     standardApi({ workflows: [workflow(), second()] });
-    renderAt('/admin/workflows');
+    renderAt('/settings/workflows');
     expect(await screen.findByRole('heading', { level: 1, name: 'वर्कफ़्लो' })).toBeInTheDocument();
     const card = (await screen.findByRole('heading', { name: 'Two-level approval' })).closest('article')!;
     expect(within(card).getByRole('list', { name: 'Two-level approval का फ़्लो' })).toHaveTextContent('48 घं');
     expect(within(card).getByRole('link', { name: 'Two-level approval संपादित करें' })).toHaveAttribute(
       'href',
-      '/admin/workflows/w1',
+      '/settings/workflows/w1',
     );
     expect(screen.getByText('अपने आप प्रकाशित होता है')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'नया वर्कफ़्लो' })).toHaveAttribute('href', '/admin/workflows/new');
+    expect(screen.getByRole('link', { name: 'नया वर्कफ़्लो' })).toHaveAttribute('href', '/settings/workflows/new');
     cleanup();
 
-    renderAt('/admin/workflows/w1');
+    renderAt('/settings/workflows/w1');
     expect(await screen.findByRole('button', { name: 'वर्कफ़्लो सहेजें' })).toBeInTheDocument();
     expect(await screen.findByText('जमा किया गया')).toBeInTheDocument();
   });

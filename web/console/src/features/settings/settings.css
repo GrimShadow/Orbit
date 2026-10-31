@@ -1,0 +1,134 @@
+/* The Settings area: a section list beside the section's own page (ADR-0042). */
+.dam-settings {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--dam-space-4);
+  align-items: start;
+}
+.dam-settings__content {
+  min-width: 0;
+}
+.dam-settings__nav {
+  /* positioned so the absolutely placed, screen-reader-only group names stay inside the scrolling row instead of widening the page */
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--dam-border-subtle);
+  padding-bottom: var(--dam-space-2);
+}
+.dam-settings__navtitle {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: var(--dam-text-sm);
+  font-weight: 700;
+  color: var(--dam-text);
+}
+.dam-settings__group,
+.dam-settings__list {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* On a narrow screen the row is flat: the group names are for the vertical list, but stay available to a screen reader. */
+.dam-settings__grouplabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.dam-settings__link {
+  display: flex;
+  align-items: center;
+  gap: var(--dam-space-2);
+  min-height: 40px;
+  padding: 0 var(--dam-space-3);
+  border-radius: var(--dam-radius);
+  color: var(--dam-text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: var(--dam-text-sm);
+  white-space: nowrap;
+  transition:
+    background-color var(--dam-duration) var(--dam-ease),
+    color var(--dam-duration) var(--dam-ease);
+}
+.dam-settings__link:hover {
+  background: var(--dam-surface-2);
+}
+.dam-settings__link[aria-current='page'] {
+  background: var(--dam-brand-soft, color-mix(in srgb, var(--dam-brand) 12%, transparent));
+  color: var(--dam-brand-soft-text, var(--dam-brand));
+}
+.dam-settings__link:focus-visible {
+  outline: 2px solid var(--dam-focus);
+  outline-offset: 2px;
+}
+.dam-settings__icon {
+  flex: 0 0 auto;
+  color: var(--dam-muted);
+}
+.dam-settings__link[aria-current='page'] .dam-settings__icon {
+  color: var(--dam-brand);
+}
+
+@media (min-width: 1024px) {
+  .dam-settings:not(.dam-settings--focus) {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: var(--dam-space-6, 32px);
+  }
+  .dam-settings__nav {
+    position: sticky;
+    top: calc(var(--dam-topbar-h) + var(--dam-space-5));
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--dam-space-4);
+    overflow: visible;
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+  .dam-settings__navtitle {
+    padding-inline: var(--dam-space-3);
+    font-size: var(--dam-text-lg, 1.125rem);
+  }
+  .dam-settings__group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--dam-space-1);
+  }
+  .dam-settings__list {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dam-settings__grouplabel {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0 var(--dam-space-3);
+    overflow: visible;
+    clip: auto;
+    color: var(--dam-muted);
+    font-size: var(--dam-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dam-settings__link {
+    transition: none;
+  }
+}

@@ -236,8 +236,8 @@ describe('Insights navigation', () => {
   it('keeps the sidebar entry out for roles without analytics.read', async () => {
     install(newWorld(), ['assets.read', 'glossary.manage']);
     renderAt('/me');
-    // The glossary entry only appears once the permissions have loaded, so by then Insights would be there too.
-    expect(await screen.findByRole('link', { name: 'Glossary' })).toBeInTheDocument();
+    // The Settings entry only appears once the permissions have loaded, so by then Insights would be there too.
+    expect(await screen.findByRole('link', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Insights' })).not.toBeInTheDocument();
   });
 

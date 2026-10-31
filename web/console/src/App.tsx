@@ -16,6 +16,9 @@ import { UnusedAssetsPage } from './features/analytics/UnusedAssetsPage';
 import { KeyResultsPage } from './features/insights/KeyResultsPage';
 import { ReportLinkRedirect } from './features/insights/ReportLinkRedirect';
 import { ReportsPage } from './features/insights/ReportsPage';
+import { LegacyRedirect } from './features/settings/LegacyRedirect';
+import { SettingsLayout } from './features/settings/SettingsLayout';
+import { LEGACY_SETTINGS_PATHS } from './features/settings/settingsModel';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { AssetDetailPage } from './features/asset/AssetDetailPage';
 import { CollectionDetailPage } from './features/collections/CollectionDetailPage';
@@ -58,14 +61,21 @@ export function App() {
                 <Route path="/insights/reports/:name" element={<ReportLinkRedirect />} />
                 <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/admin/ai" element={<AiSettingsPage />} />
-                <Route path="/admin/glossary" element={<GlossaryPage />} />
-                <Route path="/admin/rights" element={<RightsPage />} />
-                <Route path="/admin/webhooks" element={<WebhooksPage />} />
-                <Route path="/integrations" element={<IntegrationsPage />} />
-                <Route path="/admin/audit" element={<AuditPage />} />
-                <Route path="/admin/workflows" element={<WorkflowsPage />} />
-                <Route path="/admin/workflows/:id" element={<WorkflowDesignerPage />} />
+                <Route path="/settings" element={<SettingsLayout />}>
+                  <Route index element={null} />
+                  <Route path="integrations" element={<IntegrationsPage />} />
+                  <Route path="audit" element={<AuditPage />} />
+                  <Route path="webhooks" element={<WebhooksPage />} />
+                  <Route path="workflows" element={<WorkflowsPage />} />
+                  <Route path="workflows/:id" element={<WorkflowDesignerPage />} />
+                  <Route path="ai" element={<AiSettingsPage />} />
+                  <Route path="glossary" element={<GlossaryPage />} />
+                  <Route path="rights" element={<RightsPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Route>
+                {LEGACY_SETTINGS_PATHS.map(({ from, to }) => (
+                  <Route key={from} path={from} element={<LegacyRedirect to={to} />} />
+                ))}
                 <Route path="/upload" element={<UploadPage />} />
                 <Route path="/me" element={<MePage />} />
               </Route>

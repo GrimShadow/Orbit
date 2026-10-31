@@ -64,7 +64,7 @@ describe('rights list', () => {
         ],
       }),
     );
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Rights' })).toBeInTheDocument();
     const first = await card('Acme stock photography');
@@ -90,7 +90,7 @@ describe('rights list', () => {
 
   it('collapses long channel lists into "+N" with the full list for assistive technology', async () => {
     install(world({ rights: [rights({ channels: ['a1', 'b2', 'c3', 'd4', 'e5', 'f6'] })] }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     const el = await card('Acme stock photography');
     const list = within(el).getByRole('list', { name: 'Channels' });
     expect(
@@ -113,7 +113,7 @@ describe('rights list', () => {
         ],
       }),
     );
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await card('A valid');
     const text = async (name: string) => (await card(name)).textContent ?? '';
     expect(await text('A valid')).toContain('Valid');
@@ -137,7 +137,7 @@ describe('rights list', () => {
         ],
       }),
     );
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     const strip = await screen.findByRole('list', { name: 'Rights summary' });
     const counts = within(strip)
       .getAllByRole('listitem')
@@ -155,7 +155,7 @@ describe('rights list', () => {
         ],
       }),
     );
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await card('Acme spring');
 
     await userEvent.selectOptions(screen.getByLabelText('Status'), 'expiring');
@@ -190,7 +190,7 @@ describe('rights list', () => {
         ],
       }),
     );
-    renderAt('/admin/rights?status=expired&q=acme');
+    renderAt('/settings/rights?status=expired&q=acme');
     expect(await screen.findByRole('heading', { name: 'Acme summer' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Acme spring' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Status')).toHaveValue('expired');
@@ -199,7 +199,7 @@ describe('rights list', () => {
 
   it('invites you to add the first record', async () => {
     install(world({ rights: [] }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     expect(await screen.findByText('No rights yet')).toBeInTheDocument();
     expect(screen.getByText(/describes a licence/)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'New rights' })).toHaveLength(1);
@@ -209,20 +209,20 @@ describe('rights list', () => {
     install(world(), (c) =>
       c.pathname === '/api/v1/rights' && c.method === 'GET' ? new Promise<Response>(() => {}) : undefined,
     );
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     expect(await screen.findByText('Loading rights')).toBeInTheDocument();
   });
 
   it('shows a calm no-access state on 403 and an error with retry on failure', async () => {
     install(world(), (c) => (c.pathname === '/api/v1/rights' && c.method === 'GET' ? problem(403, 'Forbidden') : undefined));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     expect(await screen.findByText('You do not have access to rights')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New rights' })).not.toBeInTheDocument();
     cleanup();
 
     let fail = true;
     install(world(), (c) => (c.pathname === '/api/v1/rights' && c.method === 'GET' && fail ? problem(500, 'Boom') : undefined));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     expect(await screen.findByText('We could not load the rights', undefined, { timeout: 4000 })).toBeInTheDocument();
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -233,7 +233,7 @@ describe('rights list', () => {
 describe('creating rights', () => {
   it('sends exactly what was entered', async () => {
     const calls = install(world());
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await userEvent.click(await screen.findByRole('button', { name: 'New rights' }));
     const form = await dialog('New rights');
 
@@ -267,7 +267,7 @@ describe('creating rights', () => {
 
   it('sends empty lists and null dates when nothing is restricted, and watermark off by default', async () => {
     const calls = install(world());
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await userEvent.click(await screen.findByRole('button', { name: 'New rights' }));
     const form = await dialog('New rights');
     await userEvent.type(within(form).getByLabelText('Name'), 'Open licence');
@@ -289,7 +289,7 @@ describe('creating rights', () => {
 
   it('explains the watermark switch', async () => {
     install(world());
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await userEvent.click(await screen.findByRole('button', { name: 'New rights' }));
     const form = await dialog('New rights');
     expect(within(form).getByText('Previews are always watermarked; the original and video are withheld.')).toBeInTheDocument();
@@ -300,7 +300,7 @@ describe('creating rights', () => {
 
   it('offers the tenant’s channel and region terms, without "global"', async () => {
     install(world());
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await userEvent.click(await screen.findByRole('button', { name: 'New rights' }));
     const form = await dialog('New rights');
     const channels = await within(form).findByRole('group', { name: 'Allowed channels' });
@@ -321,7 +321,7 @@ describe('creating rights', () => {
 
   it('falls back to free entry of lower-case codes when the tenant has no vocabulary', async () => {
     const calls = install(world({ channels: null, regions: null }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await userEvent.click(await screen.findByRole('button', { name: 'New rights' }));
     const form = await dialog('New rights');
     await userEvent.type(await within(form).findByLabelText('Allowed channels'), 'Web Site,Print{Enter}');
@@ -337,7 +337,7 @@ describe('creating rights', () => {
 
   it('checks the name and the dates before sending anything, and previews the status live', async () => {
     const calls = install(world());
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await userEvent.click(await screen.findByRole('button', { name: 'New rights' }));
     const form = await dialog('New rights');
 
@@ -377,7 +377,7 @@ describe('creating rights', () => {
           })
         : undefined,
     );
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await userEvent.click(await screen.findByRole('button', { name: 'New rights' }));
     const form = await dialog('New rights');
     await userEvent.type(within(form).getByLabelText('Name'), 'Acme');
@@ -396,7 +396,7 @@ describe('creating rights', () => {
 
   it('reports a duplicate name returned by the server on the name field', async () => {
     install(world());
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await userEvent.click(await screen.findByRole('button', { name: 'New rights' }));
     const form = await dialog('New rights');
     await userEvent.type(within(form).getByLabelText('Name'), 'acme STOCK photography');
@@ -406,7 +406,7 @@ describe('creating rights', () => {
 
   it('shows a general message when the failure names no field', async () => {
     install(world(), (c) => (c.method === 'POST' && c.pathname === '/api/v1/rights' ? problem(500, 'Boom') : undefined));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await userEvent.click(await screen.findByRole('button', { name: 'New rights' }));
     const form = await dialog('New rights');
     await userEvent.type(within(form).getByLabelText('Name'), 'Acme');
@@ -416,7 +416,7 @@ describe('creating rights', () => {
 
   it('tells you to save before attaching documents', async () => {
     install(world());
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await userEvent.click(await screen.findByRole('button', { name: 'New rights' }));
     const form = await dialog('New rights');
     expect(within(form).getByText(/Save the rights first/)).toBeInTheDocument();
@@ -427,7 +427,7 @@ describe('creating rights', () => {
 describe('editing rights', () => {
   it('opens with the stored values and replaces the record', async () => {
     const calls = install(world({ rights: [rights({ notes: 'Old note', watermarkRequired: true })] }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Edit');
     const form = await dialog('Edit rights');
     expect(within(form).getByLabelText('Name')).toHaveValue('Acme stock photography');
@@ -461,14 +461,14 @@ describe('editing rights', () => {
 
   it('opens from the name, too', async () => {
     install(world());
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await userEvent.click(await screen.findByRole('button', { name: 'Acme stock photography' }));
     expect(await dialog('Edit rights')).toBeInTheDocument();
   });
 
   it('warns, with the number of assigned assets, before a change that narrows where assets can be used', async () => {
     install(world({ rights: [rights({ channels: ['web', 'print'], regions: [], assetCount: 12 })] }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Edit');
     const form = await dialog('Edit rights');
     const web = await within(form).findByRole('checkbox', { name: 'Website' });
@@ -493,7 +493,7 @@ describe('editing rights', () => {
     install(
       world({ rights: [rights({ id: 'u', name: 'Unused', assetCount: 0 }), rights({ id: 'o', name: 'One', assetCount: 1 })] }),
     );
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Unused', 'Edit');
     let form = await dialog('Edit rights');
     await userEvent.click(await within(form).findByRole('checkbox', { name: 'Website' }));
@@ -514,7 +514,7 @@ describe('editing rights', () => {
         ? c.json().then((b) => json(rights({ ...(b as object), assetCount: 900, pendingAssets: 400 })))
         : undefined,
     );
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Edit');
     const form = await dialog('Edit rights');
     await userEvent.click(await within(form).findByRole('checkbox', { name: 'Website' }));
@@ -527,7 +527,7 @@ describe('editing rights', () => {
 
   it('asks before throwing away unsaved edits', async () => {
     const calls = install(world());
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Edit');
     const form = await dialog('Edit rights');
 
@@ -555,7 +555,7 @@ describe('editing rights', () => {
 describe('duplicating and deleting', () => {
   it('duplicates as "<name> copy" with the same terms, then "copy 2"', async () => {
     const calls = install(world({ rights: [rights({ watermarkRequired: true, notes: 'n', assetCount: 3, documentCount: 1 })] }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Duplicate');
     await waitFor(() => expect(writes(calls, 'POST', '/api/v1/rights')).toHaveLength(1));
     expect(await writes(calls, 'POST', '/api/v1/rights')[0]!.json()).toEqual({
@@ -578,7 +578,7 @@ describe('duplicating and deleting', () => {
     install(world(), (c) =>
       c.method === 'POST' && c.pathname === '/api/v1/rights' ? problem(500, 'Boom', { detail: 'Disk full' }) : undefined,
     );
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Duplicate');
     expect((await screen.findAllByText('Could not duplicate the rights')).length).toBeGreaterThan(0);
     expect(screen.getByText('Disk full')).toBeInTheDocument();
@@ -586,7 +586,7 @@ describe('duplicating and deleting', () => {
 
   it('deletes only after a confirmation', async () => {
     const calls = install(world({ rights: [rights({ documentCount: 2 })] }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Delete');
     const confirm = await dialog('Delete these rights?');
     expect(within(confirm).getByText('“Acme stock photography” will be deleted. This cannot be undone.')).toBeInTheDocument();
@@ -600,7 +600,7 @@ describe('duplicating and deleting', () => {
 
   it('explains that rights still assigned to assets cannot be deleted', async () => {
     install(world({ rights: [rights({ assetCount: 7 })] }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Delete');
     const confirm = await dialog('Delete these rights?');
     await userEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
@@ -612,7 +612,7 @@ describe('duplicating and deleting', () => {
 
   it('uses the singular for one asset', async () => {
     install(world({ rights: [rights({ assetCount: 1 })] }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Delete');
     const confirm = await dialog('Delete these rights?');
     await userEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
@@ -630,7 +630,7 @@ describe('documents', () => {
 
   async function openEdit(w = world({ rights: [rights({ documentCount: 1 })], documents: { r1: [doc({ uploadedBy: 'u1' })] } })) {
     const calls = install(w);
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Edit');
     return { calls, form: await dialog('Edit rights'), w };
   }
@@ -733,7 +733,7 @@ describe('documents', () => {
       }
       return undefined;
     });
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Edit');
     const form = await dialog('Edit rights');
     await within(form).findByText('No documents attached yet.');
@@ -768,7 +768,7 @@ describe('documents', () => {
     install(world({ rights: [rights({ documentCount: 1 })], documents: { r1: [doc()] } }), (c) =>
       c.pathname.endsWith('/link') ? problem(500, 'Boom') : undefined,
     );
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Edit');
     const form = await dialog('Edit rights');
     await userEvent.click(await within(form).findByRole('button', { name: 'Download release-form.pdf' }));
@@ -795,7 +795,7 @@ describe('documents', () => {
 describe('permissions', () => {
   it('is only a list of cards with an add button for someone who can manage rights', async () => {
     install(world({ permissions: ['rights.manage'] }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     expect(await screen.findByRole('button', { name: 'New rights' })).toBeInTheDocument();
   });
 });
@@ -876,7 +876,7 @@ describe('accessibility', () => {
         documents: { r1: [doc({ uploadedBy: 'u1' })] },
       }),
     );
-    const { container } = renderAt('/admin/rights');
+    const { container } = renderAt('/settings/rights');
     await card('Acme stock photography');
     expect(await axe(container)).toHaveNoViolations();
 
@@ -900,19 +900,19 @@ describe('accessibility', () => {
 
   it('has no violations on the empty, no-access and delete states', async () => {
     install(world({ rights: [] }));
-    const empty = renderAt('/admin/rights');
+    const empty = renderAt('/settings/rights');
     await screen.findByText('No rights yet');
     expect(await axe(empty.container)).toHaveNoViolations();
     cleanup();
 
     install(world(), (c) => (c.pathname === '/api/v1/rights' && c.method === 'GET' ? problem(403, 'Forbidden') : undefined));
-    const denied = renderAt('/admin/rights');
+    const denied = renderAt('/settings/rights');
     await screen.findByText('You do not have access to rights');
     expect(await axe(denied.container)).toHaveNoViolations();
     cleanup();
 
     install(world({ rights: [rights({ assetCount: 2 })] }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     await openMenu('Acme stock photography', 'Delete');
     const confirm = await dialog('Delete these rights?');
     await userEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
@@ -925,7 +925,7 @@ describe('Hindi', () => {
   it('renders the rights list and the form in Hindi', async () => {
     setLanguage('hi');
     install(world({ rights: [rights({ assetCount: 4, documentCount: 2, watermarkRequired: true })] }));
-    renderAt('/admin/rights');
+    renderAt('/settings/rights');
     expect(await screen.findByRole('heading', { level: 1, name: 'अधिकार' })).toBeInTheDocument();
     const c = await card('Acme stock photography');
     expect(within(c).getByText('4 एसेट')).toBeInTheDocument();

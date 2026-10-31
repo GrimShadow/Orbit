@@ -2,6 +2,8 @@ import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
 import { setLanguage } from '../../../i18n';
+import { renderPage } from '../../settings/settingsTestKit';
+import { AiSettingsPage } from './AiSettingsPage';
 import {
   backfillBody,
   estimateCount,
@@ -174,8 +176,9 @@ describe('status', () => {
 
 describe('page states', () => {
   it('shows a calm no-permission state for a 403', async () => {
+    // The page on its own: the Settings layout does not open AI without ai.manage, but the page keeps its own no-access state.
     install(world({ permissions: [] }));
-    renderAt();
+    renderPage(<AiSettingsPage />, '/settings/ai');
     expect(await screen.findByText('AI settings are not available to your role')).toBeInTheDocument();
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });
@@ -851,7 +854,7 @@ describe('accessibility', () => {
 
   it('has no axe violations in the 403 and error states', async () => {
     install(world({ permissions: [] }));
-    const { container } = renderAt();
+    const { container } = renderPage(<AiSettingsPage />, '/settings/ai');
     await screen.findByText('AI settings are not available to your role');
     expect(await axe(container)).toHaveNoViolations();
   });

@@ -11,6 +11,7 @@ import { ConnectorCatalog } from './ConnectorCatalog';
 import { useConnections, useConnectors } from './integrationsApi';
 import type { ConnectionDto, ConnectorDto } from './integrationsTypes';
 import './integrations.css';
+import { useSettingsEyebrow } from '../settings/useSettingsEyebrow';
 
 interface FormState {
   connector: ConnectorDto;
@@ -22,6 +23,7 @@ interface FormState {
 export function IntegrationsPage() {
   const { t } = useTranslation();
   useDocumentTitle(t('integrations.title'));
+  const eyebrow = useSettingsEyebrow();
   const me = useMe();
   const allowed = !!me.data?.permissions.includes('integrations.manage');
   const connectors = useConnectors(allowed);
@@ -113,7 +115,7 @@ export function IntegrationsPage() {
 
   return (
     <div className="dam-page dam-intpage">
-      <PageHeader title={t('integrations.title')} description={t('integrations.description')} />
+      <PageHeader title={t('integrations.title')} eyebrow={eyebrow} description={t('integrations.description')} />
       {body}
     </div>
   );

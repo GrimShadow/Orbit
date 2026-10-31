@@ -25,13 +25,15 @@ import { GlossaryForm } from './GlossaryForm';
 import { GlossaryImport } from './GlossaryImport';
 import { GLOSSARY_LIMIT, useDeleteGlossaryTerm, useGlossary } from './glossaryApi';
 import './glossary.css';
+import { useSettingsEyebrow } from '../settings/useSettingsEyebrow';
 
-/** `/admin/glossary`: terms that translation must not get wrong. Locked terms are kept as written in every language; mapped
+/** `/settings/glossary`: terms that translation must not get wrong. Locked terms are kept as written in every language; mapped
  * terms are replaced by a fixed rendering per language (ADR-0036). Needs `glossary.manage`. */
 export function GlossaryPage() {
   const { t, i18n } = useTranslation();
   const { push } = useToast();
   useDocumentTitle(t('glossary.title'));
+  const eyebrow = useSettingsEyebrow();
   const me = useMe();
   const [typed, setTyped] = useState('');
   const [q, setQ] = useState('');
@@ -207,6 +209,7 @@ export function GlossaryPage() {
     <div className="dam-page dam-gpage">
       <PageHeader
         title={t('glossary.title')}
+        eyebrow={eyebrow}
         description={t('glossary.description')}
         actions={canManage && !me.isPending && !empty && !query.error ? actions : undefined}
       />

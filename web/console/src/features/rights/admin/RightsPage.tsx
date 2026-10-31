@@ -10,12 +10,14 @@ import { RightsForm, toBody, type SavedInfo } from './RightsForm';
 import { RightsList, Summary, Toolbar } from './RightsList';
 import { copyName, countByStatus, filterRights, isStatus } from './rightsLabels';
 import './rights.css';
+import { useSettingsEyebrow } from '../../settings/useSettingsEyebrow';
 
-/** `/admin/rights`: licences and release terms that narrow, time-limit or watermark the assets they are assigned to. */
+/** `/settings/rights`: licences and release terms that narrow, time-limit or watermark the assets they are assigned to. */
 export function RightsPage() {
   const { t } = useTranslation();
   const { push } = useToast();
   useDocumentTitle(t('rights.title'));
+  const eyebrow = useSettingsEyebrow();
   const [params, setParams] = useSearchParams();
   const query = useRightsList();
   const save = useSaveRights();
@@ -185,6 +187,7 @@ export function RightsPage() {
     <div className="dam-page dam-rpage">
       <PageHeader
         title={t('rights.title')}
+        eyebrow={eyebrow}
         description={t('rights.description')}
         actions={forbidden || query.isPending || all.length === 0 ? undefined : newButton}
       />

@@ -240,7 +240,7 @@ function Designer({ workflow }: { workflow: WorkflowDto | null }) {
       setBaseline({ ...clean });
       setDraft({ ...clean });
       push({ title: t('workflows.designer.saved'), tone: 'success' });
-      if (isNew) navigate(`/admin/workflows/${saved.id}`, { replace: true });
+      if (isNew) navigate(`/settings/workflows/${saved.id}`, { replace: true });
     } catch (e) {
       if (e instanceof DefinitionRejected) {
         setServerIssues({ key: defKey, issues: e.issues, ok: false });
@@ -271,7 +271,7 @@ function Designer({ workflow }: { workflow: WorkflowDto | null }) {
 
   return (
     <div className={`dam-page dam-wfd${selected && view === 'visual' ? ' dam-wfd--sheet' : ''}`}>
-      <Link className="dam-wfd__back" to="/admin/workflows">
+      <Link className="dam-wfd__back" to="/settings/workflows">
         <ArrowLeft size={14} weight="bold" aria-hidden="true" />
         {t('workflows.designer.back')}
       </Link>
@@ -506,7 +506,7 @@ export function WorkflowDesignerPage() {
                 : t('workflows.designer.notFound.description')
           }
           action={
-            <Link className="dam-btn dam-btn--secondary" to="/admin/workflows">
+            <Link className="dam-btn dam-btn--secondary" to="/settings/workflows">
               {t('workflows.designer.back')}
             </Link>
           }

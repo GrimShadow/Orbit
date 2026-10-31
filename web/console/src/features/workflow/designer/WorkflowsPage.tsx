@@ -12,6 +12,7 @@ import { FolderDefaults } from './FolderDefaults';
 import { conflictMessage, isForbidden } from './designerApi';
 import { FlowSummary } from './flow';
 import './designer.css';
+import { useSettingsEyebrow } from '../../settings/useSettingsEyebrow';
 
 /** "Name copy", then "Name copy 2" ... - the first name the tenant is not already using (names are unique ignoring case). */
 export function copyName(name: string, taken: readonly string[], copy: string): string {
@@ -49,7 +50,7 @@ function WorkflowCard({
         <div className="dam-wfcardlist__head">
           <div className="dam-wfcardlist__text">
             <h2 id={`wf-${workflow.id}`} className="dam-wfcardlist__name">
-              <Link to={`/admin/workflows/${workflow.id}`}>{workflow.name}</Link>
+              <Link to={`/settings/workflows/${workflow.id}`}>{workflow.name}</Link>
             </h2>
             <p className={workflow.description ? 'dam-wfcardlist__desc' : 'dam-wfcardlist__desc dam-hint'}>
               {workflow.description || t('workflows.noDescription')}
@@ -70,7 +71,7 @@ function WorkflowCard({
         <div className="dam-wfcardlist__actions">
           <Link
             className="dam-btn dam-btn--secondary dam-btn--sm"
-            to={`/admin/workflows/${workflow.id}`}
+            to={`/settings/workflows/${workflow.id}`}
             aria-label={t('workflows.editNamed', { name: workflow.name })}
           >
             <PencilSimple size={14} aria-hidden="true" />
@@ -105,6 +106,7 @@ export function WorkflowsPage() {
   const { t } = useTranslation();
   const { push } = useToast();
   useDocumentTitle(t('workflows.title'));
+  const eyebrow = useSettingsEyebrow();
   const query = useWorkflows();
   const save = useSaveWorkflow();
   const remove = useDeleteWorkflow();
@@ -139,7 +141,7 @@ export function WorkflowsPage() {
   };
 
   const newButton = (
-    <Link className="dam-btn dam-btn--primary" to="/admin/workflows/new">
+    <Link className="dam-btn dam-btn--primary" to="/settings/workflows/new">
       <Plus size={16} weight="bold" aria-hidden="true" />
       {t('workflows.new')}
     </Link>
@@ -151,6 +153,7 @@ export function WorkflowsPage() {
     <div className="dam-page dam-wfpage">
       <PageHeader
         title={t('workflows.title')}
+        eyebrow={eyebrow}
         description={
           query.isSuccess && workflows.length > 0 ? t('workflows.count', { count: workflows.length }) : t('workflows.description')
         }

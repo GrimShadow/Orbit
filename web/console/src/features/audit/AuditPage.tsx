@@ -15,11 +15,13 @@ import { hasFilters } from './auditFilters';
 import { shortId } from './auditFormat';
 import { useAuditFilters } from './useAuditFilters';
 import './audit.css';
+import { useSettingsEyebrow } from '../settings/useSettingsEyebrow';
 
-/** `/admin/audit` - the tamper-evident audit log: integrity check, filters, results, per-entry detail and export. */
+/** `/settings/audit` - the tamper-evident audit log: integrity check, filters, results, per-entry detail and export. */
 export function AuditPage() {
   const { t, i18n } = useTranslation();
   useDocumentTitle(t('audit.title'));
+  const eyebrow = useSettingsEyebrow();
   const { push } = useToast();
   const { filters, update, clear } = useAuditFilters();
   const list = useAuditEntries(filters);
@@ -75,7 +77,7 @@ export function AuditPage() {
   if (filters.entityId) chip('entityId', t('audit.filters.entityId'), shortId(filters.entityId));
   if (filters.q) chip('q', t('audit.filters.q'), filters.q);
 
-  const header = <PageHeader title={t('audit.title')} description={t('audit.desc')} />;
+  const header = <PageHeader title={t('audit.title')} eyebrow={eyebrow} description={t('audit.desc')} />;
 
   if (list.error && isForbidden(list.error)) {
     return (

@@ -39,7 +39,7 @@ export function TranslateAssetButton({ asset }: { asset: Pick<AssetDto, 'id' | '
       {!ready && (
         <p id={hintId} className="dam-hint dam-tbtn__hint">
           {t(support.state === 'off' ? 'translation.inline.off' : 'translation.inline.unsupported')}{' '}
-          {support.canManageAi && <Link to="/admin/ai">{t('translation.inline.settings')}</Link>}
+          {support.canManageAi && <Link to="/settings/ai">{t('translation.inline.settings')}</Link>}
         </p>
       )}
       <TranslateDialog assetId={asset.id} assetType={asset.type} open={open} onClose={() => setOpen(false)} />
