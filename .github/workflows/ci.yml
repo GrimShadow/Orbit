@@ -25,7 +25,7 @@ jobs:
       - run: dotnet build Dam.sln -c Release
       - run: dotnet test tests/Dam.UnitTests -c Release --no-build --logger "trx;LogFileName=results.trx" --logger GitHubActions
       - if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: dotnet-unit-test-results, path: "**/TestResults/*.trx" }
 
   dotnet-integration:
@@ -50,7 +50,7 @@ jobs:
           echo "shard ${{ matrix.shard }}/4 filter: $filter"
           dotnet test tests/Dam.IntegrationTests -c Release --no-build --filter "$filter" --logger "trx;LogFileName=results-${{ matrix.shard }}.trx" --logger GitHubActions --logger "console;verbosity=normal" --blame-hang --blame-hang-dump-type none --blame-hang-timeout 6m
       - if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: "dotnet-integration-results-${{ matrix.shard }}", path: "**/TestResults/**" }
 
   dotnet:
@@ -69,7 +69,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check && pnpm lint
@@ -95,7 +95,7 @@ jobs:
         run: dotnet build Dam.sln -c Release
       # Results go to the Security tab (free on public repos) and the job also fails on any error-level finding.
       # Dependabot PRs run with a read-only token and cannot upload, so they only get the in-job gate.
-      - uses: github/codeql-action/analyze@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v3
         with: { upload: "${{ github.actor == 'dependabot[bot]' && 'never' || 'always' }}", output: sarif-results, category: "/language:${{ matrix.language }}" }
       - name: Fail on error-level findings
         run: |
@@ -103,7 +103,7 @@ jobs:
           echo "error-level CodeQL findings: $n"
           [ "$n" -eq 0 ]
       - if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: "codeql-${{ matrix.language }}", path: sarif-results }
 
   semgrep:
@@ -128,7 +128,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/repo" "$TRIVY" fs /repo --format cyclonedx --output /repo/sbom-source.cdx.json \
             --skip-dirs node_modules,tests
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: sbom-source, path: sbom-source.cdx.json }
 
   helm:
@@ -182,11 +182,11 @@ jobs:
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/out" "$TRIVY" image \
             scan/${{ matrix.name }}:${{ github.sha }} --format cyclonedx --output /out/sbom-${{ matrix.name }}.cdx.json
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: "sbom-${{ matrix.name }}", path: "sbom-${{ matrix.name }}.cdx.json" }
       - name: Log in to GHCR
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
       - name: Push multi-arch, tagged by git SHA
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
